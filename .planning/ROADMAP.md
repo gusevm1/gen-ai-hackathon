@@ -75,11 +75,11 @@ Plans:
   3. Cron schedule runs FlatFox scraper daily, producing `data/flatfox/{timestamp}/listings.jsonl`
   4. Lock-file prevents overlapping scraper runs
   5. Each scrape run produces a `_run_meta.json` recording listing count, duration, and status
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md -- Scheduler + Lock + Run Metadata + S3 Sync + PM2 Config (Wave 1)
+- [ ] 03-02-PLAN.md -- EC2 Provisioning + Setup + Deploy Scripts (Wave 1)
 
 ### Phase 4: Homegate Scraper
 **Goal**: Resume and complete the Homegate scraper — deploy the custom Apify actor and wire it into the pipeline alongside FlatFox
@@ -112,6 +112,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 (when unblocked) -> 5
 | 1. Foundation | 2/2 | Complete | 2026-03-05 |
 | 01.1 Homegate Actor (INSERTED) | 1/2 | PAUSED (DataDome) | - |
 | 2. FlatFox Scraper | 1/1 | Complete | 2026-03-05 |
-| 3. EC2 Deployment + Scheduling | 0/? | Not started | - |
+| 3. EC2 Deployment + Scheduling | 0/2 | Planned | - |
 | 4. Homegate Scraper | 0/? | Blocked (DataDome) | - |
 | 5. Hardening | 0/? | Not started | - |
