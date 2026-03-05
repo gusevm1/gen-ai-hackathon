@@ -34,6 +34,17 @@ Plans:
 - [ ] 01-01: Project Foundation + Core Types + Utilities (Wave 1)
 - [ ] 01-02: Homegate Scraper + Pipeline Wiring (Wave 2)
 
+### Phase 01.1: Build custom Homegate scraper actor on Apify (INSERTED)
+
+**Goal:** A custom CheerioCrawler-based Apify actor deployed to the user's Apify account that scrapes Homegate property listings via `window.__INITIAL_STATE__` JSON extraction, replacing the paid third-party actor and using only platform credits
+**Requirements**: SITE-01
+**Depends on:** Phase 1
+**Plans:** 2 plans
+
+Plans:
+- [ ] 01.1-01-PLAN.md -- Build actor project with CheerioCrawler extraction logic (Wave 1)
+- [ ] 01.1-02-PLAN.md -- Deploy actor to Apify and wire into HomegateAdapter (Wave 2)
+
 ### Phase 2: Second Scraper + Scheduling
 **Goal**: The application scrapes both Homegate (Apify) and FlatFox (REST API) on a configurable daily schedule without manual intervention, with lock-file protection preventing overlapping runs
 **Depends on**: Phase 1
