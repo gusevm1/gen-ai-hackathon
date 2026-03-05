@@ -14,7 +14,7 @@ This roadmap delivers a Swiss real estate scraping service that collects data on
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Core types, schema, parsers, JSONL writer, pipeline scaffold
-- [ ] **Phase 2: FlatFox Scraper** - Direct REST API scraper with normalizer, wired into pipeline, verified locally
+- [x] **Phase 2: FlatFox Scraper** - Direct REST API scraper with normalizer, wired into pipeline, verified locally
 - [ ] **Phase 3: EC2 Deployment + Scheduling** - Provision EC2, deploy app, cron-based daily scraping, run metadata
 - [ ] **Phase 4: Homegate Scraper** - Resume DataDome bypass work, deploy custom Apify actor, wire into pipeline
 - [ ] **Phase 5: Hardening** - Health endpoint, email alerts, data quality checks, deduplication
@@ -63,7 +63,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 02-01-PLAN.md -- FlatFox adapter, normalizer, and pipeline wiring (Wave 1)
+- [x] 02-01-PLAN.md -- FlatFox adapter, normalizer, and pipeline wiring (Wave 1)
 
 ### Phase 3: EC2 Deployment + Scheduling
 **Goal**: The FlatFox scraper runs on an EC2 instance on a daily cron schedule, collecting data automatically without manual intervention
@@ -111,7 +111,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 (when unblocked) -> 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-03-05 |
 | 01.1 Homegate Actor (INSERTED) | 1/2 | PAUSED (DataDome) | - |
-| 2. FlatFox Scraper | 0/1 | Planned | - |
+| 2. FlatFox Scraper | 1/1 | Complete | 2026-03-05 |
 | 3. EC2 Deployment + Scheduling | 0/? | Not started | - |
 | 4. Homegate Scraper | 0/? | Blocked (DataDome) | - |
 | 5. Hardening | 0/? | Not started | - |

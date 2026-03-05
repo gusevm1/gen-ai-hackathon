@@ -21,13 +21,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **SCRP-01**: PropertyListing TypeScript interface defines unified schema for all scraped listings
 - [x] **SCRP-02**: Scraper adapter interface allows both Apify-backed and direct API scrapers
-- [ ] **SCRP-03**: Scraped data stored as files in `data/{site}/{YYYY-MM-DD_HHMMSS}/` directories
+- [x] **SCRP-03**: Scraped data stored as files in `data/{site}/{YYYY-MM-DD_HHMMSS}/` directories
 - [x] **SCRP-04**: Swiss number parser handles apostrophe thousands separators (`CHF 1'200'000` -> `1200000`) and decimal rooms (`3.5 Zimmer` -> `3.5`)
 
 ### Site Integrations
 
 - [x] **SITE-01**: Homegate scraper via Apify actor retrieves property listings (target ~1000 listings)
-- [ ] **SITE-02**: FlatFox scraper via official REST API retrieves property listings (target ~1000 listings)
+- [x] **SITE-02**: FlatFox scraper via official REST API retrieves property listings (target ~1000 listings)
 
 ### Scheduling & Operations
 
@@ -88,7 +88,7 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
+Which phases cover which requirements. Updated during roadmap rework.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
@@ -101,18 +101,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SETUP-07 | Phase 3 | Pending |
 | SCRP-01 | Phase 1 | Complete |
 | SCRP-02 | Phase 1 | Complete |
-| SCRP-03 | Phase 1 | Pending |
+| SCRP-03 | Phase 2 | Complete |
 | SCRP-04 | Phase 1 | Complete |
-| SITE-01 | Phase 1 | Complete |
-| SITE-02 | Phase 2 | Pending |
-| OPS-01 | Phase 2 | Pending |
-| OPS-02 | Phase 2 | Pending |
-| OPS-03 | Phase 3 | Pending |
-| OPS-04 | Phase 3 | Pending |
-| OPS-05 | Phase 2 | Pending |
+| SITE-01 | Phase 4 | Paused (DataDome) |
+| SITE-02 | Phase 2 | Complete |
+| OPS-01 | Phase 3 | Pending |
+| OPS-02 | Phase 3 | Pending |
+| OPS-03 | Phase 5 | Pending |
+| OPS-04 | Phase 5 | Pending |
+| OPS-05 | Phase 3 | Pending |
 | QUAL-01 | Phase 1 | Complete |
-| QUAL-02 | Phase 3 | Pending |
-| QUAL-03 | Phase 3 | Pending |
+| QUAL-02 | Phase 5 | Pending |
+| QUAL-03 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 21 total
@@ -121,4 +121,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after roadmap creation*
+*Last updated: 2026-03-05 after roadmap rework (FlatFox-first pivot)*
