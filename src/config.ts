@@ -1,7 +1,8 @@
+import 'dotenv/config';
 import { z } from 'zod';
 
 const EnvSchema = z.object({
-  APIFY_TOKEN: z.string().min(1, 'APIFY_TOKEN is required'),
+  APIFY_TOKEN: z.string().min(1).optional(), // Optional -- only needed for Homegate (Apify-backed)
   LOG_LEVEL: z
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
     .default('info'),

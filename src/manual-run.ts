@@ -1,6 +1,6 @@
 import { loadConfig } from './config.js';
 
-// 1. Load config FIRST (fail-fast on missing APIFY_TOKEN)
+// 1. Load config (APIFY_TOKEN is optional -- only required for Homegate)
 const config = loadConfig();
 
 // 2. Create logger
@@ -15,7 +15,7 @@ const dryRun = process.argv.includes('--dry-run');
 if (!site || site === '--help') {
   console.log('Usage: npx tsx src/manual-run.ts <site> [--dry-run]');
   console.log('');
-  console.log('Sites: homegate');
+  console.log('Sites: homegate, flatfox');
   console.log('');
   console.log('Options:');
   console.log('  --dry-run  Fetch ~10 listings, validate and log, do not write to disk');
@@ -26,6 +26,8 @@ if (!site || site === '--help') {
 import { ApifyClient } from 'apify-client';
 import { HomegateAdapter } from './scrapers/homegate/adapter.js';
 import { normalizeHomegate } from './scrapers/homegate/normalize.js';
+import { FlatfoxAdapter } from './scrapers/flatfox/adapter.js';
+import { normalizeFlatfox } from './scrapers/flatfox/normalize.js';
 import { PropertyListingSchema } from './schema/listing.js';
 import type { PropertyListing } from './schema/listing.js';
 import { writeJsonl } from './output/jsonl-writer.js';
@@ -33,12 +35,19 @@ import { writeJsonl } from './output/jsonl-writer.js';
 async function main(): Promise<void> {
   // Select adapter and normalizer
   let adapter;
-  let normalize: (raw: Record<string, unknown>) => Record<string, unknown>;
+  let normalize: (raw: Record<string, unknown>) => Record<string, unknown> | null;
 
   if (site === 'homegate') {
+    if (!config.APIFY_TOKEN) {
+      logger.fatal('APIFY_TOKEN is required for Homegate scraping. Set it in .env');
+      process.exit(1);
+    }
     const client = new ApifyClient({ token: config.APIFY_TOKEN });
     adapter = new HomegateAdapter(client, logger);
     normalize = normalizeHomegate;
+  } else if (site === 'flatfox') {
+    adapter = new FlatfoxAdapter(logger);
+    normalize = normalizeFlatfox;
   } else {
     logger.fatal({ site }, 'Unknown site');
     process.exit(1);
@@ -48,18 +57,26 @@ async function main(): Promise<void> {
 
   // Step 1: Scrape raw records
   const rawRecords = await adapter.scrape({ dryRun });
-  logger.info({ count: rawRecords.length }, 'Raw records fetched from Apify');
+  logger.info({ count: rawRecords.length }, 'Raw records fetched');
 
   // Step 2: Normalize + Validate
   const valid: PropertyListing[] = [];
   const rejectionSummary: Record<string, number> = {};
+  let filtered = 0;
+  let rejected = 0;
 
   for (const [i, raw] of rawRecords.entries()) {
     const normalized = normalize(raw);
+    if (normalized === null) {
+      // Filtered out by normalizer (e.g., non-residential FlatFox listing)
+      filtered++;
+      continue;
+    }
     const result = PropertyListingSchema.safeParse(normalized);
     if (result.success) {
       valid.push(result.data);
     } else {
+      rejected++;
       // Log each rejection as a warning (per user decision)
       const issues = result.error.issues.map((iss) => iss.message);
       logger.warn({ index: i, issues }, 'Record rejected by schema validation');
@@ -75,8 +92,9 @@ async function main(): Promise<void> {
   logger.info(
     {
       total: rawRecords.length,
+      filtered,
       valid: valid.length,
-      rejected: rawRecords.length - valid.length,
+      rejected,
       rejectionDetails: rejectionSummary,
     },
     'Validation summary',
