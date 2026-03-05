@@ -26,7 +26,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Site Integrations
 
-- [ ] **SITE-01**: Homegate scraper via Apify actor retrieves property listings (target ~1000 listings)
+- [x] **SITE-01**: Homegate scraper via Apify actor retrieves property listings (target ~1000 listings)
 - [ ] **SITE-02**: FlatFox scraper via official REST API retrieves property listings (target ~1000 listings)
 
 ### Scheduling & Operations
@@ -103,7 +103,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCRP-02 | Phase 1 | Complete |
 | SCRP-03 | Phase 1 | Pending |
 | SCRP-04 | Phase 1 | Complete |
-| SITE-01 | Phase 1 | Pending |
+| SITE-01 | Phase 1 | Complete |
 | SITE-02 | Phase 2 | Pending |
 | OPS-01 | Phase 2 | Pending |
 | OPS-02 | Phase 2 | Pending |
