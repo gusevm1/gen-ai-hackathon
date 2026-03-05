@@ -9,9 +9,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Project Setup
 
-- [ ] **SETUP-01**: Project initialized with package.json, tsconfig.json, ESLint, and .env/.env.example
-- [ ] **SETUP-02**: Pino-based structured logging with configurable log levels
-- [ ] **SETUP-03**: Config loader validates required environment variables at startup (fail fast on missing APIFY_TOKEN)
+- [x] **SETUP-01**: Project initialized with package.json, tsconfig.json, ESLint, and .env/.env.example
+- [x] **SETUP-02**: Pino-based structured logging with configurable log levels
+- [x] **SETUP-03**: Config loader validates required environment variables at startup (fail fast on missing APIFY_TOKEN)
 - [ ] **SETUP-04**: EC2 instance provisioned (t3.large, 50GB EBS gp3, eu-central-1)
 - [ ] **SETUP-05**: EC2 setup script installs Node.js 22, Chromium dependencies, and project dependencies
 - [ ] **SETUP-06**: Git repo cloned on EC2 with deploy workflow (SSH + git pull)
@@ -19,10 +19,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Scraping Infrastructure
 
-- [ ] **SCRP-01**: PropertyListing TypeScript interface defines unified schema for all scraped listings
-- [ ] **SCRP-02**: Scraper adapter interface allows both Apify-backed and direct API scrapers
+- [x] **SCRP-01**: PropertyListing TypeScript interface defines unified schema for all scraped listings
+- [x] **SCRP-02**: Scraper adapter interface allows both Apify-backed and direct API scrapers
 - [ ] **SCRP-03**: Scraped data stored as files in `data/{site}/{YYYY-MM-DD_HHMMSS}/` directories
-- [ ] **SCRP-04**: Swiss number parser handles apostrophe thousands separators (`CHF 1'200'000` -> `1200000`) and decimal rooms (`3.5 Zimmer` -> `3.5`)
+- [x] **SCRP-04**: Swiss number parser handles apostrophe thousands separators (`CHF 1'200'000` -> `1200000`) and decimal rooms (`3.5 Zimmer` -> `3.5`)
 
 ### Site Integrations
 
@@ -39,7 +39,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data Quality
 
-- [ ] **QUAL-01**: Zod schema validation on every scraped record before storage
+- [x] **QUAL-01**: Zod schema validation on every scraped record before storage
 - [ ] **QUAL-02**: Alert if >20% of listings in a run have null prices or null rooms
 - [ ] **QUAL-03**: Within-site listing deduplication using listing URL as primary key
 
@@ -92,17 +92,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SETUP-01 | Phase 1 | Pending |
-| SETUP-02 | Phase 1 | Pending |
-| SETUP-03 | Phase 1 | Pending |
+| SETUP-01 | Phase 1 | Complete |
+| SETUP-02 | Phase 1 | Complete |
+| SETUP-03 | Phase 1 | Complete |
 | SETUP-04 | Phase 3 | Pending |
 | SETUP-05 | Phase 3 | Pending |
 | SETUP-06 | Phase 3 | Pending |
 | SETUP-07 | Phase 3 | Pending |
-| SCRP-01 | Phase 1 | Pending |
-| SCRP-02 | Phase 1 | Pending |
+| SCRP-01 | Phase 1 | Complete |
+| SCRP-02 | Phase 1 | Complete |
 | SCRP-03 | Phase 1 | Pending |
-| SCRP-04 | Phase 1 | Pending |
+| SCRP-04 | Phase 1 | Complete |
 | SITE-01 | Phase 1 | Pending |
 | SITE-02 | Phase 2 | Pending |
 | OPS-01 | Phase 2 | Pending |
@@ -110,7 +110,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPS-03 | Phase 3 | Pending |
 | OPS-04 | Phase 3 | Pending |
 | OPS-05 | Phase 2 | Pending |
-| QUAL-01 | Phase 1 | Pending |
+| QUAL-01 | Phase 1 | Complete |
 | QUAL-02 | Phase 3 | Pending |
 | QUAL-03 | Phase 3 | Pending |
 

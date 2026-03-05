@@ -28,11 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Swiss-format numbers in the raw data (e.g., `CHF 1'200'000`, `3.5 Zimmer`) are correctly parsed to numeric values in the output
   4. The application fails fast at startup if APIFY_TOKEN is missing from the environment
   5. Structured JSON logs (via Pino) are emitted during the scrape showing progress, record counts, and any validation failures
-**Plans**: TBD
+**Plans**: 2
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01: Project Foundation + Core Types + Utilities (Wave 1)
+- [ ] 01-02: Homegate Scraper + Pipeline Wiring (Wave 2)
 
 ### Phase 2: Second Scraper + Scheduling
 **Goal**: The application scrapes both Homegate (Apify) and FlatFox (REST API) on a configurable daily schedule without manual intervention, with lock-file protection preventing overlapping runs
