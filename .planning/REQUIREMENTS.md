@@ -22,7 +22,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **SCRP-01**: PropertyListing TypeScript interface defines unified schema for all scraped listings
 - [ ] **SCRP-02**: Scraper adapter interface allows both Apify-backed and direct API scrapers
 - [ ] **SCRP-03**: Scraped data stored as files in `data/{site}/{YYYY-MM-DD_HHMMSS}/` directories
-- [ ] **SCRP-04**: Swiss number parser handles apostrophe thousands separators (`CHF 1'200'000` → `1200000`) and decimal rooms (`3.5 Zimmer` → `3.5`)
+- [ ] **SCRP-04**: Swiss number parser handles apostrophe thousands separators (`CHF 1'200'000` -> `1200000`) and decimal rooms (`3.5 Zimmer` -> `3.5`)
 
 ### Site Integrations
 
@@ -76,14 +76,14 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Feature | Reason |
 |---------|--------|
-| Investment analysis / yield calculations | Future milestone — analysis layer, not scraping |
+| Investment analysis / yield calculations | Future milestone -- analysis layer, not scraping |
 | User-facing frontend | Future milestone |
-| API endpoints for querying data | Future milestone — raw JSON sufficient for data collection |
+| API endpoints for querying data | Future milestone -- raw JSON sufficient for data collection |
 | Image downloading from listings | Disk space and licensing concerns |
 | NLP on listing descriptions | Analysis layer, not scraping layer |
 | Real-time scraping / webhooks | Daily cadence sufficient for real estate |
-| Agency sites (17 small sites) | Diminishing returns — hours of dev for hundreds of listings each |
-| Alle-Immobilien / ImmoStreet | SMG subsidiaries — listings overlap with Homegate/ImmoScout24 |
+| Agency sites (17 small sites) | Diminishing returns -- hours of dev for hundreds of listings each |
+| Alle-Immobilien / ImmoStreet | SMG subsidiaries -- listings overlap with Homegate/ImmoScout24 |
 | Mobile app | Web-first |
 
 ## Traceability
@@ -92,33 +92,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SETUP-01 | — | Pending |
-| SETUP-02 | — | Pending |
-| SETUP-03 | — | Pending |
-| SETUP-04 | — | Pending |
-| SETUP-05 | — | Pending |
-| SETUP-06 | — | Pending |
-| SETUP-07 | — | Pending |
-| SCRP-01 | — | Pending |
-| SCRP-02 | — | Pending |
-| SCRP-03 | — | Pending |
-| SCRP-04 | — | Pending |
-| SITE-01 | — | Pending |
-| SITE-02 | — | Pending |
-| OPS-01 | — | Pending |
-| OPS-02 | — | Pending |
-| OPS-03 | — | Pending |
-| OPS-04 | — | Pending |
-| OPS-05 | — | Pending |
-| QUAL-01 | — | Pending |
-| QUAL-02 | — | Pending |
-| QUAL-03 | — | Pending |
+| SETUP-01 | Phase 1 | Pending |
+| SETUP-02 | Phase 1 | Pending |
+| SETUP-03 | Phase 1 | Pending |
+| SETUP-04 | Phase 3 | Pending |
+| SETUP-05 | Phase 3 | Pending |
+| SETUP-06 | Phase 3 | Pending |
+| SETUP-07 | Phase 3 | Pending |
+| SCRP-01 | Phase 1 | Pending |
+| SCRP-02 | Phase 1 | Pending |
+| SCRP-03 | Phase 1 | Pending |
+| SCRP-04 | Phase 1 | Pending |
+| SITE-01 | Phase 1 | Pending |
+| SITE-02 | Phase 2 | Pending |
+| OPS-01 | Phase 2 | Pending |
+| OPS-02 | Phase 2 | Pending |
+| OPS-03 | Phase 3 | Pending |
+| OPS-04 | Phase 3 | Pending |
+| OPS-05 | Phase 2 | Pending |
+| QUAL-01 | Phase 1 | Pending |
+| QUAL-02 | Phase 3 | Pending |
+| QUAL-03 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21 ⚠️
+- Mapped to phases: 21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after initial definition*
+*Last updated: 2026-03-05 after roadmap creation*
