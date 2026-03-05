@@ -68,10 +68,15 @@ Recent decisions affecting current work:
 
 None yet.
 
+### Roadmap Evolution
+
+- Phase 01.1 inserted after Phase 1: Build custom Homegate scraper actor on Apify (URGENT)
+  - Reason: Third-party actor `ecomscrape/homegate-property-search-scraper` requires $20/month rental fee, not covered by platform credits. Building our own actor uses only platform credits (sponsored by Apify for hackathon).
+
 ### Blockers/Concerns
 
 - Apify free-tier credit limits ($5/month) may be insufficient for daily scrapes of 1000+ listings -- verify during Phase 1 execution
-- Apify actor input schemas for Homegate actor need test call verification during Phase 1
+- ~~Apify actor input schemas for Homegate actor need test call verification during Phase 1~~ → Resolved: building own actor in Phase 01.1
 
 ## Session Continuity
 
