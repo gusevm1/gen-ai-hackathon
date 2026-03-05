@@ -1,9 +1,0 @@
-{
-  "actorSpecification": 1,
-  "name": "homegate-scraper",
-  "title": "Homegate Property Search Scraper",
-  "version": "0.1",
-  "buildTag": "latest",
-  "input": "./input_schema.json",
-  "dockerfile": "./Dockerfile"
-}
