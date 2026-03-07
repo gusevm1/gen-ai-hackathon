@@ -1,16 +1,23 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing';
-
-// Import the background script to register its listeners
-import '../entrypoints/background';
+import { handleInstalled } from '../entrypoints/background';
 
 describe('background onInstalled', () => {
   beforeEach(() => {
     fakeBrowser.reset();
+    vi.restoreAllMocks();
+    vi.spyOn(fakeBrowser.tabs, 'create');
+    vi.spyOn(fakeBrowser.runtime, 'getURL').mockImplementation(
+      (path: string) => `chrome-extension://test-id${path}`,
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('opens onboarding tab on first install', async () => {
-    await fakeBrowser.runtime.onInstalled.trigger({ reason: 'install' });
+    await handleInstalled({ reason: 'install' });
     expect(fakeBrowser.tabs.create).toHaveBeenCalledWith(
       expect.objectContaining({
         url: expect.stringContaining('onboarding.html'),
@@ -19,14 +26,12 @@ describe('background onInstalled', () => {
   });
 
   it('does NOT open onboarding tab on update', async () => {
-    await fakeBrowser.runtime.onInstalled.trigger({ reason: 'update' });
+    await handleInstalled({ reason: 'update' });
     expect(fakeBrowser.tabs.create).not.toHaveBeenCalled();
   });
 
   it('does NOT open onboarding tab on chrome_update', async () => {
-    await fakeBrowser.runtime.onInstalled.trigger({
-      reason: 'chrome_update',
-    });
+    await handleInstalled({ reason: 'chrome_update' });
     expect(fakeBrowser.tabs.create).not.toHaveBeenCalled();
   });
 });
