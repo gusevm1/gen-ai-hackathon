@@ -10,17 +10,17 @@ Requirements for hackathon MVP. Each maps to roadmap phases.
 ### Onboarding & Profile
 
 - [x] **ONBD-01**: User sees a full-page onboarding wizard on first install
-- [ ] **ONBD-02**: User can set location + radius preference (e.g., Stadelhofen + 50km)
-- [ ] **ONBD-03**: User can select buy or rent
-- [ ] **ONBD-04**: User can select property type (apartment, house, etc.)
-- [ ] **ONBD-05**: User can set budget range (min/max CHF)
-- [ ] **ONBD-06**: User can set rooms range (min/max)
-- [ ] **ONBD-07**: User can set living area range (min/max sqm)
-- [ ] **ONBD-08**: User can set year built range (Baujahr)
-- [ ] **ONBD-09**: User can select floor preference (Erdgeschoss vs not)
-- [ ] **ONBD-10**: User can set availability preference
-- [ ] **ONBD-11**: User can toggle features/furnishings (balcony, elevator, parking, Minergie, etc.)
-- [ ] **ONBD-12**: User can add custom soft-criteria text fields (e.g., "near Bahnhof", "low tax canton", "good schools")
+- [x] **ONBD-02**: User can set location + radius preference (e.g., Stadelhofen + 50km)
+- [x] **ONBD-03**: User can select buy or rent
+- [x] **ONBD-04**: User can select property type (apartment, house, etc.)
+- [x] **ONBD-05**: User can set budget range (min/max CHF)
+- [x] **ONBD-06**: User can set rooms range (min/max)
+- [x] **ONBD-07**: User can set living area range (min/max sqm)
+- [x] **ONBD-08**: User can set year built range (Baujahr)
+- [x] **ONBD-09**: User can select floor preference (Erdgeschoss vs not)
+- [x] **ONBD-10**: User can set availability preference
+- [x] **ONBD-11**: User can toggle features/furnishings (balcony, elevator, parking, Minergie, etc.)
+- [x] **ONBD-12**: User can add custom soft-criteria text fields (e.g., "near Bahnhof", "low tax canton", "good schools")
 - [x] **ONBD-13**: User can configure importance weights per category via sliders
 - [x] **ONBD-14**: User profile is stored as JSON in chrome.storage.local and persists across sessions
 
@@ -97,17 +97,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | ONBD-01 | Phase 1 | Complete |
-| ONBD-02 | Phase 1 | Pending |
-| ONBD-03 | Phase 1 | Pending |
-| ONBD-04 | Phase 1 | Pending |
-| ONBD-05 | Phase 1 | Pending |
-| ONBD-06 | Phase 1 | Pending |
-| ONBD-07 | Phase 1 | Pending |
-| ONBD-08 | Phase 1 | Pending |
-| ONBD-09 | Phase 1 | Pending |
-| ONBD-10 | Phase 1 | Pending |
-| ONBD-11 | Phase 1 | Pending |
-| ONBD-12 | Phase 1 | Pending |
+| ONBD-02 | Phase 1 | Complete |
+| ONBD-03 | Phase 1 | Complete |
+| ONBD-04 | Phase 1 | Complete |
+| ONBD-05 | Phase 1 | Complete |
+| ONBD-06 | Phase 1 | Complete |
+| ONBD-07 | Phase 1 | Complete |
+| ONBD-08 | Phase 1 | Complete |
+| ONBD-09 | Phase 1 | Complete |
+| ONBD-10 | Phase 1 | Complete |
+| ONBD-11 | Phase 1 | Complete |
+| ONBD-12 | Phase 1 | Complete |
 | ONBD-13 | Phase 1 | Complete |
 | ONBD-14 | Phase 1 | Complete |
 | EXTR-01 | Phase 2 | Pending |
