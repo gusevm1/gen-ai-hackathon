@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- WXT scaffold, dependencies, profile schema, storage layer, tests
+- [x] 01-01-PLAN.md -- WXT scaffold, dependencies, profile schema, storage layer, tests
 - [ ] 01-02-PLAN.md -- Step 1 Standard Filters form + Step 2 Soft Criteria form
 - [ ] 01-03-PLAN.md -- Weight redistribution hook + Step 3 Weight Allocation form
 - [ ] 01-04-PLAN.md -- Wizard shell wiring, popup dashboard, end-to-end verification
@@ -89,7 +89,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Onboarding | 0/4 | Planning complete | - |
+| 1. Foundation & Onboarding | 1/4 | In Progress | - |
 | 2. Data Extraction & Backend | 0/? | Not started | - |
 | 3. LLM Scoring Pipeline | 0/? | Not started | - |
 | 4. Score UI & Extension Polish | 0/? | Not started | - |
