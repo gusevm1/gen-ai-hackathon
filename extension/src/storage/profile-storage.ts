@@ -1,10 +1,16 @@
 import { storage } from 'wxt/utils/storage';
-import type { PreferenceProfile } from '../schema/profile';
+import type { PreferenceProfile, StepFiltersData, SoftCriterion } from '../schema/profile';
+
+export interface WizardPartialData {
+  filters?: StepFiltersData;
+  softCriteria?: SoftCriterion[];
+  weights?: Record<string, number>;
+}
 
 export interface WizardState {
   currentStep: number;
   completedSteps: number[];
-  partialData: Record<string, unknown>;
+  partialData: WizardPartialData;
 }
 
 export const profileStorage = storage.defineItem<PreferenceProfile | null>(
