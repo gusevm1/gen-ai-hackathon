@@ -29,11 +29,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can add free-text custom soft-criteria (e.g., "near Bahnhof", "low taxes") during onboarding
   4. User's complete preference profile persists in chrome.storage.local and survives browser restarts
   5. Extension loads on Homegate.ch without errors and the WXT scaffold supports content script, background worker, popup, and onboarding page entrypoints
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md -- WXT scaffold, dependencies, profile schema, storage layer, tests
+- [ ] 01-02-PLAN.md -- Step 1 Standard Filters form + Step 2 Soft Criteria form
+- [ ] 01-03-PLAN.md -- Weight redistribution hook + Step 3 Weight Allocation form
+- [ ] 01-04-PLAN.md -- Wizard shell wiring, popup dashboard, end-to-end verification
 
 ### Phase 2: Data Extraction & Backend
 **Goal**: Extension can invisibly fetch listing detail pages and extract structured data, and a secure EC2 backend is ready to proxy LLM requests
@@ -87,7 +89,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Onboarding | 0/? | Not started | - |
+| 1. Foundation & Onboarding | 0/4 | Planning complete | - |
 | 2. Data Extraction & Backend | 0/? | Not started | - |
 | 3. LLM Scoring Pipeline | 0/? | Not started | - |
 | 4. Score UI & Extension Polish | 0/? | Not started | - |
