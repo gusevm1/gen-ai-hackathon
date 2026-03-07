@@ -21,7 +21,7 @@ Requirements for hackathon MVP. Each maps to roadmap phases.
 - [ ] **ONBD-10**: User can set availability preference
 - [ ] **ONBD-11**: User can toggle features/furnishings (balcony, elevator, parking, Minergie, etc.)
 - [ ] **ONBD-12**: User can add custom soft-criteria text fields (e.g., "near Bahnhof", "low tax canton", "good schools")
-- [ ] **ONBD-13**: User can configure importance weights per category via sliders
+- [x] **ONBD-13**: User can configure importance weights per category via sliders
 - [x] **ONBD-14**: User profile is stored as JSON in chrome.storage.local and persists across sessions
 
 ### Data Extraction
@@ -108,7 +108,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ONBD-10 | Phase 1 | Pending |
 | ONBD-11 | Phase 1 | Pending |
 | ONBD-12 | Phase 1 | Pending |
-| ONBD-13 | Phase 1 | Pending |
+| ONBD-13 | Phase 1 | Complete |
 | ONBD-14 | Phase 1 | Complete |
 | EXTR-01 | Phase 2 | Pending |
 | EXTR-02 | Phase 2 | Pending |
