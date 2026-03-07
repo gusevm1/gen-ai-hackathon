@@ -12,7 +12,7 @@ HomeMatch v1.0 delivers a working Chrome extension on Homegate.ch that onboards 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Onboarding** - WXT scaffold, manifest, storage schema, full-page onboarding wizard, and preference profile persistence
+- [x] **Phase 1: Foundation & Onboarding** - WXT scaffold, manifest, storage schema, full-page onboarding wizard, and preference profile persistence
 - [ ] **Phase 2: Data Extraction & Backend** - Background fetch of Homegate listing detail pages, __INITIAL_STATE__ parsing, and EC2 Hono proxy setup
 - [ ] **Phase 3: LLM Scoring Pipeline** - Claude-powered evaluation of listings against user profile with weighted categories and multilingual output
 - [ ] **Phase 4: Score UI & Extension Polish** - Badge injection on search results, progressive loading, expandable breakdown panel, and extension popup dashboard
@@ -33,9 +33,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md -- WXT scaffold, dependencies, profile schema, storage layer, tests
-- [ ] 01-02-PLAN.md -- Step 1 Standard Filters form + Step 2 Soft Criteria form
-- [ ] 01-03-PLAN.md -- Weight redistribution hook + Step 3 Weight Allocation form
-- [ ] 01-04-PLAN.md -- Wizard shell wiring, popup dashboard, end-to-end verification
+- [x] 01-02-PLAN.md -- Step 1 Standard Filters form + Step 2 Soft Criteria form
+- [x] 01-03-PLAN.md -- Weight redistribution hook + Step 3 Weight Allocation form
+- [x] 01-04-PLAN.md -- Wizard shell wiring, popup dashboard, end-to-end verification
 
 ### Phase 2: Data Extraction & Backend
 **Goal**: Extension can invisibly fetch listing detail pages and extract structured data, and a secure EC2 backend is ready to proxy LLM requests
@@ -89,7 +89,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Onboarding | 1/4 | In Progress | - |
+| 1. Foundation & Onboarding | 4/4 | Complete | 2026-03-07 |
 | 2. Data Extraction & Backend | 0/? | Not started | - |
 | 3. LLM Scoring Pipeline | 0/? | Not started | - |
 | 4. Score UI & Extension Polish | 0/? | Not started | - |
