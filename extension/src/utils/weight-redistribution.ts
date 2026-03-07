@@ -29,12 +29,12 @@ export function redistributeWeights(
     // Edge case: all others are 0, distribute remaining equally
     const equalShare = remaining / otherKeys.length;
     otherKeys.forEach((k) => {
-      result[k] = Math.round(equalShare * 10) / 10;
+      result[k] = Math.max(0, Math.round(equalShare * 10) / 10);
     });
   } else {
     // Proportional redistribution
     otherKeys.forEach((k) => {
-      result[k] = Math.round(((weights[k] / otherSum) * remaining) * 10) / 10;
+      result[k] = Math.max(0, Math.round(((weights[k] / otherSum) * remaining) * 10) / 10);
     });
   }
 
@@ -42,7 +42,8 @@ export function redistributeWeights(
   const total = Object.values(result).reduce((s, v) => s + v, 0);
   const roundedTotal = Math.round(total * 10) / 10;
   if (roundedTotal !== 100 && otherKeys.length > 0) {
-    result[otherKeys[0]] = Math.round((result[otherKeys[0]] + (100 - roundedTotal)) * 10) / 10;
+    const adjusted = Math.round((result[otherKeys[0]] + (100 - roundedTotal)) * 10) / 10;
+    result[otherKeys[0]] = Math.max(0, adjusted);
   }
 
   return result;

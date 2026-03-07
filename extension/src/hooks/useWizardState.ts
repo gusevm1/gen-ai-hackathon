@@ -36,9 +36,24 @@ export function useWizardState(): UseWizardStateReturn {
 
         // Restore wizard state
         const state = await wizardStateStorage.getValue();
-        if (state) {
+        if (state && state.partialData && Object.keys(state.partialData).length > 0) {
           setCurrentStep(state.currentStep);
           setPartialData(state.partialData);
+        } else if (existingProfile) {
+          // Edit mode with cleared wizard state — decompose saved profile into step data
+          const { schemaVersion, softCriteria, weights, createdAt, updatedAt, ...filters } = existingProfile;
+          const restored: WizardPartialData = {
+            filters: Object.keys(filters).length > 0 ? filters as StepFiltersData : undefined,
+            softCriteria: softCriteria?.length ? softCriteria : undefined,
+            weights: weights && Object.keys(weights).length > 0 ? weights : undefined,
+          };
+          setPartialData(restored);
+          // Persist so subsequent navigations work
+          await wizardStateStorage.setValue({
+            currentStep: 0,
+            completedSteps: [0, 1, 2],
+            partialData: restored,
+          });
         }
       } finally {
         setIsLoading(false);
