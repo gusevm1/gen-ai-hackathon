@@ -96,43 +96,43 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ONBD-01 | — | Pending |
-| ONBD-02 | — | Pending |
-| ONBD-03 | — | Pending |
-| ONBD-04 | — | Pending |
-| ONBD-05 | — | Pending |
-| ONBD-06 | — | Pending |
-| ONBD-07 | — | Pending |
-| ONBD-08 | — | Pending |
-| ONBD-09 | — | Pending |
-| ONBD-10 | — | Pending |
-| ONBD-11 | — | Pending |
-| ONBD-12 | — | Pending |
-| ONBD-13 | — | Pending |
-| ONBD-14 | — | Pending |
-| EXTR-01 | — | Pending |
-| EXTR-02 | — | Pending |
-| EXTR-03 | — | Pending |
-| EVAL-01 | — | Pending |
-| EVAL-02 | — | Pending |
-| EVAL-03 | — | Pending |
-| EVAL-04 | — | Pending |
-| EVAL-05 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
-| UI-05 | — | Pending |
-| UI-06 | — | Pending |
-| BACK-01 | — | Pending |
-| BACK-02 | — | Pending |
-| BACK-03 | — | Pending |
+| ONBD-01 | Phase 1 | Pending |
+| ONBD-02 | Phase 1 | Pending |
+| ONBD-03 | Phase 1 | Pending |
+| ONBD-04 | Phase 1 | Pending |
+| ONBD-05 | Phase 1 | Pending |
+| ONBD-06 | Phase 1 | Pending |
+| ONBD-07 | Phase 1 | Pending |
+| ONBD-08 | Phase 1 | Pending |
+| ONBD-09 | Phase 1 | Pending |
+| ONBD-10 | Phase 1 | Pending |
+| ONBD-11 | Phase 1 | Pending |
+| ONBD-12 | Phase 1 | Pending |
+| ONBD-13 | Phase 1 | Pending |
+| ONBD-14 | Phase 1 | Pending |
+| EXTR-01 | Phase 2 | Pending |
+| EXTR-02 | Phase 2 | Pending |
+| EXTR-03 | Phase 2 | Pending |
+| EVAL-01 | Phase 3 | Pending |
+| EVAL-02 | Phase 3 | Pending |
+| EVAL-03 | Phase 3 | Pending |
+| EVAL-04 | Phase 3 | Pending |
+| EVAL-05 | Phase 3 | Pending |
+| UI-01 | Phase 4 | Pending |
+| UI-02 | Phase 4 | Pending |
+| UI-03 | Phase 4 | Pending |
+| UI-04 | Phase 4 | Pending |
+| UI-05 | Phase 4 | Pending |
+| UI-06 | Phase 4 | Pending |
+| BACK-01 | Phase 2 | Pending |
+| BACK-02 | Phase 2 | Pending |
+| BACK-03 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 31 total
-- Mapped to phases: 0
-- Unmapped: 31 ⚠️
+- Mapped to phases: 31
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after initial definition*
+*Last updated: 2026-03-07 -- traceability updated with phase mappings*
