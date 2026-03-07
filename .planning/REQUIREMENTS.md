@@ -1,124 +1,138 @@
-# Requirements: Swiss Property Scraper
+# Requirements: HomeMatch
 
-**Defined:** 2026-03-05
-**Core Value:** Reliably collect and store comprehensive property listing data from Swiss real estate websites, building historical snapshots over time that enable downstream investment analysis.
+**Defined:** 2026-03-07
+**Core Value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website.
 
 ## v1 Requirements
 
-Requirements for initial release. Each maps to roadmap phases.
+Requirements for hackathon MVP. Each maps to roadmap phases.
 
-### Project Setup
+### Onboarding & Profile
 
-- [x] **SETUP-01**: Project initialized with package.json, tsconfig.json, ESLint, and .env/.env.example
-- [x] **SETUP-02**: Pino-based structured logging with configurable log levels
-- [x] **SETUP-03**: Config loader validates required environment variables at startup (fail fast on missing APIFY_TOKEN)
-- [ ] **SETUP-04**: EC2 instance provisioned (t3.large, 50GB EBS gp3, eu-central-1)
-- [ ] **SETUP-05**: EC2 setup script installs Node.js 22, Chromium dependencies, and project dependencies
-- [ ] **SETUP-06**: Git repo cloned on EC2 with deploy workflow (SSH + git pull)
-- [ ] **SETUP-07**: Application runs as a persistent process on EC2 (PM2 or systemd service)
+- [ ] **ONBD-01**: User sees a full-page onboarding wizard on first install
+- [ ] **ONBD-02**: User can set location + radius preference (e.g., Stadelhofen + 50km)
+- [ ] **ONBD-03**: User can select buy or rent
+- [ ] **ONBD-04**: User can select property type (apartment, house, etc.)
+- [ ] **ONBD-05**: User can set budget range (min/max CHF)
+- [ ] **ONBD-06**: User can set rooms range (min/max)
+- [ ] **ONBD-07**: User can set living area range (min/max sqm)
+- [ ] **ONBD-08**: User can set year built range (Baujahr)
+- [ ] **ONBD-09**: User can select floor preference (Erdgeschoss vs not)
+- [ ] **ONBD-10**: User can set availability preference
+- [ ] **ONBD-11**: User can toggle features/furnishings (balcony, elevator, parking, Minergie, etc.)
+- [ ] **ONBD-12**: User can add custom soft-criteria text fields (e.g., "near Bahnhof", "low tax canton", "good schools")
+- [ ] **ONBD-13**: User can configure importance weights per category via sliders
+- [ ] **ONBD-14**: User profile is stored as JSON in chrome.storage.local and persists across sessions
 
-### Scraping Infrastructure
+### Data Extraction
 
-- [x] **SCRP-01**: PropertyListing TypeScript interface defines unified schema for all scraped listings
-- [x] **SCRP-02**: Scraper adapter interface allows both Apify-backed and direct API scrapers
-- [x] **SCRP-03**: Scraped data stored as files in `data/{site}/{YYYY-MM-DD_HHMMSS}/` directories
-- [x] **SCRP-04**: Swiss number parser handles apostrophe thousands separators (`CHF 1'200'000` -> `1200000`) and decimal rooms (`3.5 Zimmer` -> `3.5`)
+- [ ] **EXTR-01**: Extension background worker fetches listing detail pages without opening visible tabs
+- [ ] **EXTR-02**: Extension extracts listing data from Homegate's `__INITIAL_STATE__` JSON
+- [ ] **EXTR-03**: Fetches are throttled to 2-3 concurrent requests to avoid rate limiting
 
-### Site Integrations
+### LLM Scoring
 
-- [x] **SITE-01**: Homegate scraper via Apify actor retrieves property listings (target ~1000 listings)
-- [x] **SITE-02**: FlatFox scraper via official REST API retrieves property listings (target ~1000 listings)
+- [ ] **EVAL-01**: Each listing is evaluated by Claude against the user's preference profile and weights
+- [ ] **EVAL-02**: Evaluation returns a percentage match score with weighted category breakdown
+- [ ] **EVAL-03**: Each category includes bullet-point reasoning with references to listing description text
+- [ ] **EVAL-04**: Evaluation explicitly states "I don't know" for data points not available in the listing
+- [ ] **EVAL-05**: Analysis is returned in the listing's language (DE/FR/IT)
 
-### Scheduling & Operations
+### Extension UI
 
-- [ ] **OPS-01**: node-cron scheduler runs scrapers on configurable daily cadence
-- [ ] **OPS-02**: Lock-file prevents overlapping scraper runs
-- [ ] **OPS-03**: Health endpoint (GET /health) returns service status, last run time, and per-site listing counts
-- [ ] **OPS-04**: Email notifications on scraper failures (via AWS SES, reuse existing API keys)
-- [ ] **OPS-05**: Run metadata stored per scrape (_run_meta.json with listing count, duration, status)
+- [ ] **UI-01**: Score badge (percentage + match label) is injected next to each listing on Homegate search results
+- [ ] **UI-02**: Loading skeleton badges appear immediately while scores are being computed
+- [ ] **UI-03**: Scores appear progressively as each LLM call resolves
+- [ ] **UI-04**: User can click a score badge to expand an inline analysis panel with category breakdowns
+- [ ] **UI-05**: Extension popup shows profile summary, on/off toggle, and edit preferences link
+- [ ] **UI-06**: Weights are adjustable from extension settings after onboarding
 
-### Data Quality
+### Backend
 
-- [x] **QUAL-01**: Zod schema validation on every scraped record before storage
-- [ ] **QUAL-02**: Alert if >20% of listings in a run have null prices or null rooms
-- [ ] **QUAL-03**: Within-site listing deduplication using listing URL as primary key
+- [ ] **BACK-01**: Thin EC2 backend receives listing data + user profile and proxies to Claude API
+- [ ] **BACK-02**: Backend keeps API keys secure (not exposed in extension)
+- [ ] **BACK-03**: Backend returns structured scoring response (percentage, categories, reasoning)
 
 ## v2 Requirements
 
-Deferred to future release. Tracked but not in current roadmap.
+Deferred to future milestone. Tracked but not in current roadmap.
 
-### Additional Sites
+### Filter Integration
 
-- **SITE-03**: ImmoScout24 via Apify actor (84K+ listings, same actor author as Homegate)
-- **SITE-04**: Comparis via Apify actor (community actor, needs reliability verification)
-- **SITE-05**: JamesEdition via Apify actor (luxury segment)
-- **SITE-06**: RealAdvisor custom Crawlee scraper (Next.js SSR)
-- **SITE-07**: Newhome custom scraper (requires PlaywrightCrawler, 403 on basic fetch)
+- **FILT-01**: Extension pre-fills Homegate filter fields from user profile preferences
+- **FILT-02**: Filter pre-fill works after Homegate SPA navigation (not just page load)
 
-### Data Intelligence
+### Caching & Performance
 
-- **DATA-01**: Listing change detection (diff consecutive runs: new listings, price drops, removals)
-- **DATA-02**: Cross-site deduplication (fuzzy address matching)
-- **DATA-03**: Historical price trend analysis per listing
+- **PERF-01**: Scores are cached by listing ID + profile hash with configurable TTL
+- **PERF-02**: Cache invalidates automatically when user profile changes
 
-### Operations
+### Multi-Profile
 
-- **OPS-06**: Data retention policy (compress runs older than 7 days)
-- **OPS-07**: Scrape metrics dashboard in health endpoint
-- **OPS-08**: FADP-compliant personal data separation at scrape time
+- **MULT-01**: User can create and switch between multiple preference profiles
+- **MULT-02**: Each profile has its own name and independent preferences/weights
 
-### Infrastructure
+### Cross-Portal
 
-- **INFRA-01**: Database migration (PostgreSQL or SQLite for structured queries)
-- **INFRA-02**: CI/CD pipeline (GitHub Actions for lint + test + deploy)
+- **PORT-01**: Extension supports ImmoScout24.ch with site-specific adapter
+- **PORT-02**: Extension supports Comparis.ch with site-specific adapter
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Investment analysis / yield calculations | Future milestone -- analysis layer, not scraping |
-| User-facing frontend | Future milestone |
-| API endpoints for querying data | Future milestone -- raw JSON sufficient for data collection |
-| Image downloading from listings | Disk space and licensing concerns |
-| NLP on listing descriptions | Analysis layer, not scraping layer |
-| Real-time scraping / webhooks | Daily cadence sufficient for real estate |
-| Agency sites (17 small sites) | Diminishing returns -- hours of dev for hundreds of listings each |
-| Alle-Immobilien / ImmoStreet | SMG subsidiaries -- listings overlap with Homegate/ImmoScout24 |
-| Mobile app | Web-first |
+| Image/photo analysis | Token cost and latency prohibitive for v1; text-only evaluation |
+| User accounts / authentication | Profile lives in extension storage; no server-side user management |
+| Historical price tracking | Requires database infrastructure; not core to match scoring |
+| Push notifications for new listings | MV3 service workers can't run without open tab; needs separate service |
+| Save/bookmark listings | Homegate has its own saved listings; no need to duplicate |
+| Auto-scroll/auto-load all pages | Appears as bot traffic; risks IP blocking |
+| Streaming typewriter effect | <3s responses don't benefit from streaming; adds complexity |
+| Mobile app | Chrome extension only for v1 |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap rework.
+Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SETUP-01 | Phase 1 | Complete |
-| SETUP-02 | Phase 1 | Complete |
-| SETUP-03 | Phase 1 | Complete |
-| SETUP-04 | Phase 3 | Pending |
-| SETUP-05 | Phase 3 | Pending |
-| SETUP-06 | Phase 3 | Pending |
-| SETUP-07 | Phase 3 | Pending |
-| SCRP-01 | Phase 1 | Complete |
-| SCRP-02 | Phase 1 | Complete |
-| SCRP-03 | Phase 2 | Complete |
-| SCRP-04 | Phase 1 | Complete |
-| SITE-01 | Phase 4 | Paused (DataDome) |
-| SITE-02 | Phase 2 | Complete |
-| OPS-01 | Phase 3 | Pending |
-| OPS-02 | Phase 3 | Pending |
-| OPS-03 | Phase 5 | Pending |
-| OPS-04 | Phase 5 | Pending |
-| OPS-05 | Phase 3 | Pending |
-| QUAL-01 | Phase 1 | Complete |
-| QUAL-02 | Phase 5 | Pending |
-| QUAL-03 | Phase 5 | Pending |
+| ONBD-01 | — | Pending |
+| ONBD-02 | — | Pending |
+| ONBD-03 | — | Pending |
+| ONBD-04 | — | Pending |
+| ONBD-05 | — | Pending |
+| ONBD-06 | — | Pending |
+| ONBD-07 | — | Pending |
+| ONBD-08 | — | Pending |
+| ONBD-09 | — | Pending |
+| ONBD-10 | — | Pending |
+| ONBD-11 | — | Pending |
+| ONBD-12 | — | Pending |
+| ONBD-13 | — | Pending |
+| ONBD-14 | — | Pending |
+| EXTR-01 | — | Pending |
+| EXTR-02 | — | Pending |
+| EXTR-03 | — | Pending |
+| EVAL-01 | — | Pending |
+| EVAL-02 | — | Pending |
+| EVAL-03 | — | Pending |
+| EVAL-04 | — | Pending |
+| EVAL-05 | — | Pending |
+| UI-01 | — | Pending |
+| UI-02 | — | Pending |
+| UI-03 | — | Pending |
+| UI-04 | — | Pending |
+| UI-05 | — | Pending |
+| UI-06 | — | Pending |
+| BACK-01 | — | Pending |
+| BACK-02 | — | Pending |
+| BACK-03 | — | Pending |
 
 **Coverage:**
-- v1 requirements: 21 total
-- Mapped to phases: 21
-- Unmapped: 0
+- v1 requirements: 31 total
+- Mapped to phases: 0
+- Unmapped: 31 ⚠️
 
 ---
-*Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after roadmap rework (FlatFox-first pivot)*
+*Requirements defined: 2026-03-07*
+*Last updated: 2026-03-07 after initial definition*
