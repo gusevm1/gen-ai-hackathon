@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useWizardState } from '@/hooks/useWizardState';
 import { useProfile } from '@/hooks/useProfile';
+import { wizardStateStorage } from '@/storage/profile-storage';
 import { toggleTheme, themeStorage } from '@/lib/theme';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -104,14 +105,18 @@ export function WizardShell({ isEditMode = false }: WizardShellProps) {
   const handleWeightsComplete = async (weights: Record<string, number>) => {
     await wizard.saveStepData(2, weights);
 
+    // Read authoritative data from storage (not React state which can be stale)
+    const stored = await wizardStateStorage.getValue();
+    const storedPartial = stored?.partialData ?? {};
+
     // Assemble full profile
     const now = new Date().toISOString();
     const fullProfile: PreferenceProfile = {
       schemaVersion: 1,
       // Step 1 data
-      ...wizard.partialData.filters,
+      ...storedPartial.filters,
       // Step 2 data
-      softCriteria: wizard.partialData.softCriteria ?? [],
+      softCriteria: storedPartial.softCriteria ?? [],
       // Step 3 data
       weights,
       // Metadata
