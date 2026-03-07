@@ -9,7 +9,7 @@ Requirements for hackathon MVP. Each maps to roadmap phases.
 
 ### Onboarding & Profile
 
-- [ ] **ONBD-01**: User sees a full-page onboarding wizard on first install
+- [x] **ONBD-01**: User sees a full-page onboarding wizard on first install
 - [ ] **ONBD-02**: User can set location + radius preference (e.g., Stadelhofen + 50km)
 - [ ] **ONBD-03**: User can select buy or rent
 - [ ] **ONBD-04**: User can select property type (apartment, house, etc.)
@@ -22,7 +22,7 @@ Requirements for hackathon MVP. Each maps to roadmap phases.
 - [ ] **ONBD-11**: User can toggle features/furnishings (balcony, elevator, parking, Minergie, etc.)
 - [ ] **ONBD-12**: User can add custom soft-criteria text fields (e.g., "near Bahnhof", "low tax canton", "good schools")
 - [ ] **ONBD-13**: User can configure importance weights per category via sliders
-- [ ] **ONBD-14**: User profile is stored as JSON in chrome.storage.local and persists across sessions
+- [x] **ONBD-14**: User profile is stored as JSON in chrome.storage.local and persists across sessions
 
 ### Data Extraction
 
@@ -96,7 +96,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ONBD-01 | Phase 1 | Pending |
+| ONBD-01 | Phase 1 | Complete |
 | ONBD-02 | Phase 1 | Pending |
 | ONBD-03 | Phase 1 | Pending |
 | ONBD-04 | Phase 1 | Pending |
@@ -109,7 +109,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ONBD-11 | Phase 1 | Pending |
 | ONBD-12 | Phase 1 | Pending |
 | ONBD-13 | Phase 1 | Pending |
-| ONBD-14 | Phase 1 | Pending |
+| ONBD-14 | Phase 1 | Complete |
 | EXTR-01 | Phase 2 | Pending |
 | EXTR-02 | Phase 2 | Pending |
 | EXTR-03 | Phase 2 | Pending |
