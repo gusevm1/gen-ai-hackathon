@@ -1,262 +1,189 @@
 # Project Research Summary
 
-**Project:** Swiss Property Scraper
-**Domain:** Multi-site web scraping infrastructure for Swiss real estate listings
-**Researched:** 2026-03-05
-**Confidence:** HIGH
+**Project:** HomeMatch — AI-Powered Property Listing Scorer
+**Domain:** Chrome Extension (MV3) + LLM Proxy Backend + Third-Party Site Integration
+**Researched:** 2026-03-07
+**Confidence:** HIGH (stack verified via official docs and npm; architecture patterns verified against Chrome official docs)
 
 ## Executive Summary
 
-This project is a single-process Node.js scraping service that collects property listing data from 20+ Swiss real estate sites on a scheduled cadence, stores timestamped JSON snapshots on EC2, and exposes a health endpoint. The right way to build it is with a layered adapter architecture: use existing Apify Store actors for the two dominant platforms (Homegate, ImmoScout24), hit the FlatFox official REST API directly, and build Crawlee-based custom scrapers for remaining sites. This hybrid approach is the fastest path to meaningful data coverage while demonstrating technical breadth — Apify actors for proven sites, a real public API integration, and custom scrapers for everything else. The architecture mirrors a proven codebase (shoparoo-meals-backend) with a registry-driven adapter pattern that makes adding new sites a sub-30-minute task.
+HomeMatch is a Chrome Extension (Manifest V3) that injects AI-generated match score badges onto Homegate.ch property listing cards, evaluated against the user's stored preference profile. The stack is clear and well-defined: WXT 0.20 as the extension build framework, React 19 for UI components, Tailwind CSS v4 for Shadow DOM-compatible styling, a thin Hono 4.12 proxy on EC2 that holds the Anthropic API key and forwards requests to Claude, and `@wxt-dev/storage` for typed `chrome.storage.local` access. No database, no user accounts. The entire value chain is: user sets preferences once in an onboarding wizard, content script detects listing cards on Homegate, background service worker fetches each listing detail page and calls the LLM proxy, and scored badges appear progressively as results arrive.
 
-The recommended stack is deliberately minimal: Crawlee for scraping orchestration, node-cron for scheduling, Fastify for the health endpoint, Zod v4 for schema validation, and date-partitioned JSONL files for storage. There is no database, no Redis, no message queue. Every technology choice has a clear "why not the more complex alternative" answer, and those answers consistently point back to: single EC2 box, hackathon timeline, data collection phase only. The stack's complexity ceiling is correctly calibrated — it avoids BullMQ (needs Redis), PostgreSQL (premature), and Puppeteer-for-everything (resource-prohibitive).
+The recommended build order follows strict architectural dependencies: shared utilities first, then the onboarding/storage layer (no score can be generated without a profile), then the background service worker + data extraction from Homegate's `window.__INITIAL_STATE__` JSON, then LLM integration, then the badge injection UI. The backend can be developed in parallel with the extension and must be running before any end-to-end testing. The core loop — detect listing card, fetch detail, score against profile, render badge — must be solid before adding UX polish.
 
-The two highest-risk areas are data quality and legal compliance. Silent data corruption is the most dangerous failure mode: a scraper runs successfully, stores JSON, and the stored data is wrong — empty prices, null rooms, mismatched schemas from site changes — with no alert firing. Swiss FADP data protection law is a non-negotiable architectural constraint: agent contact data (phone, email, name) is personal data under nFADP and must be separated from property data at scrape time, not cleaned up later. Both risks have prevention strategies that must be built into Phase 1, not retrofitted.
+The primary risks are MV3 service worker lifecycle constraints (30s idle termination, 5-minute task limit), Homegate's anti-bot detection on background fetches, Claude API Tier 1 rate limits on burst scoring of 20+ listings, and content script CSS bleed-through on a third-party site. Every one of these has a well-understood mitigation: `chrome.storage.session` for in-flight state, `credentials: 'include'` with realistic headers for Homegate fetches, Anthropic prompt caching to reduce ITPM consumption, and Shadow DOM isolation with Tailwind CSS injected inside the shadow root. These mitigations must be designed in from Phase 1 — retroactive Shadow DOM refactors are expensive, and global state in service workers is a silent failure mode.
 
 ## Key Findings
 
 ### Recommended Stack
 
-See: `.planning/research/STACK.md`
-
-The stack is confident and internally consistent. Crawlee (`^3.16`) handles all scraping orchestration — it wraps both CheerioCrawler (HTTP, fast) and PlaywrightCrawler (browser, JS-rendering) under a single API, so switching between them is a one-import change. Most Swiss real estate sites embed listing data in `window.__INITIAL_STATE__` or `<script>` JSON tags, meaning CheerioCrawler handles them without launching a browser — dramatically faster and lower-memory. Playwright is the fallback for SPA sites. The Apify client (`apify-client`) calls cloud actors for Homegate and ImmoScout24, where proven actors already exist. node-cron is the correct scheduler choice over BullMQ: it is in-process, requires no Redis dependency, and is completely sufficient for a single EC2 box running 23 scrapers.
+The extension is built on WXT 0.20 (Vite-based, MV3-first, HMR for content scripts and popups), which ships ~43% smaller bundles than the alternative Plasmo and provides first-class abstractions for all extension contexts: popup, content scripts, background service worker, and unlisted full-page tabs (used for onboarding). Plasmo should be avoided — it appears to be in maintenance mode as of 2025 and uses the slower Parcel bundler. The backend is a single Hono route (`POST /score`) deployed on EC2 with Node.js 18+, using `@hono/node-server` and the official `@anthropic-ai/sdk`. The extension never holds the Anthropic API key; it lives in the EC2 environment only.
 
 **Core technologies:**
-- **Node.js 22.x LTS + TypeScript ~5.7:** Runtime and language — LTS, native TS strip support, team-familiar
-- **tsx:** TypeScript execution — 5-10x faster than ts-node, zero config, watch mode for dev
-- **Crawlee ^3.16:** Scraping framework — unified API for HTTP and browser crawlers, anti-bot fingerprinting, session management, request queuing built-in
-- **apify-client:** Apify integration — calls cloud actors for Homegate, ImmoScout24 (actors already built and maintained by ecomscrape)
-- **node-cron ^4.2:** Scheduling — lightweight, in-process, no Redis dependency
-- **Fastify ^5.7:** Health endpoint server — native TS, Pino logging built-in, 2-3x faster than Express
-- **Zod ^4.3:** Validation — TypeScript-first schema validation for both data and config, 14x faster than v3
-- **dotenv ^17.3:** Config — load environment variables, validate at startup
-
-**Storage pattern:** Date-partitioned JSONL files at `data/{site}/{YYYY-MM-DD_HHMMSS}/listings.jsonl`. JSONL format (one listing per line) prevents inode exhaustion and enables incremental writes with crash recovery.
+- **WXT 0.20**: Extension build framework — file-based entrypoints, auto-generated MV3 manifest, HMR, `createShadowRootUi()` for injected UI isolation
+- **React 19.2**: UI rendering for popup, onboarding wizard, and injected badge components — first-class WXT integration via `@wxt-dev/module-react`
+- **TypeScript 5.x**: Type safety across all extension contexts and backend — prevents content-script/service-worker messaging mismatches
+- **Tailwind CSS v4**: Utility-first styling with native `:host` selector support — inject generated CSS into shadow root, not the host page
+- **@wxt-dev/storage 1.2**: Typed, promise-based wrapper for `chrome.storage.local` — works across popup, content scripts, and service worker contexts
+- **Hono 4.12 + @hono/node-server**: Thin EC2 proxy — ultralight (14 KB), streaming helper for SSE passthrough, built-in CORS middleware
+- **@anthropic-ai/sdk 0.78**: Official Claude client on the backend only — streaming, prompt caching, SSE support
+- **Zod 4 / @zod/mini**: Schema validation — `@zod/mini` in extension bundle (1.9 KB gzipped), full `zod` on backend
 
 ### Expected Features
 
-See: `.planning/research/FEATURES.md`
+The core value proposition rests on an unbroken dependency chain: Preference Profile → LLM Scoring → Score Badge Injection. Every other feature is either an enhancement to this chain or independent of it. The hackathon MVP must ship the full chain end-to-end; everything else is additive.
 
-**Site coverage tiers are the most critical finding for roadmap ordering:**
-- **Tier 1 (use Apify actors):** Homegate.ch (100K+ listings), ImmoScout24.ch (84K+ listings), FlatFox.ch (official public API — skip Apify entirely), Comparis.ch (Apify actor available), JamesEdition.com (Apify actor available)
-- **Tier 2 (custom scrapers needed):** RealAdvisor.ch (Next.js SSR), Newhome.ch (403 on basic fetch — needs browser), Alle-Immobilien.ch (WordPress, but significant overlap with Homegate/ImmoScout24 — lower priority)
-- **Tier 3 (agency sites):** Very low priority — tiny listing pools, high custom dev effort per site
+**Must have (table stakes) — all P1 for hackathon demo:**
+- **Score badge injection on listing cards** — core visible value; Shadow DOM required to survive Homegate CSS
+- **Onboarding wizard (full-page tab)** — no profile = no scores; must open on extension install
+- **Preference profile in chrome.storage.local** — foundation for everything; JSON blob, no server, no auth
+- **Background fetch of listing detail pages** — listing cards show minimal data; full description needed for LLM soft-criteria evaluation
+- **LLM evaluation via EC2 proxy** — Claude call with listing data + profile + weights + language instruction + "I don't know" instruction
+- **Loading skeleton badges** — appear immediately; prevents "is it broken?" confusion during 2-5s scoring latency
+- **Expandable score breakdown** — category scores + bullet reasoning + listing text citations; collapses on click
+- **Extension popup dashboard** — on/off toggle + profile summary + edit link
 
-**Critical SMG insight:** Homegate, ImmoScout24, FlatFox, Alle-Immobilien, and ImmoStreet are all owned by the same parent company (SMG Swiss Marketplace Group). Significant listing overlap means scraping Homegate + ImmoScout24 + FlatFox already covers the SMG ecosystem — Alle-Immobilien and ImmoStreet should be deprioritized.
-
-**Must have (table stakes):**
-- Multi-site scraping (minimum Homegate + ImmoScout24 + FlatFox to be useful)
-- Unified data schema (normalize `numberOfRooms` vs `number_of_rooms` vs `rooms` to one field)
-- Scheduled execution (daily cron — real estate listings persist for weeks, daily is sufficient)
-- Within-site listing deduplication (use listing URL as primary key per site)
-- Raw data persistence (JSONL files on EC2 with timestamps)
-- Error handling and retries (wrap actor calls in try/catch, log failures, continue other sites)
-- Comprehensive field extraction (use detail scrapers, not just search scrapers)
-- Health endpoint (single `GET /health` with last run status)
-
-**Should have (competitive/differentiator):**
-- Historical snapshot tracking (timestamped runs enable price-over-time analysis — core investment value)
-- FlatFox direct API integration (official REST API, no Apify needed, demonstrates technical versatility)
-- Listing change detection (diff consecutive runs: new listings, price changes, removals)
-- Apify actor + custom scraper hybrid approach (shows judges range of approaches)
-- Scrape metrics dashboard (success rates, listing counts per site, data quality scores)
+**Should have (competitive differentiators):**
+- **Configurable importance weights per category** — sliders/chips in onboarding; feed directly into LLM prompt weighting
+- **Progressive badge reveal** — badges appear one-by-one as each LLM call resolves (not all-or-nothing)
+- **Multi-language analysis** — prompt-level instruction only, no extra engineering; Claude handles DE/FR/IT natively
+- **Score cache with TTL** — cache scores by listing ID + profile hash in `chrome.storage.local`; reduces LLM cost on repeat visits
+- **Transparent citation of listing text** — LLM prompt instructs quoting relevant phrases from description; builds trust
 
 **Defer (v2+):**
-- Cross-site deduplication (requires fuzzy address matching — high complexity, high error rate)
-- Real-time scraping/webhooks (daily cadence is sufficient for real estate)
-- Image downloading (disk space and licensing concerns)
-- NLP on descriptions (analysis layer, not scraping layer)
-- Database migration (JSON files sufficient for data collection phase)
-- Agency sites / Tier 3 sites (diminishing returns)
+- Image analysis of listing photos — token cost and latency are prohibitive in v1
+- Multiple user profiles (broker use case) — breaks "no accounts" constraint
+- Cross-portal support (ImmoScout24, Comparis) — architecture extensible but do not build for v1
+- Push notifications for new listings — requires server-side monitoring, not feasible in MV3
 
 ### Architecture Approach
 
-See: `.planning/research/ARCHITECTURE.md`
-
-The architecture is a **single-process Node.js monolith** using a Strategy pattern for scraper adapters. The Scraper Registry holds all site configurations as a data array (similar to shoparoo's `STORES` array). A factory function resolves each config to the appropriate adapter: `ApifyScraperAdapter` wraps the ApifyClient call/wait/download pattern proven in shoparoo; `CustomAdapter` runs Crawlee-based crawlers locally. Both implement a common `ScraperAdapter` interface (`scrape(): Promise<ScrapeResult>`), so the Scheduler has no knowledge of adapter internals. Adding a new site means: create a `sites/{name}/transform.ts`, optionally a `sites/{name}/scraper.ts` for custom crawlers, and add one entry to `registry.ts`. No other files change.
+The architecture is a message-passing hub pattern: content scripts never make external requests, all network activity flows through the background service worker, and `chrome.storage.local` is the sole persistence layer that survives service worker termination. The content script's responsibility is DOM observation and badge rendering only. The service worker handles Homegate detail page fetching (parsing `window.__INITIAL_STATE__` JSON via regex — not DOMParser, which is unavailable in service workers), batched LLM proxy calls, and score caching. The EC2 backend is a pure stateless proxy: validate request, call Claude, return JSON.
 
 **Major components:**
-1. **Scheduler** — node-cron triggers sequential site scraping; holds run state for health endpoint; implements lock-file protection against overlapping runs
-2. **Scraper Registry** — central SITES config array; single place to add/enable/disable sites; maps site name to adapter type and input
-3. **Apify Adapter** — generic wrapper for `client.actor(id).call(input)` + `dataset(id).listItems()`; proven pattern from shoparoo
-4. **Custom Adapter** — base class for Crawlee-based scrapers (CheerioCrawler or PlaywrightCrawler); each site gets its own `scraper.ts`
-5. **Result Normalizer** — per-site `transform(raw): PropertyListing` function; maps raw API fields to unified schema; preserves `rawData` for re-processing
-6. **Storage Writer** — writes `listings.jsonl` + `_run_meta.json` to `data/{site}/{timestamp}/`; verifies write success; checks disk space before writing
-7. **Health Server** — Fastify server; single `GET /health` returning uptime, last run times, per-site status, next scheduled run
-
-**Build order matters:** Types → Storage → Apify Adapter → First Site Transform → Registry → Manual Test → Scheduler → Health Server → Additional Sites. Do not build the scheduler before one scraper works end-to-end.
+1. **Content Script** — MutationObserver for listing card detection, Shadow DOM badge injection, SPA navigation re-scan via `webNavigation.onHistoryStateUpdated`
+2. **Background Service Worker** — all external fetches (Homegate + EC2 proxy), message broker for content script requests, `chrome.storage.local` read/write for profile + score cache
+3. **Popup** — on/off toggle, profile summary, links to onboarding; reads `chrome.storage.local` directly
+4. **Onboarding Page (unlisted full-page tab)** — multi-step preference wizard, writes profile JSON to `chrome.storage.local` on completion
+5. **EC2 Backend (Hono)** — single `POST /score` route, holds Anthropic API key, validates CORS to `chrome-extension://` origin only
+6. **chrome.storage.local** — persistent state layer: userProfile, weights, scoreCache, extensionEnabled flag
 
 ### Critical Pitfalls
 
-See: `.planning/research/PITFALLS.md`
+1. **Service worker global state lost on termination** — Never store in-flight state in JS variables; use `chrome.storage.session` for ephemeral state, `chrome.storage.local` for persistent data. Register all event listeners at the top level of the service worker, not inside async callbacks.
 
-1. **IP banning (CRITICAL)** — Homegate blocks scrapers "after a few requests." Use Apify actors for the major aggregators (they handle proxy rotation internally). For any custom scraper, randomize delays (3-8 seconds with jitter, never uniform). Never run multiple scrapers against the same site concurrently. Build rate-limiting configuration per site from day one.
+2. **DOMParser unavailable in service worker** — Do not attempt to parse fetched Homegate HTML with `new DOMParser()`. Instead, extract `window.__INITIAL_STATE__` JSON from the raw HTML string using a regex match — this pattern is confirmed to work on Homegate's HTML structure.
 
-2. **Silent data corruption (CRITICAL)** — The scraper reports success but stored data is wrong (null prices, empty fields, CAPTCHA HTML stored as a listing). Prevent with: Zod schema validation on every scraped record before writing; alert if >20% of listings from a run have null prices; verify file size > 0 after every write. Swiss-specific: prices use apostrophe as thousands separator (`CHF 1'200'000`), rooms are decimals (`3.5 Zimmer`) — build a shared `parseSwissNumber()` utility from day one.
+3. **CSS leakage between extension and host page** — Wrap every injected UI element in Shadow DOM (`attachShadow({mode: 'open'})`). Add `all: initial` on the shadow host root element. Inject Tailwind CSS inside the shadow root, never into the host page's `<head>`. This must be designed in from Phase 1; retroactive refactors cost 2-4x as much.
 
-3. **Swiss FADP data protection violations (CRITICAL)** — Agent names, phone numbers, and emails are personal data under nFADP (effective September 2023). Criminal penalties up to CHF 250,000. Strip or hash personal data fields at scrape time; store in a separate file with access controls if needed. Never mix personal data with property data in the same JSON file. Document legal basis (likely "legitimate interest").
+4. **Content script doesn't re-execute on SPA navigation** — Homegate is a SPA using `history.pushState`. Use `MutationObserver` scoped narrowly to the results list container (not `document.body`) plus `chrome.webNavigation.onHistoryStateUpdated` in the service worker to detect route changes and re-trigger badge injection.
 
-4. **EC2 disk exhaustion (HIGH)** — At 23 sites, daily snapshots quickly fill the default 8GB EBS volume. Provision minimum 50GB. Use JSONL format (not one file per listing) to avoid inode exhaustion. Check disk space before each run; compress runs older than 7 days (gzip reduces JSON 80-90%).
-
-5. **Unreliable community Apify actors (HIGH)** — Community actors for Swiss sites have no SLA. Before integrating, verify: last update <30 days, rating >4 stars, run success rate >90%. Have a custom scraper fallback plan for every Apify-dependent site. The ecomscrape actors for Homegate and ImmoScout24 are the best candidates but must be monitored.
+5. **Claude API Tier 1 rate limits on burst scoring** — At Tier 1 (50 RPM, 30,000 ITPM), 20 listings at ~1,500 tokens each saturates the ITPM budget in one batch. Mitigation: use `cache_control: {"type": "ephemeral"}` on system prompt and user profile (cached tokens don't count toward ITPM); process listings in batches of 3 concurrent; add exponential backoff on 429 responses; upgrade to Tier 2 ($40 deposit) before demo.
 
 ## Implications for Roadmap
 
-Based on combined research, suggested phase structure:
+Based on the dependency graph in FEATURES.md, the build order in ARCHITECTURE.md, and the phase-to-pitfall mapping in PITFALLS.md, the following phase structure is strongly recommended. The core loop must be shipped vertically before any horizontal feature additions.
 
-### Phase 1: Foundation and First Scraper
+### Phase 1: Foundation — Shared Utilities, Manifest, and Content Script Skeleton
 
-**Rationale:** The architecture's dependency analysis is clear — you cannot build the scheduler before you have a working scraper, and you cannot have a working scraper without the types and storage layer. Validate the full pipeline with one real site before scaling. The build order from ARCHITECTURE.md is the correct phase 1 sequence.
+**Rationale:** Everything else imports from shared utilities; the manifest defines all extension contexts; the content script's Shadow DOM and SPA navigation patterns must be established before badge UI is built. Getting these wrong requires expensive retroactive refactors (especially Shadow DOM). PITFALLS.md flags four critical pitfalls that must be mitigated at this phase: service worker state design, Shadow DOM isolation, SPA navigation handling, and DOM selector abstraction.
 
-**Delivers:** A working end-to-end pipeline that scrapes Homegate via Apify actor, normalizes to a unified schema, and writes timestamped JSONL to disk. Manually triggered (no scheduler yet).
+**Delivers:** Working extension scaffold that detects Homegate listing cards, injects placeholder elements, and survives SPA navigation. No scoring yet — just the detection and injection skeleton.
 
-**Addresses:**
-- Project scaffold (package.json, tsconfig.json, .env, .env.example)
-- Config loader with Zod validation (fail fast on missing APIFY_TOKEN)
-- Logger utility (Pino-based structured logging)
-- `PropertyListing` interface and `ScraperAdapter` interface
-- JSONL storage writer with write verification and disk space check
-- Apify adapter (generic wrapper for actor call/wait/download)
-- Swiss number parser utility (`parseSwissNumber()`, `parseSwissRooms()`)
-- Homegate site transform (first real site normalization)
-- Scraper Registry with Homegate entry
-- Manual test script to run one site and inspect output
+**Addresses features:** Score badge injection skeleton, on/off toggle foundation, extension popup shell.
 
-**Avoids:** Silent data corruption (Zod validation on every record), FADP violations (separate personal data at schema design time), disk exhaustion (JSONL format, disk check before write).
+**Must avoid:** CSS leakage (Shadow DOM from day one), global state in service worker (use `chrome.storage.session`/`local` from day one), unbounded MutationObserver (scope to results container), hardcoded fragile selectors (build selector abstraction with fallbacks).
 
-**Research flag:** STANDARD PATTERNS — well-documented Apify client usage proven in shoparoo. Skip `/gsd:research-phase`.
+### Phase 2: Data Layer — Onboarding Wizard, Profile Storage, and Background Fetch
 
----
+**Rationale:** The LLM scorer needs a user profile and listing data. Onboarding must come before scoring because the content script requires a valid profile to send with score requests. Background fetch is the data acquisition layer — and it has the second-highest pitfall density (DOMParser unavailability, anti-bot headers, service worker mid-batch termination, message channel closure). These must be proven working before wiring up the LLM.
 
-### Phase 2: Additional Tier 1 Sites and Scheduler
+**Delivers:** Full onboarding wizard that writes a profile to `chrome.storage.local`. Working service worker that fetches Homegate detail pages and extracts listing data from `window.__INITIAL_STATE__`. End-to-end message passing from content script to service worker and back (with `return true` async pattern).
 
-**Rationale:** Once the pipeline is validated with Homegate, adding ImmoScout24 and FlatFox is low-risk (same patterns). The scheduler completes the "service" transformation — the system becomes fully automated. All three must be in place before the system has investment value (coverage + automation = historical snapshots begin accumulating).
+**Uses:** `@wxt-dev/storage`, WXT unlisted page entrypoint for onboarding, `chrome.storage.local` schema, `fetch()` with `credentials: 'include'` and realistic request headers.
 
-**Delivers:** Automated daily scraping of the three highest-value Swiss platforms. Historical snapshot accumulation begins. Health endpoint confirms the service is alive.
+**Must avoid:** DOMParser in service worker (use regex JSON extraction), missing `return true` in `onMessage` listener, fetching Homegate without session cookies (gets 403), sequential batch processing that exceeds 5-minute worker limit.
 
-**Addresses:**
-- ImmoScout24 Apify integration (same pattern as Homegate, different actor ID and transform)
-- FlatFox direct REST API integration (independent code path — no Apify needed; demonstrates technical versatility)
-- Scheduler with node-cron (sequential execution, lock-file protection, run state tracking)
-- Health server (Fastify `GET /health` with last run status, next scheduled run, per-site counts)
-- Entry point wiring (scheduler + health server started in `src/index.ts`)
-- Offset scheduling (stagger site scrapes to avoid simultaneous hits: Homegate at :00, ImmoScout24 at :30, FlatFox at :45)
+### Phase 3: LLM Integration — EC2 Backend Proxy and Scoring Pipeline
 
-**Avoids:** Scheduler overlap (lock files per site), IP banning from concurrent scraping (staggered schedule), silent scheduler failure (lock timeout enforcement).
+**Rationale:** The backend can be developed in parallel with Phase 2, but end-to-end integration only makes sense once Phase 2's data extraction is working. This phase wires listing data into Claude and renders real scores in badges. Prompt design is the key risk — the quality of the system prompt and weight-to-prompt translation directly determines product quality.
 
-**Research flag:** STANDARD PATTERNS for Apify integration and scheduler. FlatFox API is well-documented (official public API). Skip `/gsd:research-phase`.
+**Delivers:** Working EC2 Hono backend at `POST /score`. Full scoring pipeline: content script detects cards, service worker fetches detail page + calls proxy + receives score, content script renders real score badges. Prompt includes: listing data, user profile + weights, language instruction, "I don't know" instruction, listing text citation instruction.
 
----
+**Implements:** EC2 backend (Hono + `@anthropic-ai/sdk`), CORS restricted to `chrome-extension://` origin, shared secret header for proxy auth, Anthropic prompt caching on system prompt and user profile, exponential backoff on 429 errors.
 
-### Phase 3: Data Quality and Operational Hardening
+**Must avoid:** API key in extension bundle (never), open CORS policy on proxy (never), sending raw HTML to LLM instead of extracted JSON (wastes 5-10x tokens), scoring all listings simultaneously (triggers Tier 1 rate limits).
 
-**Rationale:** After Phase 2, data is accumulating but its quality is unverified at scale. Before expanding to more sites, harden the pipeline: implement the monitoring that catches corruption early, add the change detection that creates investment signal, and add Comparis as a fourth source. This phase converts "data exists" into "data is trustworthy."
+### Phase 4: UX Polish and Reliability
 
-**Delivers:** A monitored, hardened scraping service with proven data quality metrics and investment-grade change detection signals.
+**Rationale:** After the core loop works end-to-end, invest in the UX features that determine whether users keep the extension after the first session — progressive badge reveal, expandable score breakdown, loading skeleton badges, and graceful failure states. Also address extension update context invalidation here.
 
-**Addresses:**
-- Schema health checks (alert if >20% of records in a run have null prices or null rooms)
-- Listing change detection (diff consecutive runs: new listings, price drops, removals)
-- Per-site scrape metrics (listing count per run, success rate, data quality score — stored as metadata)
-- Comparis.ch Apify actor integration (4th source, actor verified as available from ecomscrape)
-- Data retention policy (compress runs older than 7 days, disk usage dashboard in health endpoint)
-- Run metadata enrichment (`_run_meta.json` includes listing count, null rate, duration, status)
+**Delivers:** Skeleton badges on page load, progressive badge reveal as scores arrive, expandable inline breakdown panel with category scores + bullet reasoning + listing text citations, neutral "unable to score" state on failures, score cache with TTL to reduce repeat-visit latency and cost, graceful handling of extension updates with open tabs.
 
-**Avoids:** Silent data corruption at scale (health checks catch schema drift), disk exhaustion (compression policy).
+**Addresses features:** Progressive badge reveal, expandable score breakdown, score cache with TTL, transparent listing text citations, honest "I don't know" rendering.
 
-**Research flag:** NEEDS DEEPER RESEARCH for Comparis actor (community actor, verify maintenance status). Run `/gsd:research-phase` if Comparis actor evaluation is complex.
-
----
-
-### Phase 4: Tier 2 Custom Scrapers (Post-Hackathon)
-
-**Rationale:** Agency sites and custom scrapers are high effort for low incremental coverage. Tier 1 (Homegate + ImmoScout24 + FlatFox + Comparis) already covers the vast majority of Swiss listings. Tier 2 custom scrapers (RealAdvisor, Newhome) require browser automation and have anti-bot challenges. This is post-hackathon work.
-
-**Delivers:** Expanded coverage for RealAdvisor (price-per-m2 data) and Newhome (cantonal bank listings), and optionally JamesEdition (luxury segment).
-
-**Addresses:**
-- RealAdvisor custom Crawlee scraper (Next.js SSR, look for `__NEXT_DATA__`)
-- Newhome custom scraper (403 on basic fetch — requires PlaywrightCrawler with proper headers)
-- JamesEdition Apify actor integration (luxury segment, actor available)
-- Cross-site deduplication planning (address normalization, composite key strategy)
-
-**Avoids:** JS rendering misclassification (classify each Tier 2 site before writing scraper: static/hidden-JSON/SPA).
-
-**Research flag:** NEEDS DEEPER RESEARCH — Newhome and RealAdvisor require site-specific technical assessment before scraper development. Run `/gsd:research-phase` for each.
-
----
+**Must avoid:** All-or-nothing badge reveal (users think extension is frozen), silent scoring failure (show "?" badge with tooltip), inline expansion covering the listing card permanently (make it collapsible).
 
 ### Phase Ordering Rationale
 
-- **Phase 1 before Phase 2:** Cannot schedule scrapers that do not exist. The architecture build order (Types → Storage → Adapter → Transform → Registry → Manual Test) is non-negotiable for de-risking the pipeline.
-- **Tier 1 sites before custom scrapers:** Apify actors are low-effort and high-coverage. Custom scrapers for Tier 2/3 sites cost 2-8 hours each for marginal listing gain. Validate the Apify pipeline first.
-- **Data quality before scale:** Adding more sites before the existing 3 sites are verified correct creates technical debt that corrupts all historical data retroactively. Phase 3 hardening must come before Phase 4 expansion.
-- **Scheduler requires error handling:** Unattended cron execution silently loses data on failure. Error handling, logging, and lock files are Phase 2 prerequisites, not Phase 3 additions.
-- **FlatFox in Phase 2 not Phase 1:** FlatFox is independent (no Apify dependency) and serves as a good parallel workstream, but Phase 1 must first validate the core Apify pipeline. FlatFox adds in Phase 2 when the pipeline is proven.
+- Shared utilities and manifest first — everything else imports from them; no entrypoint can be built without the manifest defined
+- Shadow DOM and SPA detection in Phase 1 — retroactive Shadow DOM refactors are the highest-recovery-cost pitfall identified; must be foundational
+- Onboarding and storage before scoring — the scoring pipeline is meaningless without a profile; no "score all listings" test is possible until profile data exists
+- Background fetch before LLM integration — data extraction from Homegate's `__INITIAL_STATE__` must be proven before wiring it to Claude prompts; a broken parser produces hallucinated scores with no obvious error
+- Backend parallel to extension phases 1-2 — EC2 proxy has no dependency on extension phases; teams can work in parallel; integration testing happens in Phase 3
+- UX polish last — the core loop must work before investing in progressive disclosure and cache; polish on a broken pipeline is wasted effort
 
 ### Research Flags
 
-**Phases needing deeper research during planning:**
-- **Phase 3 — Comparis actor evaluation:** Verify ecomscrape actor maintenance status, success rate, last update. If actor is unreliable, switch to custom Cheerio scraper (Comparis likely uses SPA rendering, needs site assessment).
-- **Phase 4 — Newhome technical assessment:** Site returned 403 on basic fetch. Need to determine if it is a Cloudflare-protected SPA or a Next.js SSR site with strict bot detection. Determines whether PlaywrightCrawler is required.
-- **Phase 4 — RealAdvisor technical assessment:** Next.js site with React Server Components. Need to verify if `__NEXT_DATA__` contains listing data on first load (no browser needed) or if data is client-fetched (browser needed).
+Phases likely needing deeper research during planning:
+- **Phase 2 (Background Fetch):** Homegate's `window.__INITIAL_STATE__` JSON path structure for listing detail pages needs validation against a live Homegate fetch before writing the parser. The confirmed path is `data["listing"]["listing"]` but should be verified on current Homegate HTML.
+- **Phase 3 (LLM Integration):** Prompt engineering for weighted multi-criteria evaluation with uncertainty signaling needs iteration. No prior research covers the specific prompt structure for Swiss property scoring — this requires empirical testing. Prompt caching implementation on `@anthropic-ai/sdk 0.78` should be verified against current SDK docs.
+- **Phase 4 (UX Polish):** Score cache invalidation on profile change (profile hash key strategy) is well-understood but should be specified explicitly before implementation.
 
-**Phases with standard patterns (skip research):**
-- **Phase 1:** Apify client usage is identical to shoparoo pattern. JSONL storage is standard Node.js fs/promises. Zod validation is well-documented.
-- **Phase 2:** node-cron is extensively documented. FlatFox has an official public API with docs. ImmoScout24 uses the same Apify actor pattern as Homegate.
+Phases with standard patterns (skip research-phase):
+- **Phase 1 (Foundation):** WXT Shadow DOM setup, MutationObserver scoping, and `chrome.webNavigation.onHistoryStateUpdated` patterns are all well-documented in official Chrome and WXT docs. No novel patterns required.
+- **Phase 2 (Onboarding/Storage):** WXT unlisted page entrypoints and `@wxt-dev/storage` usage are standard patterns with official documentation. Multi-step wizard state management is well-understood React local state.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All technologies have official docs, proven in related project (shoparoo). Rationale for each choice is clear. |
-| Features | MEDIUM-HIGH | Apify actor availability verified via search. FlatFox API verified via official source. Data field inventory based on Apify docs + ScrapFly guides + open-source projects. SMG ownership verified via official corporate source. |
-| Architecture | HIGH | Patterns directly map from proven shoparoo codebase. Strategy pattern + registry + adapter is a standard design. Build order dependencies are clearly documented. |
-| Pitfalls | MEDIUM-HIGH | Anti-bot and data corruption pitfalls are well-corroborated by multiple sources. Swiss FADP legal risk is HIGH confidence (DLA Piper + Adnovum sources). Actor reliability pitfall is based on general Apify community experience. |
+| Stack | HIGH | WXT, Hono, React 19, Tailwind v4, `@anthropic-ai/sdk` all verified against official docs and current npm versions. Version compatibility table in STACK.md is reliable. |
+| Features | MEDIUM | Core loop (badge injection, onboarding, LLM scoring) is well-validated. No direct competitor applies AI match scoring with weighted preferences to Swiss property portals — novel combination means some UX patterns are inferred from analogues (JobRight, Area360) rather than direct precedent. |
+| Architecture | HIGH | All MV3 patterns verified against official Chrome documentation. Message-passing hub, Shadow DOM isolation, SPA navigation handling, and `chrome.storage.local` as the state persistence layer are the canonical MV3 approaches. Homegate `__INITIAL_STATE__` JSON structure verified via third-party scraping source (MEDIUM confidence on the exact JSON path). |
+| Pitfalls | HIGH | All critical pitfalls verified against official Chrome docs (service worker lifecycle, messaging API, host_permissions). Anthropic rate limits verified against official Anthropic API docs. Homegate anti-bot behavior verified via scraping community sources (MEDIUM confidence — real-world headers may require adjustment). |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Apify actor input schemas:** The exact input parameters for `ecomscrape~homegate-property-search-scraper` and `ecomscrape~immoscout24-property-search-scraper` (how to specify Switzerland-only, max items, language) need to be verified by running a test call before building the full integration. Resolve in Phase 1 execution.
-
-- **Comparis actor reliability:** The `stealth_mode/comparis-property-search-scraper` actor was identified but its maintenance status (last update, success rate) was not fully verified. Check Apify Store for current status before committing Phase 3. May need custom Cheerio scraper as fallback.
-
-- **Remax.ch actor scope:** The identified Remax actors (`getdataforme/remax-scraper`, `parseforge/remax-scraper`) were flagged as potentially scraping remax.com (global) rather than remax.ch (Swiss). Low priority but needs a URL parameter test before integrating.
-
-- **FlatFox API pagination:** The FlatFox public API is confirmed to exist. The exact pagination mechanism and rate limits need verification against the official API docs before building the integration.
-
-- **Apify free-tier credit limits:** The free tier provides $5/month platform usage credits. Running daily scrapes of Homegate + ImmoScout24 (both of which retrieve 1,000+ listings) needs a credit consumption estimate before committing to the daily cadence. May require switching to the paid tier.
+- **Homegate `__INITIAL_STATE__` JSON exact path:** Confirmed by third-party scraping guide (`data["listing"]["listing"]` for detail pages) but should be validated with a live test fetch in Phase 2 before writing the parser.
+- **Claude prompt structure for weighted scoring:** No template exists — prompt engineering for the multi-criteria weighted evaluation with uncertainty signaling and multilingual output needs empirical iteration in Phase 3. Allocate time for prompt iteration in the Phase 3 plan.
+- **Homegate DOM selectors for listing cards:** Research identifies `[data-test="result-list"]` and `[data-test="result-list-item"]` as the selector targets, but these should be validated live before building the content script observer. Build a selector abstraction with fallbacks from Phase 1.
+- **EC2 proxy authentication approach:** Research recommends a UUID shared secret generated at extension install time and sent as a header. The exact header name and validation logic needs to be specified during Phase 3 planning.
+- **Anthropic Tier 1 rate limits for demo:** If the demo account is on Tier 1, upgrade to Tier 2 ($40 deposit) before demo day. Verify API account tier before Phase 3 testing begins.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Crawlee Official Docs — Introduction](https://crawlee.dev/js/docs/introduction) — scraping framework patterns
-- [Apify SDK for JavaScript](https://docs.apify.com/sdk/js/docs/overview) — actor development patterns
-- [Apify API Client for JavaScript](https://docs.apify.com/api/client/js/docs) — client API patterns
-- [FlatFox Official API Reference](https://flatfox.ch/en/docs/api/) — FlatFox integration
-- [SMG Swiss Marketplace Group — Real Estate Portfolio](https://swissmarketplace.group/portfolio/real-estate/) — site ownership / overlap analysis
-- [Swiss FADP Overview (DLA Piper)](https://www.dlapiperdataprotection.com/?t=law&c=CH) — data protection legal risk
-- [AWS EC2 Volume Disk Space](https://repost.aws/knowledge-center/ec2-volume-disk-space) — disk management
-- shoparoo-meals-backend codebase — Apify call/wait/download pattern, SITES registry pattern, run metadata pattern
+- [Chrome Extension Service Worker Lifecycle](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle) — 30s idle termination, 5-minute task limit, event listener registration rules
+- [Chrome Extension Message Passing](https://developer.chrome.com/docs/extensions/develop/concepts/messaging) — `return true` async pattern, message channel closure behavior
+- [Cross-Origin Network Requests in Extensions](https://developer.chrome.com/docs/extensions/develop/concepts/network-requests) — host_permissions, content script CORS restrictions
+- [chrome.webNavigation API](https://developer.chrome.com/docs/extensions/reference/api/webNavigation) — SPA navigation detection
+- [Claude API Rate Limits — Anthropic Official Docs](https://platform.claude.com/docs/en/api/rate-limits) — Tier 1: 50 RPM / 30K ITPM, Tier 2: 1,000 RPM / 450K ITPM
+- [WXT Official Docs — wxt.dev](https://wxt.dev/) — entrypoints, content script UI modes (Shadow DOM), storage API, version 0.20.18
+- [Hono Official Docs](https://hono.dev/docs/getting-started/nodejs) — Node.js adapter, CORS middleware, streaming
+- [anthropics/anthropic-sdk-typescript GitHub](https://github.com/anthropics/anthropic-sdk-typescript) — streaming, prompt caching, Node.js usage
 
 ### Secondary (MEDIUM confidence)
-- [Homegate Property Details Scraper — Apify](https://apify.com/ecomscrape/homegate-property-details-scraper) — actor availability and field coverage
-- [ImmoScout24 Property Search Scraper — Apify](https://apify.com/ecomscrape/immoscout24-property-search-scraper) — actor availability
-- [FlatFox.ch Properties Scraper — Apify](https://apify.com/lexis-solutions/flatfox-ch-properties-scraper) — actor availability
-- [Comparis Property Search Scraper — Apify](https://apify.com/stealth_mode/comparis-property-search-scraper) — actor availability (maintenance status unverified)
-- [How to Scrape Homegate.ch — ScrapFly](https://scrapfly.io/blog/posts/how-to-scrape-homegate-ch-real-estate-property-data) — site technical structure, anti-bot behavior
-- [How to Scrape ImmoScout24.ch — ScrapFly](https://scrapfly.io/blog/posts/how-to-scrape-immoscout24-ch-real-estate-property-data) — site technical structure
-- [swiss-immo-scraper — GitHub](https://github.com/dvdblk/swiss-immo-scraper) — open-source reference implementation
-- [Best Node.js Schedulers — BetterStack](https://betterstack.com/community/guides/scaling-nodejs/best-nodejs-schedulers/) — node-cron vs BullMQ comparison
-- [Pino vs Winston — BetterStack](https://betterstack.com/community/comparisons/pino-vs-winston/) — logger selection rationale
-- [Swiss FADP (Adnovum)](https://www.adnovum.com/blog/swiss-federal-act-on-data-protection-2023) — FADP requirements and penalties
-
-### Tertiary (LOW confidence)
-- [Remax Scraper — Apify](https://apify.com/getdataforme/remax-scraper) — may be remax.com not remax.ch; needs URL parameter verification
-- [ZenRows TypeScript Web Scraping Guide](https://www.zenrows.com/blog/web-scraping-typescript) — general TypeScript scraping patterns
-- [Small JSON Files Problem on S3](https://medium.com/@e.pkontou/small-files-problem-on-s3-5a5ec7f19d0a) — inode exhaustion rationale for JSONL format
+- [How to Scrape Homegate.ch Real Estate — Scrapfly](https://scrapfly.io/blog/posts/how-to-scrape-homegate-ch-real-estate-property-data) — `window.__INITIAL_STATE__` JSON structure and path on Homegate listing pages
+- [2025 State of Browser Extension Frameworks](https://redreamality.com/blog/the-2025-state-of-browser-extension-frameworks-a-comparative-analysis-of-plasmo-wxt-and-crxjs/) — Plasmo maintenance status, WXT vs competitors
+- [Making Chrome Extension Smart for SPA — Medium](https://medium.com/@softvar/making-chrome-extension-smart-by-supporting-spa-websites-1f76593637e8) — SPA navigation handling patterns
+- [Solving CSS Interference in Chrome Extensions — DEV Community](https://dev.to/developertom01/solving-css-and-javascript-interference-in-chrome-extensions-a-guide-to-react-shadow-dom-and-best-practices-9l) — Shadow DOM isolation for injected UI
+- [Managing Concurrency in Chrome Extensions — Taboola](https://www.taboola.com/engineering/managing-concurrency-in-chrome-extensions/) — concurrent fetch patterns in service workers
+- [JobRight.ai Chrome Extension](https://chromewebstore.google.com/detail/jobright-autofill/odcnpipkhjegpefkfplmedhmkmmhmoko) — match score badge UX model
+- [Hackers Target Misconfigured LLM Proxies — BleepingComputer](https://www.bleepingcomputer.com/news/security/hackers-target-misconfigured-proxies-to-access-paid-llm-services/) — proxy authentication requirements
 
 ---
-*Research completed: 2026-03-05*
+*Research completed: 2026-03-07*
 *Ready for roadmap: yes*

@@ -1,342 +1,162 @@
-# Technology Stack
+# Stack Research
 
-**Project:** Swiss Property Scraper
-**Researched:** 2026-03-05
-**Overall Confidence:** HIGH
-
----
+**Domain:** Chrome Extension (MV3) + Thin Node.js LLM Proxy Backend
+**Researched:** 2026-03-07
+**Confidence:** HIGH (WXT, React, Hono verified via official docs and current npm; @anthropic-ai/sdk version confirmed)
 
 ## Recommended Stack
 
-### Runtime & Language
+### Core Technologies
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Node.js | 22.x LTS | Runtime | LTS with native TypeScript strip support (v22.6+). Required by Playwright. Team familiarity from shoparoo. | HIGH |
-| TypeScript | ~5.7 | Language | Type safety for scraper configs, data schemas, scheduler logic. Crawlee is built in TS. | HIGH |
-| tsx | latest | TS execution (dev) | 5-10x faster than ts-node via esbuild. Zero config. Watch mode for dev iteration. | HIGH |
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| WXT | 0.20.x | Chrome extension build framework | The dominant framework for MV3 extensions as of 2025-2026. Vite-based, framework-agnostic, provides file-based entrypoints, auto-generated manifest, built-in storage/messaging APIs, HMR for content scripts AND popup, and cross-browser support. Actively maintained (7.9k GitHub stars). Ships ~43% smaller bundles than Plasmo. Purpose-built for exactly this architecture: popup, content scripts, background service worker, and unlisted full-page tabs all as first-class entrypoints. |
+| React | 19.2.x | UI rendering for popup, onboarding, content script overlays | React 19.2 is stable and recommended for production. WXT has a first-class `@wxt-dev/module-react` integration. The popup, onboarding wizard, and injected badge UI all benefit from component-based composition. The extension community's most-used framework for Chrome extension UIs. |
+| TypeScript | 5.x | Type safety across extension and backend | WXT is TypeScript-first. Types for chrome.* APIs, storage schemas, message payloads, and Zod-validated API contracts all benefit from TypeScript. Required to avoid runtime errors from content-script → background messaging mismatches. |
+| Tailwind CSS | 4.x | Styling for popup, onboarding, injected content UI | v4 (Jan 2025) ships CSS-only config (`@import "tailwindcss"`, no tailwind.config.js needed). Native `:host` selector support is a major improvement for Shadow DOM injection in content scripts. Style isolation works with WXT's `createShadowRootUi()` by injecting Tailwind's generated CSS into the shadow root. |
+| Hono | 4.12.x | Thin Node.js HTTP server for LLM proxy backend | Ultra-lightweight (14 KB core), 3.5x faster than Express, built on Web Standards. Ships a streaming helper ideal for proxying Claude SSE responses. Built-in CORS middleware. TypeScript-native. Deploys on Node.js via `@hono/node-server`. Perfect fit for a single-responsibility proxy that does auth, rate-limiting, and Claude API forwarding. Runs on EC2 with Node.js 18+. |
+| @anthropic-ai/sdk | 0.78.x | Claude API client (backend only) | Official Anthropic TypeScript SDK. Supports streaming SSE, message batching, and custom baseURL (for proxying). Lives on the backend only — never shipped in extension bundle. |
 
-**Why not ts-node:** tsx is faster, simpler, and requires no tsconfig hacks. ts-node is legacy at this point.
-**Why not native Node TS stripping:** Still experimental for production; tsx is more battle-tested and handles edge cases better.
+### Supporting Libraries
 
-### Web Scraping Framework
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| @wxt-dev/module-react | 1.1.x | React integration for WXT | Required to use React in WXT entrypoints (popup, content script UI, onboarding page). Install as a WXT module, not a standalone Vite plugin. |
+| @wxt-dev/storage | 1.2.x | Typed, promise-based chrome.storage wrapper | Use for persisting user preference profile JSON in `chrome.storage.local`. Provides type-safe item definitions, watch callbacks for reactive updates, and versioning. Replaces raw `chrome.storage.local` calls across content script, background, and popup. |
+| Zod | 4.x | Runtime schema validation | Validate user profile structure on save/load from storage. Validate backend request/response payloads. The `@zod/mini` distribution (1.9 KB gzipped) is suitable for in-extension validation where bundle size matters. Use full `zod` on the backend. |
+| @hono/node-server | 1.x | Node.js adapter for Hono | Required to run Hono on EC2 Node.js. Converts Node.js `http.IncomingMessage` / `ServerResponse` to Web Standard Request/Response. |
+| vite | 6.x | Bundler (via WXT) | WXT uses Vite internally. No direct configuration needed for standard setups — WXT exposes `vite()` config hook in `wxt.config.ts` for customization. |
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Crawlee | ^3.16 | Scraping orchestration | Built by Apify. Unified API across CheerioCrawler, PlaywrightCrawler. Anti-bot fingerprinting, proxy rotation, session management, request queuing all built-in. Switching between HTTP and browser crawlers requires changing one import. | HIGH |
-| Playwright | ^1.58 | Browser automation | For JS-rendered sites. Multi-browser support (Chromium, Firefox, WebKit). Better maintained than Puppeteer. Crawlee's PlaywrightCrawler wraps it. | HIGH |
-| Cheerio | (via Crawlee) | HTML parsing | Bundled with Crawlee's CheerioCrawler. 70% faster than browser-based for static content. ~500 pages/min on 4GB RAM. | HIGH |
+### Development Tools
 
-**Strategy -- Use CheerioCrawler as default, PlaywrightCrawler as fallback:**
-
-Most Swiss real estate sites (Homegate, ImmoScout24) embed property data in `window.__INITIAL_STATE__` or `<script>` tags as JSON. This means CheerioCrawler (HTTP-only, no browser) can extract data directly without JavaScript rendering. This is dramatically faster and uses far less memory.
-
-Reserve PlaywrightCrawler for sites that:
-- Require JavaScript to render listing content
-- Have aggressive anti-bot that blocks HTTP requests
-- Need interaction (scrolling, clicking "load more")
-
-Crawlee makes switching trivial -- same handler logic, different crawler class.
-
-### Apify Integration
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| apify-client | latest | Call Apify cloud actors | Lightweight client for calling pre-built Apify Store actors (Homegate scraper, ImmoScout24 scraper) from EC2. Auto-retry, rate limiting built-in. | HIGH |
-| apify (SDK) | latest | Actor development (optional) | Only needed if building actors to deploy ON Apify platform. For EC2-only custom scrapers, Crawlee alone suffices. | MEDIUM |
-
-**Integration pattern:**
-
-```typescript
-// For sites with existing Apify Store actors (Homegate, ImmoScout24):
-import { ApifyClient } from 'apify-client';
-const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
-const run = await client.actor('ecomscrape/homegate-property-details-scraper').call(input);
-const { items } = await client.dataset(run.defaultDatasetId).listItems();
-
-// For custom scrapers (sites without Apify actors):
-import { CheerioCrawler } from 'crawlee';
-// Run directly on EC2, no Apify platform needed
-```
-
-**Known Apify Store actors for Swiss real estate:**
-- `ecomscrape/homegate-property-details-scraper` -- Homegate.ch property details
-- `ecomscrape/homegate-property-search-scraper` -- Homegate.ch search results
-- `ecomscrape/immoscout24-property-details-scraper` -- ImmoScout24.ch property details
-- `ecomscrape/immoscout24-property-search-scraper` -- ImmoScout24.ch search results
-
-Sites without Apify actors (Comparis, Flatfox, Newhome, etc.) need custom Crawlee scrapers on EC2.
-
-### Scheduler
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| node-cron | ^4.2 | Periodic scraper execution | Lightweight (67KB), zero dependencies beyond cron parsing. Cron syntax familiar. Perfect for single-server, in-process scheduling. No Redis required. | HIGH |
-
-**Why node-cron over BullMQ:**
-- BullMQ requires Redis -- unnecessary infrastructure for a single EC2 box
-- BullMQ is designed for distributed job queues across multiple workers/servers
-- node-cron runs in-process, trivial to set up, sufficient for 23 scrapers on a single machine
-- If the project later needs job persistence, retry queues, or multi-server scaling, migrate to BullMQ then
-
-**Why not cron (OS-level):**
-- node-cron keeps scheduling in the application layer, co-located with scraper logic
-- Easier to monitor, configure, and deploy as a single Node.js process
-- Can dynamically adjust schedules without touching crontab
-
-**Scheduling approach:**
-```typescript
-import cron from 'node-cron';
-
-// Run scrapers at different intervals to spread load
-cron.schedule('0 */4 * * *', () => runScraper('homegate'));    // Every 4 hours
-cron.schedule('30 */4 * * *', () => runScraper('immoscout24')); // Offset by 30 min
-cron.schedule('0 */6 * * *', () => runScraper('comparis'));     // Every 6 hours
-```
-
-### HTTP Server (Health Endpoint)
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Fastify | ^5.7 | Health endpoint server | 2-3x faster than Express. Native TypeScript support. Plugin system superior for adding routes later. Schema validation built-in. Pino logging integrated. | HIGH |
-
-**Why Fastify over Express:**
-- Built-in TypeScript support (Express needs @types/express)
-- Native JSON schema validation
-- Pino logger integrated by default
-- 70-80K req/s vs Express's 20-30K req/s (matters less here, but good defaults)
-- Plugin architecture is cleaner for future expansion (API routes in later milestones)
-- Express v5 has been in beta for years; Fastify v5 is stable and actively maintained
-
-**Health endpoint is minimal:**
-```typescript
-import Fastify from 'fastify';
-
-const server = Fastify({ logger: true }); // Pino built-in
-
-server.get('/health', async () => ({
-  status: 'ok',
-  uptime: process.uptime(),
-  scrapers: getScraperStatuses(), // last run times, success/fail
-}));
-
-await server.listen({ port: 3000, host: '0.0.0.0' });
-```
-
-### Data Storage (Raw JSON)
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Node.js fs/promises | built-in | File I/O | Native, zero dependencies. async/await API. | HIGH |
-| zod | ^4.3 | Schema validation | Validate scraped data shape before writing. Catch scraper breakage early. 14x faster in v4 vs v3. Zero dependencies. | HIGH |
-
-**Storage pattern -- date-partitioned directory structure:**
-
-```
-data/
-  raw/
-    homegate/
-      2026-03-05/
-        search-results-001.json
-        search-results-002.json
-        listings/
-          listing-12345.json
-          listing-12346.json
-      2026-03-06/
-        ...
-    immoscout24/
-      2026-03-05/
-        ...
-    comparis/
-      ...
-```
-
-**Why this structure:**
-- Date partitioning enables historical snapshots (core project goal)
-- Per-site directories keep data organized
-- Individual listing files prevent giant monolithic JSON files
-- Easy to `ls` / `du` to check data volume
-- Simple to archive old data (`tar` a date directory)
-- No database overhead; grep/jq for ad-hoc queries
-
-**Why not a single large JSON file per scrape:**
-- Large files (>100MB) cause memory issues with `JSON.parse()`
-- Individual files enable incremental processing
-- Deduplication is simpler (check if `listing-{id}.json` exists)
-
-### Logging
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Pino | (via Fastify) | Structured logging | Ships with Fastify. JSON output for machine parsing. Async, non-blocking. Fastest Node.js logger. | HIGH |
-| pino-pretty | latest | Dev log formatting | Human-readable logs during development. Disabled in production. | MEDIUM |
-
-**Why not Winston:** Pino is faster, ships with Fastify, and JSON-structured logs are better for scraper debugging (attach scraper name, site URL, listing count as structured fields).
-
-### Configuration & Environment
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| dotenv | ^17.3 | Environment variables | Load .env file. 45M+ weekly downloads. Zero dependencies. Industry standard. | HIGH |
-| zod | ^4.3 | Config validation | Validate env vars at startup. Fail fast if APIFY_TOKEN missing. Reuse same lib as data validation. | HIGH |
-
-**Environment variables needed:**
-```bash
-APIFY_TOKEN=           # Reuse from shoparoo setup
-NODE_ENV=production
-PORT=3000
-DATA_DIR=/data/raw     # Where JSON files are stored
-LOG_LEVEL=info
-```
-
-### Development Tooling
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| tsx | latest | Run TypeScript | Fast execution via esbuild. Watch mode. | HIGH |
-| ESLint | ^9.x | Linting | Flat config format (eslint.config.js). TypeScript plugin. | MEDIUM |
-| Prettier | ^3.x | Formatting | Consistent code style. | MEDIUM |
-| vitest | ^3.x | Testing (future) | Fastest TS-native test runner. Not needed for hackathon MVP. | LOW |
-
-**Why not Jest:** vitest is faster, native ESM/TS support, but testing is out of scope for hackathon week.
-
----
-
-## Alternatives Considered
-
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Scraping framework | Crawlee | Raw Playwright/Puppeteer | Crawlee adds request queuing, anti-bot fingerprinting, session management, proxy rotation. Raw Playwright means building all of this yourself. |
-| Scraping framework | Crawlee | Scrapy (Python) | Project is Node.js/TypeScript. Crawlee is the JS equivalent and integrates with Apify. |
-| Browser automation | Playwright (via Crawlee) | Puppeteer | Puppeteer is Chrome-only. Playwright supports Chromium, Firefox, WebKit. Playwright has better API, active development by Microsoft. |
-| HTTP parsing | Cheerio (via Crawlee) | JSDOM | Cheerio is 70% faster. JSDOM simulates full DOM which is unnecessary for data extraction. |
-| Scheduler | node-cron | BullMQ | BullMQ requires Redis. Over-engineered for single-server, 23-scraper setup. Add Redis dependency only when actually needed. |
-| Scheduler | node-cron | OS crontab | Keeps scheduling in app layer. Dynamic config. Easier monitoring. Single process deployment. |
-| HTTP server | Fastify | Express | Express lacks native TS support, slower, middleware architecture less clean. Express v5 still beta. Fastify v5 is stable with better defaults. |
-| HTTP server | Fastify | None (no server) | Health endpoint is a requirement. Fastify is minimal enough to justify. |
-| Logger | Pino (via Fastify) | Winston | Pino is faster, JSON-native, integrated with Fastify. Winston is more configurable but that configurability is unnecessary here. |
-| Validation | Zod v4 | Joi / Yup | Zod is TypeScript-first with static type inference. Joi/Yup are JS-first with TS bolted on. Zod v4 is 14x faster than v3. |
-| TS runner | tsx | ts-node | tsx is 5-10x faster, zero config, watch mode built-in. ts-node is legacy. |
-| TS runner | tsx | Native Node TS | Still experimental for production use. tsx handles edge cases better. |
-| Storage | Raw JSON files | SQLite | JSON files are simpler, no schema migration, easy to inspect with jq. Database is explicitly out of scope. |
-| Storage | Raw JSON files | MongoDB | Adds infrastructure overhead. JSON files achieve the same goal for data collection phase. |
-
----
-
-## Swiss Real Estate Site Scraping Techniques
-
-Understanding how target sites serve data is critical for choosing the right crawler type per site.
-
-### Sites Using Hidden JSON Data (CheerioCrawler viable)
-
-| Site | Technique | Data Location | Notes |
-|------|-----------|---------------|-------|
-| Homegate.ch | Hidden web data | `window.__INITIAL_STATE__` in `<script>` tags | Extract JSON directly from HTML. No JS rendering needed for basic extraction. Has anti-bot measures (empty/obfuscated data). |
-| ImmoScout24.ch | Hidden web data | `<script>` tags with JSON datasets | Property data embedded in page source. No JS rendering needed for basic extraction. Rate limiting in place. |
-
-### Sites Likely Requiring Browser (PlaywrightCrawler)
-
-| Site | Likely Reason | Notes |
-|------|---------------|-------|
-| Comparis.ch | SPA / heavy JS rendering | Major aggregator, likely React/Angular app. Research needed per-site. |
-| Most agency sites | Varies | Smaller sites may use WordPress (static HTML, easy) or React (needs browser). Test each. |
-
-### Strategy
-
-1. **Try CheerioCrawler first** for every site -- fastest, lowest resource usage
-2. **Check for hidden JSON** (`__INITIAL_STATE__`, `__NEXT_DATA__`, inline `<script type="application/ld+json">`)
-3. **Fall back to PlaywrightCrawler** only when HTTP requests get blocked or content requires JS rendering
-4. **Use Apify Store actors** for Homegate and ImmoScout24 to save development time -- these are already built and maintained
-
----
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| WXT CLI (`wxt dev`) | Dev server with HMR for extension | Launches Chrome with extension loaded. Persists user data across reloads with `--user-data-dir`. Use `wxt dev --browser chrome` for targeted dev. |
+| TypeScript tsc | Type checking | Run `tsc --noEmit` in CI. WXT generates types for entrypoints and manifest automatically (`wxt prepare`). |
+| eslint + @typescript-eslint | Lint | Catch cross-context mistakes (e.g., DOM API usage in service worker context). |
+| nodemon / tsx watch | Backend dev server | `tsx watch src/index.ts` for local EC2 backend development without a build step. |
+| dotenv | Backend secrets | `ANTHROPIC_API_KEY` loaded from `.env` in local dev. On EC2, use environment variables injected at deploy time (not committed). |
 
 ## Installation
 
 ```bash
-# Core scraping
-npm install crawlee @crawlee/cheerio @crawlee/playwright playwright
+# --- Chrome Extension ---
+# Scaffold with WXT + React + TypeScript
+npm create wxt@latest homematch-extension -- --template react-ts
+cd homematch-extension
 
-# Apify integration
-npm install apify-client
+# WXT React module
+npm install @wxt-dev/module-react @wxt-dev/storage
 
-# Server & scheduling
-npm install fastify node-cron
+# UI
+npm install tailwindcss
 
-# Validation & config
-npm install zod dotenv
+# Runtime schema validation (mini bundle for extension)
+npm install @zod/mini
 
-# Logging (pino comes with fastify, add pretty for dev)
-npm install -D pino-pretty
+# Dev dependencies
+npm install -D typescript eslint @typescript-eslint/eslint-plugin
 
-# TypeScript tooling
+# --- Backend (separate directory: homematch-backend) ---
+mkdir homematch-backend && cd homematch-backend
+npm init -y
+
+npm install hono @hono/node-server @anthropic-ai/sdk zod dotenv
+
 npm install -D typescript tsx @types/node
-
-# Install Playwright browsers (required on EC2)
-npx playwright install --with-deps chromium
 ```
 
-**EC2 note:** `npx playwright install --with-deps chromium` installs Chromium and its system dependencies (fonts, libraries). Only install Chromium (not all browsers) to minimize disk usage. This command handles apt-get dependencies automatically on Ubuntu/Debian.
+## Alternatives Considered
 
----
-
-## Package Summary
-
-### Production Dependencies
-
-| Package | Purpose |
-|---------|---------|
-| `crawlee` | Scraping framework core |
-| `@crawlee/cheerio` | HTTP-based HTML scraping |
-| `@crawlee/playwright` | Browser-based scraping |
-| `playwright` | Browser automation engine |
-| `apify-client` | Call Apify Store actors |
-| `fastify` | HTTP server for health endpoint |
-| `node-cron` | In-process job scheduling |
-| `zod` | Data and config validation |
-| `dotenv` | Environment variable loading |
-
-### Dev Dependencies
-
-| Package | Purpose |
-|---------|---------|
-| `typescript` | Type checking |
-| `tsx` | Fast TS execution |
-| `@types/node` | Node.js type definitions |
-| `pino-pretty` | Human-readable dev logs |
-
----
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|-------------------------|
+| WXT | Plasmo | Only if team is React-only and building a short-lived prototype where Plasmo's React DX is more important than long-term maintenance. Plasmo appears to be in maintenance mode as of 2025 and uses the slower Parcel bundler. |
+| WXT | CRXJS (Vite plugin) | Only if you need maximum control and minimal abstraction with a senior team that will manually configure everything. CRXJS provides no built-in storage, messaging, or entrypoint abstractions — you build them yourself. Historical abandonment risk. |
+| WXT | Webpack + custom config | Never for a new project. No ecosystem benefit. WXT gives you Vite HMR, auto-manifest, and all entrypoints out of the box. |
+| Hono | Express.js | Only if the team already has an Express codebase or needs a large ecosystem of middleware. Express is 3.5x slower and significantly heavier. For a single-route LLM proxy, Express is overkill baggage. |
+| Hono | Fastify | Fastify is a valid choice for Node.js-only deployments and has a richer plugin ecosystem. Choose it if you later need complex middleware chains. For this proxy, Hono's Web Standards API alignment is sufficient and lighter. |
+| @anthropic-ai/sdk | Vercel AI SDK (`@ai-sdk/anthropic`) | Use Vercel AI SDK if you want a unified interface for switching between models (Claude, OpenAI, Gemini) from a single SDK. Adds abstraction overhead unnecessary for a Claude-only proxy. |
+| Tailwind v4 | CSS Modules | CSS Modules are a valid isolation mechanism for popup/onboarding, but Tailwind v4's utility-first approach is faster for hackathon-pace development. Shadow DOM injection of CSS-in-JS (e.g., styled-components) is painful in content scripts — avoid. |
+| Zod | yup / joi | Zod has first-class TypeScript inference, is faster in v4, and integrates natively with the Anthropic SDK's type definitions. No compelling reason to use alternatives in a TypeScript-first stack. |
 
 ## What NOT to Use
 
-| Technology | Why Not |
-|------------|---------|
-| **Puppeteer** (standalone) | Playwright is superior (multi-browser, better API, Microsoft-backed). Crawlee wraps both but Playwright is the better choice. |
-| **Express** | Legacy middleware pattern. No native TS. Slower. Fastify is the modern choice. |
-| **ts-node** | Slow, complex configuration. tsx is faster and simpler. |
-| **BullMQ / Redis** | Over-engineered for single-server. Adds infrastructure dependency. Use node-cron. |
-| **MongoDB / PostgreSQL** | Out of scope. Raw JSON files are sufficient for data collection phase. |
-| **Axios / node-fetch** | Crawlee handles HTTP internally with got-scraping (browser-like fingerprinting). Don't use raw HTTP clients for scraping. |
-| **Selenium** | Legacy. Playwright/Puppeteer are modern replacements with better APIs. |
-| **Scrapy** | Python ecosystem. Project is Node.js/TypeScript. |
-| **PM2** | For hackathon, a simple systemd service or `tsx watch` is sufficient. PM2 adds complexity without clear benefit at this stage. |
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| Manifest V2 background pages | Chrome has sunset MV2. Extensions using MV2 are being disabled in Chrome as of 2024-2025. All new extensions must use MV3 service workers. | MV3 background service worker (built into WXT via `background/index.ts` entrypoint) |
+| Persistent state in service worker memory | MV3 service workers are terminated after 30s idle and 5min max runtime. Any in-memory state is lost. | `@wxt-dev/storage` (wraps `chrome.storage.local`) or `chrome.storage.session` for ephemeral state |
+| `window.localStorage` in content scripts or service worker | `localStorage` is tied to the page origin, inaccessible from service workers, and unreliable across contexts. | `chrome.storage.local` via `@wxt-dev/storage` |
+| CSS injected globally from content scripts | Without Shadow DOM isolation, your extension CSS will clash with Homegate's styles and vice versa. Produces hard-to-debug visual corruption. | `createShadowRootUi()` from WXT with Tailwind CSS injected into the shadow root |
+| Calling Claude API directly from the extension | Exposes your API key in the extension bundle (visible via Chrome DevTools). Keys would need to be rotated on every compromise. | EC2 backend proxy that holds the key server-side |
+| `fetch()` to Homegate from content scripts | Content scripts run in the page origin context; cross-origin fetches from content scripts are CORS-blocked. | Delegate all external fetches to the background service worker via `chrome.runtime.sendMessage` — background scripts bypass CORS with host_permissions |
+| React Server Components / Next.js | RSC requires a server runtime. Extension UIs (popup, onboarding, content script overlays) are static HTML/JS bundles loaded from the extension package. No server to hydrate from. | Standard React (client-side only) |
+| WebSockets for backend streaming | Adds connection management complexity. Claude API returns SSE. Proxy SSE → SSE is simpler and stateless. | Hono streaming helper + SSE passthrough from `@anthropic-ai/sdk` stream |
 
----
+## Stack Patterns by Variant
+
+**For the content script badge UI (score overlay on Homegate listings):**
+- Use `createShadowRootUi()` from WXT
+- Mount a React component tree inside the shadow root
+- Inject Tailwind CSS as a `<style>` tag inside the shadow root (not the global document)
+- Use `MutationObserver` to detect when new listing cards are injected (Homegate uses client-side routing)
+- Because WXT provides `autoMount()`, prefer that over manual observer wiring
+
+**For the full-page onboarding wizard:**
+- Register as a WXT "unlisted" HTML entrypoint (not a content script, not the popup)
+- Open via `chrome.tabs.create({ url: chrome.runtime.getURL('onboarding.html') })` from `runtime.onInstalled`
+- React multi-step wizard (no router needed — wizard state is local React state)
+- On completion, write the profile JSON to `@wxt-dev/storage` and close the tab
+
+**For the popup dashboard:**
+- Register as the standard popup entrypoint in WXT (`popup/index.html`)
+- React component, reads profile summary from storage, shows on/off toggle
+- "Edit" link opens the onboarding tab: `chrome.tabs.create({ url: chrome.runtime.getURL('onboarding.html') })`
+
+**For the background service worker:**
+- Registered as `background/index.ts` in WXT
+- All external HTTP fetches (Homegate detail pages, Claude proxy) live here
+- Keep stateless — reconstruct from storage on each activation
+- Use `chrome.runtime.onMessage` to receive scoring requests from content scripts
+- Use `fetch()` with `Host: homegate.ch` allowed via `host_permissions`
+
+**For the EC2 backend:**
+- Single Hono route: `POST /score` accepts listing data + user profile, calls Claude, streams response back
+- CORS locked to `chrome-extension://[your-extension-id]` for production; open for dev
+- API key read from `process.env.ANTHROPIC_API_KEY`
+- No database, no auth, no sessions — pure stateless proxy
+
+## Version Compatibility
+
+| Package | Compatible With | Notes |
+|---------|-----------------|-------|
+| wxt@0.20.x | vite@6.x (internal) | WXT 0.20 is the RC for 1.0. Breaking changes from 0.19 — follow migration guide at wxt.dev/guide/resources/upgrading |
+| @wxt-dev/module-react@1.1.x | wxt@0.20.x | Must match WXT major version. Install as a WXT module in `wxt.config.ts` modules array. |
+| @wxt-dev/storage@1.2.x | wxt@0.20.x | Separate package — works across popup, content scripts, and service worker contexts |
+| tailwindcss@4.x | vite@6.x | Tailwind v4's Vite plugin (`@tailwindcss/vite`) is required in WXT's vite config hook |
+| react@19.x | @wxt-dev/module-react@1.1.x | Confirmed compatible. Use `react@19` and `react-dom@19` matching versions. |
+| hono@4.12.x | @hono/node-server@1.x | Node adapter version must be compatible with hono core. Install both from same release cycle. |
+| @anthropic-ai/sdk@0.78.x | node@18+ | SDK requires Node.js 18 or higher — matches Hono's Node.js minimum. |
+| zod@4.x | @anthropic-ai/sdk | Zod v4 is not backward-compatible with Zod v3 API. If any dependencies pin to Zod v3, use separate packages. |
 
 ## Sources
 
-- [Crawlee official docs -- Introduction](https://crawlee.dev/js/docs/introduction) (HIGH confidence)
-- [Crawlee GitHub](https://github.com/apify/crawlee) (HIGH confidence)
-- [Apify SDK for JavaScript docs](https://docs.apify.com/sdk/js) (HIGH confidence)
-- [Apify Client JS docs](https://docs.apify.com/api/client/js) (HIGH confidence)
-- [Homegate Property Details Scraper on Apify](https://apify.com/ecomscrape/homegate-property-details-scraper) (HIGH confidence)
-- [ImmoScout24 Property Search Scraper on Apify](https://apify.com/ecomscrape/immoscout24-property-search-scraper) (HIGH confidence)
-- [How to Scrape Homegate.ch -- ScrapFly](https://scrapfly.io/blog/posts/how-to-scrape-homegate-ch-real-estate-property-data) (MEDIUM confidence)
-- [How to Scrape ImmoScout24.ch -- ScrapFly](https://scrapfly.io/blog/posts/how-to-scrape-immoscout24-ch-real-estate-property-data) (MEDIUM confidence)
-- [Swiss Immo Scraper (Python reference)](https://github.com/dvdblk/swiss-immo-scraper) (MEDIUM confidence)
-- [Best Node.js Schedulers -- BetterStack](https://betterstack.com/community/guides/scaling-nodejs/best-nodejs-schedulers/) (MEDIUM confidence)
-- [Pino vs Winston -- BetterStack](https://betterstack.com/community/comparisons/pino-vs-winston/) (MEDIUM confidence)
-- [TSX vs ts-node -- BetterStack](https://betterstack.com/community/guides/scaling-nodejs/tsx-vs-ts-node/) (MEDIUM confidence)
-- [Express vs Fastify 2025 -- Medium](https://medium.com/codetodeploy/express-or-fastify-in-2025-whats-the-right-node-js-framework-for-you-6ea247141a86) (MEDIUM confidence)
-- [Zod v4 announcement -- InfoQ](https://www.infoq.com/news/2025/08/zod-v4-available/) (MEDIUM confidence)
-- [Cheerio vs Puppeteer 2026 -- Proxyway](https://proxyway.com/guides/cheerio-vs-puppeteer-for-web-scraping) (MEDIUM confidence)
-- [Best JavaScript Web Scraping Libraries 2025 -- Apify Blog](https://blog.apify.com/best-javascript-web-scraping-libraries/) (MEDIUM confidence)
+- [WXT Official Docs — wxt.dev](https://wxt.dev/) — entrypoints, content script UI modes, storage API, version 0.20.18 confirmed
+- [WXT npm — wxt@0.20.11](https://www.npmjs.com/package/wxt) — latest published version
+- [@wxt-dev/module-react npm](https://www.npmjs.com/package/@wxt-dev/module-react) — version 1.1.5
+- [@wxt-dev/storage npm](https://www.npmjs.com/package/@wxt-dev/storage) — version 1.2.8
+- [2025 State of Browser Extension Frameworks: Plasmo vs WXT vs CRXJS](https://redreamality.com/blog/the-2025-state-of-browser-extension-frameworks-a-comparative-analysis-of-plasmo-wxt-and-crxjs/) — MEDIUM confidence, framework comparison, maintenance status
+- [How to Build Chrome Extensions with React, Vite & CRXJS in 2026](https://optymized.net/blog/building-chrome-extensions) — MEDIUM confidence
+- [Hono Official Docs — Node.js Getting Started](https://hono.dev/docs/getting-started/nodejs) — Node.js adapter, CORS middleware, streaming helper
+- [Hono npm — version 4.12.5](https://www.npmjs.com/package/hono) — latest version confirmed
+- [anthropics/anthropic-sdk-typescript GitHub](https://github.com/anthropics/anthropic-sdk-typescript) — streaming, Node.js usage patterns verified
+- [@anthropic-ai/sdk npm — 0.78.0](https://www.npmjs.com/package/@anthropic-ai/sdk) — latest version confirmed (March 2026)
+- [Tailwind CSS v4.0 Release](https://tailwindcss.com/blog/tailwindcss-v4) — CSS-only config, :host selector for Shadow DOM
+- [React 19.2 Stable](https://react.dev/blog/2025/10/01/react-19-2) — stable release confirmed
+- [Zod v4 InfoQ](https://www.infoq.com/news/2025/08/zod-v4-available/) — version 4.3.6, @zod/mini confirmed
+- [Chrome Cross-Origin Requests in Content Scripts](https://www.chromium.org/Home/chromium-security/extension-content-script-fetches/) — content script fetch CORS behavior
+- [Chrome Extension Service Worker Lifecycle](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle) — 30s idle / 5min max termination confirmed
+- [WXT Content Scripts Guide](https://wxt.dev/guide/essentials/content-scripts) — shadow root UI, integrated UI, iframe UI modes
+
+---
+*Stack research for: HomeMatch Chrome Extension + EC2 LLM Proxy*
+*Researched: 2026-03-07*

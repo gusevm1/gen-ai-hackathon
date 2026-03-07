@@ -1,337 +1,245 @@
 # Pitfalls Research
 
-**Domain:** Swiss real estate listing scraping infrastructure
-**Researched:** 2026-03-05
-**Confidence:** MEDIUM-HIGH (multiple sources corroborate; Swiss-specific legal nuances are LOW confidence due to limited case law)
+**Domain:** Chrome extension injecting UI into third-party real estate site with LLM API integration
+**Researched:** 2026-03-07
+**Confidence:** HIGH (MV3 pitfalls verified against official Chrome docs; Homegate structure verified against scraping sources; Claude rate limits verified against official Anthropic docs)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Getting IP-Banned Within Hours and Losing Scraping Access
+### Pitfall 1: Service Worker Global State Lost on Termination
 
 **What goes wrong:**
-Scrapers hit Swiss real estate sites (Homegate, ImmoScout24, Comparis) too aggressively and get permanently IP-banned. Since you are running from a single EC2 instance with one IP, a ban means total loss of scraping capability for that site. Homegate.ch in particular blocks scrapers "after sending a few requests" according to ScrapFly's analysis. These sites use Cloudflare or equivalent WAFs that detect automated traffic via TLS fingerprinting, behavioral analysis, and IP reputation scoring.
+Storing in-flight scoring state, pending request queues, or intermediate results in global JavaScript variables in the background service worker. When Chrome terminates the worker after 30 seconds of inactivity (or 5 minutes for a single long task), all global state vanishes. Next time the worker wakes up, it has no memory of which listings were being scored, breaking the UX mid-flow.
 
 **Why it happens:**
-Developers test scrapers in dev mode with rapid requests, then deploy to production without throttling. Or they set a "reasonable" delay like 1 second but don't randomize it -- uniform intervals are a scraper fingerprint. The single-IP EC2 setup makes this worse because all 23+ scrapers share one origin.
+Developers migrating from MV2 background pages expect persistent background processes. MV3 service workers are not persistent — Chrome terminates them when idle and restarts them on demand. The termination is silent and unpredictable.
 
 **How to avoid:**
-- Implement randomized delays between requests (3-8 seconds with jitter, not uniform intervals)
-- Start with extremely conservative rates: 1 request every 5-10 seconds per site
-- Use Apify cloud actors for sites with aggressive anti-bot (Apify handles proxy rotation)
-- For custom scrapers, use residential proxy services only if free-tier Apify actors cannot handle the site
-- Never run multiple scrapers against the same site concurrently
-- Respect robots.txt crawl-delay directives (Comparis returned 403 even for robots.txt fetching, suggesting aggressive protection)
-- Implement per-site rate limit configuration so each target can have its own throttle
+- Never store scoring state in global variables. Use `chrome.storage.session` (10 MB, survives worker restarts within the same browser session) for in-flight state.
+- Use `chrome.storage.local` (10 MB, persists across sessions) for scored results and the user preference profile.
+- Implement a "pending queue" as a persisted list in `chrome.storage.session`, not an in-memory array.
+- Each fetch-score cycle should be stateless and resumable: check storage at start, write to storage on completion.
+- Register all event listeners at the **top level** of the service worker script, not inside async callbacks or conditionals.
 
 **Warning signs:**
-- HTTP 403 Forbidden responses (most common)
-- HTTP 429 Too Many Requests
-- Responses returning empty HTML/JSON (site silently serving empty content instead of blocking)
-- CAPTCHAs appearing in responses
-- Response times dramatically increasing (the site is throttling you before blocking)
-- Scraped data suddenly contains zero listings
+- Scores appear for some listings then stop, with no error shown.
+- After the browser is idle for 30+ seconds, returning to Homegate shows badges stopped mid-way.
+- `console.log` in the service worker stops appearing in DevTools after idle.
 
-**Phase to address:**
-Phase 1 (initial scraper infrastructure). Rate limiting must be built into the core scraper framework from day one, not bolted on after getting banned.
+**Phase to address:** Phase 1 — Foundation & Content Script (architecture decision must be made before any state is stored).
 
 ---
 
-### Pitfall 2: Silent Data Corruption -- Scrapers Return Data But It Is Wrong
+### Pitfall 2: DOMParser Not Available in Service Worker — Homegate HTML Cannot Be Parsed Inline
 
 **What goes wrong:**
-The scraper runs without errors and stores JSON files, but the data is silently corrupted. This happens in several ways specific to Swiss real estate:
-1. Site changes its HTML structure or `window.__INITIAL_STATE__` JSON schema, and the scraper extracts wrong fields or null values
-2. Price fields contain different currencies or formats (CHF vs EUR, "auf Anfrage" / "sur demande" / "su richiesta" for "price on request" in three languages)
-3. Area measurements mix square meters with other units or omit the unit entirely
-4. The site serves a bot-detection page (CAPTCHA, JavaScript challenge) and the scraper stores that HTML as if it were a valid listing
+The background service worker fetches Homegate listing detail pages as HTML text, then tries to use `new DOMParser().parseFromString(html, 'text/html')` to extract listing data. This throws `ReferenceError: DOMParser is not defined` because service workers have no DOM access.
 
 **Why it happens:**
-Swiss real estate sites serve content in German, French, and Italian. Field labels, status messages, and error pages differ by language region. A scraper tested only against German-language listings will silently fail on French or Italian content. Additionally, sites like Homegate and ImmoScout24 embed listing data in `window.__INITIAL_STATE__` JSON objects within script tags -- when the JSON schema changes, the scraper keeps extracting from the old paths and gets nulls or wrong values.
+Developers assume the JS environment in a service worker is the same as a regular browser context. It is not — service workers run in a stripped-down worker context without DOM APIs.
 
 **How to avoid:**
-- Validate every scraped record against a schema before storing (required fields: price OR price_on_request flag, location, listing_id, source_url)
-- Store the raw HTML/JSON snapshot alongside parsed data so you can re-parse later without re-scraping
-- Add a "scrape health" check: if >20% of listings from a site have null prices or zero rooms in a single run, mark the run as suspect and alert
-- Test scrapers against all three language variants (de, fr, it URL paths)
-- Prefer extracting from JSON in script tags over HTML parsing -- JSON schemas change less frequently than CSS selectors
-- Never trust field types: parse prices as strings first, then normalize (handle "CHF 1'200'000" Swiss number formatting with apostrophe as thousands separator)
+Two options:
+
+Option A (preferred for this project): Skip HTML parsing entirely. Homegate embeds full listing data in `window.__INITIAL_STATE__` as a JSON blob in a `<script>` tag. Parse this with a regex or string extraction on the raw HTML text (no DOM required). Extract the JSON string, `JSON.parse()` it, then navigate the path `data["listing"]["listing"]` for detail pages.
+
+Option B (fallback): Use the Chrome Offscreen API with reason `DOM_PARSER`. Create an offscreen document, pass the HTML via `chrome.runtime.sendMessage`, parse it there, return the structured data. Limitation: only one offscreen document allowed at a time — cannot parallelize parsing.
 
 **Warning signs:**
-- Sudden spike in null/empty fields in stored JSON
-- Listing counts dropping dramatically for a site between runs
-- All listings from a run having identical timestamps or suspicious patterns
-- File sizes for a site's output significantly smaller than previous runs
+- `ReferenceError: DOMParser is not defined` in the service worker DevTools console.
+- All fetch-detail requests succeed (status 200) but scoring never starts.
 
-**Phase to address:**
-Phase 1 (scraper development). Schema validation is a day-one requirement, not a "nice to have."
+**Phase to address:** Phase 2 — Background Fetch & Data Extraction. Validate approach by logging `window.__INITIAL_STATE__` content from a test fetch before building the parser.
 
 ---
 
-### Pitfall 3: Swiss Data Protection Law (FADP) Violations Through Personal Data Collection
+### Pitfall 3: Content Script Doesn't Re-Execute on SPA Navigation
 
 **What goes wrong:**
-Real estate listings on Swiss sites may contain personal data -- agent names, phone numbers, email addresses, and in some cases owner/seller names. Under Switzerland's Federal Act on Data Protection (nFADP, effective since September 1, 2023), scraping and storing personal data without a legitimate legal basis is illegal. The FADP is extraterritorial: it applies to anyone processing personal data of people in Switzerland, regardless of where the processing occurs.
-
-Unlike GDPR, the FADP provides for criminal penalties (fines up to CHF 250,000 against individuals, not the company). The FADP requires: (1) purpose limitation -- data collected for one purpose cannot be used for another, (2) proportionality -- only collect what is necessary, (3) transparency -- data subjects should be aware their data is being processed.
+Homegate is a JavaScript-rendered site with client-side routing. When a user navigates between search result pages, the URL changes but no full page reload occurs. The content script was injected once on initial page load and does not re-run. Badge injection logic only runs at script startup — so navigating to page 2 of results shows no badges at all.
 
 **Why it happens:**
-Developers scrape "everything available" from listings (as stated in project requirements: "extract maximum data from each listing") without distinguishing between property data and personal data. Agent contact information, seller names, and personal descriptions get swept into raw JSON files on EC2 with no access controls, no retention policy, and no legal basis documented.
+Chrome only runs content scripts on full page navigations. SPA route changes (`history.pushState`) are invisible to the content script injection mechanism.
 
 **How to avoid:**
-- Separate property data from personal data at scrape time: listing details (price, rooms, location, description) are property data; agent names, phone numbers, emails are personal data
-- For the hackathon MVP: strip or hash personal data fields before storage, or store them in a separate file with access controls
-- Document your legal basis for data collection (likely "legitimate interest" for property market analysis with publicly available data)
-- Do not store images that contain people's faces
-- Implement a data retention policy: delete raw scrape data after N days if not needed
-- Do not bypass login walls, paywalls, or authentication mechanisms -- the nFADP and Swiss UWG (Unfair Competition Act) both treat circumvention of access controls as aggravating factors
+- Use `MutationObserver` watching `document.body` to detect when the listing grid is replaced (new listing cards appear, old ones removed).
+- Also listen for `chrome.webNavigation.onHistoryStateUpdated` in the service worker and send a message to the content script to re-scan the page.
+- Alternatively, use the WXT framework's built-in `matches` pattern with history state detection.
+- On each navigation detection, re-scan for listing card elements and inject badges only into cards that don't already have them (check for a data attribute like `data-homematch-scored`).
 
 **Warning signs:**
-- JSON files containing email addresses, phone numbers, or full names
-- No documentation of legal basis for data processing
-- Raw data accumulating indefinitely with no cleanup
-- Scraping behind-login content
+- Badges show on page 1 of search results but not page 2 (without full reload).
+- Clicking on filter changes shows a spinner but no badges appear.
+- The `MutationObserver` callback fires many times per keystroke (over-broad observation scope).
 
-**Phase to address:**
-Phase 1 (architecture). Data classification (property vs. personal) must be designed into the storage schema from the start. This is not a post-launch concern.
+**Phase to address:** Phase 1 — Content Script Foundation. Must be handled before badge injection is built.
 
 ---
 
-### Pitfall 4: Duplicate Listings Across 23+ Sites Making Data Unusable for Analysis
+### Pitfall 4: CSS Leakage — Extension Styles Break Homegate UI
 
 **What goes wrong:**
-The same property appears on Homegate, ImmoScout24, Comparis, Alle-Immobilien, and multiple agency sites simultaneously. Without deduplication, downstream analysis will double/triple-count properties, skew price statistics, and produce misleading market insights. Swiss aggregator sites (Comparis, Alle-Immobilien) themselves aggregate from other sources, creating meta-duplicates.
+Injected badge `<div>` elements pick up Homegate's global CSS rules. Conversely, extension CSS inadvertently restyled Homegate's listing cards — font sizes, colors, or flex layout shifted visually across the whole page.
 
 **Why it happens:**
-Real estate agencies in Switzerland typically list on multiple platforms. A single property might appear on 5-8 sites with slightly different descriptions, different photos, and sometimes different prices (e.g., one site shows "CHF 1'200'000" while another shows "CHF 1'190'000" due to rounding or update timing). Address formats vary by language region and site ("Bahnhofstrasse 10, 8001 Zurich" vs "Bahnhofstr. 10, 8001 Zuerich" vs "10, Bahnhofstrasse, 8001 Zurich").
+Content script stylesheets are injected into the host page's DOM. Any CSS rule with sufficient specificity bleeds into the host page. Conversely, the host page's CSS cascades into injected elements (especially inherited properties like `font-family`, `font-size`, `line-height`, `color`).
 
 **How to avoid:**
-- Design a listing identity strategy from day one: use a composite key of (normalized_address + rooms + area_sqm + listing_type) for fuzzy matching
-- Store a `source_listing_id` per site (Homegate listing ID, ImmoScout ID, etc.) to track the same listing across platforms
-- For the hackathon: do NOT attempt real-time deduplication. Store all data with source metadata, and build dedup as a post-processing step
-- Use Swiss postal code (PLZ/NPA) as the primary geographic normalizer -- it is consistent across all three language regions
-- Accept that perfect dedup is impossible in a hackathon. Instead, design the storage format so dedup CAN be done later
+- Wrap every injected UI element in a **Shadow DOM** with `element.attachShadow({mode: 'open'})`.
+- Inject extension CSS inside the shadow root — styles are fully scoped.
+- Use `all: initial` on the shadow host's root element to reset inherited styles from the host page.
+- Use Tailwind CSS with a shadow-scoped prefix, or use `@layer` reset strategies inside shadow roots.
+- Never rely on `!important` overrides — they indicate a specificity war, not a solution.
 
 **Warning signs:**
-- Total listing count across all sites is 3-5x the actual market inventory
-- Price analysis shows bimodal distributions (same properties counted at slightly different prices)
-- Location analysis shows suspicious clustering (same address appearing multiple times)
+- Badge text renders in an unexpected font or size that varies between Homegate pages.
+- Homegate's listing card layout shifts when the extension is enabled.
+- Extension popup CSS uses class names that match Homegate's class names.
 
-**Phase to address:**
-Phase 2 (data processing). Phase 1 stores raw data with source metadata; Phase 2 builds dedup as a post-processing pipeline. Do not block Phase 1 on this.
+**Phase to address:** Phase 1 — Content Script Foundation. Establish Shadow DOM pattern before building any UI components.
 
 ---
 
-### Pitfall 5: EC2 Disk Fills Up and Scraper Silently Stops Storing Data
+### Pitfall 5: Homegate Blocks Background Fetch Requests (Anti-Bot Headers)
 
 **What goes wrong:**
-Raw JSON files accumulate on the EC2 instance's EBS volume. Swiss real estate listings with images, descriptions in 3 languages, and full metadata can be 10-50KB each. At 23 sites with potentially 50,000+ listings each, a full scrape cycle could generate 500MB-2GB of JSON. Daily snapshots compound this. The default EC2 EBS volume is 8GB. When disk fills up, JSON writes silently fail or produce truncated files, and the scraper reports "success" because the HTTP requests succeeded.
-
-Additionally, the ext4 filesystem has inode limits. Millions of small JSON files can exhaust inodes before disk space runs out, causing "No space left on device" errors even with free gigabytes.
+Fetching Homegate listing detail pages from the service worker (via `fetch()`) results in 403, 429, or CAPTCHA redirect responses. The server detects non-browser request signatures: missing `Cookie` headers, wrong `User-Agent`, missing `Accept-Language`, missing `Referer`. The extension receives HTML with no listing data or a bot-detection page.
 
 **Why it happens:**
-Developers provision EC2 with default storage, don't monitor disk usage, and don't implement log/data rotation. The scraper writes files but never checks if the write actually succeeded or if the disk has space.
+Homegate uses server-side bot detection that checks request headers. Requests from the extension service worker have a bare-bones header profile (`chrome-extension://...` origin, no cookies for the current user session, no `Referer`). Even though the user is logged in on the browser, the service worker does not automatically send their session cookies.
 
 **How to avoid:**
-- Provision at least 50GB EBS volume (costs ~$5/month for gp3)
-- Store listings in consolidated JSONL files (one file per site per scrape run) instead of one file per listing -- this prevents inode exhaustion
-- Implement disk space monitoring: check available space before each scrape run, skip run if <10% free
-- Add write verification: after writing a JSON file, verify file size > 0
-- Implement data rotation: compress and archive runs older than 7 days (gzip reduces JSON by 80-90%)
-- Set up a simple cron alert: `df -h | awk '$5+0 > 80 {print}'` to detect when any partition exceeds 80%
+- Use `fetch()` with `credentials: 'include'` to send the user's existing Homegate session cookies.
+- Include realistic headers: `Accept`, `Accept-Language: de-CH,de`, `Referer: https://www.homegate.ch/`, `User-Agent` (inherit from browser context or use a realistic value).
+- Respect Homegate's robots.txt and Terms of Service. This extension is used by the logged-in user fetching their own results — not mass scraping.
+- Implement per-listing request throttling (e.g., max 2-3 concurrent fetches, 300–500ms delay between requests) to avoid rate-limit bans.
+- Parse `window.__INITIAL_STATE__` JSON from the fetched HTML rather than the rendered DOM — this is more robust to anti-scraping HTML obfuscation.
 
 **Warning signs:**
-- Scraper logs show success but output directory has no new files
-- JSON files with 0 bytes or truncated content
-- `df -h` shows >80% disk usage
-- `df -i` shows inode usage climbing
+- Fetch responses return status 200 but HTML contains "Access Denied" or "Captcha" text.
+- `window.__INITIAL_STATE__` JSON is absent in fetched HTML but visible in the browser tab.
+- Rapidly scoring 20+ listings triggers a temporary IP/session block.
 
-**Phase to address:**
-Phase 1 (infrastructure setup). Disk monitoring and JSONL file format must be decided during EC2 provisioning.
+**Phase to address:** Phase 2 — Background Fetch & Data Extraction. Validate with a single test fetch before building batch logic.
 
 ---
 
-## Moderate Pitfalls
-
-### Pitfall 6: Swiss Number and Address Formatting Breaks Parsing
+### Pitfall 6: Service Worker Terminates Mid-Batch Scoring (5-Minute Task Limit)
 
 **What goes wrong:**
-Swiss formatting conventions differ from other European countries and cause parsing failures:
-- Numbers use apostrophes as thousands separators: `CHF 1'200'000` (not `1,200,000` or `1.200.000`)
-- Decimal separator is a period in German/French regions but can be a comma in some contexts
-- Swiss postcodes are 4 digits (e.g., 8001 for Zurich)
-- Addresses can appear in any of the three national languages
-- Floor numbering: Swiss "1. OG" = first floor above ground (not ground floor)
-- Room counting: Swiss "3.5 Zimmer" means 3 rooms + 1 half-room (kitchen or alcove)
-
-**How to avoid:**
-- Build a Swiss-specific number parser that handles apostrophe thousands separator
-- Normalize "Zimmer" / "pieces" / "locali" to a unified room count field
-- Parse "3.5 Zimmer" as a decimal, not as an error
-- Store raw text alongside parsed values so you can fix parsing errors later without re-scraping
-- Use a canonical address format: `{street} {number}, {plz} {city}`
-
-**Warning signs:**
-- Prices of 0 or NaN in stored data
-- Room counts that are all integers (missing the .5 half-rooms unique to Swiss listings)
-- Address fields with inconsistent formats across different sites
-
-**Phase to address:**
-Phase 1 (scraper development). Build the Swiss number parser as a shared utility used by all scrapers.
-
----
-
-### Pitfall 7: Scheduler Runs Overlap and Cause Duplicate or Corrupted Data
-
-**What goes wrong:**
-A scheduled scrape run takes longer than expected (site is slow, network issues, more listings than anticipated). The next scheduled run starts while the previous one is still running. Both runs write to the same output location, producing interleaved or corrupted data. Or both runs hit the same site simultaneously, doubling the request rate and triggering anti-bot detection.
+A Homegate search result page shows 20 listings. The extension fetches all 20 detail pages and sends LLM calls sequentially. Each LLM call takes 3–8 seconds. Total wall time for 20 listings easily exceeds 5 minutes. Chrome terminates the service worker mid-way. Listings 12–20 never get scored. No error is shown to the user.
 
 **Why it happens:**
-Developers set a fixed cron schedule (e.g., every 6 hours) without implementing run locking or checking if the previous run completed. Swiss real estate sites have varying numbers of listings (Homegate has far more than a small agency site like Cardis), so scrape duration varies wildly between sites.
+Chrome enforces a hard 5-minute limit on a single task. Additionally, each fetch has a 30-second timeout. LLM calls through a proxy can be slow. Chaining 20 sequential operations violates these constraints.
 
 **How to avoid:**
-- Implement a lock file or semaphore per scraper: check if a `.lock` file exists before starting, create it on start, remove it on completion
-- Use timestamped output directories: `data/{site}/{YYYY-MM-DD_HH-mm}/` so runs never overwrite each other
-- Set timeouts on individual scrape runs: if a run exceeds 2x expected duration, kill it and log the failure
-- Schedule scrapers for different sites at staggered times, not all at once
-- Use PM2 or systemd with restart policies instead of bare cron
+- Process listings in parallel batches (e.g., 3 concurrent fetch+score operations at a time).
+- Use the concurrency pattern: push all listing URLs into `chrome.storage.session` as a queue, then process with a self-scheduling pattern (each completed task picks up the next from the queue).
+- Each individual fetch+score operation must complete within 5 minutes — which is fine for a single listing, but never chain them into one long sequential async chain.
+- Use `chrome.alarms` to re-trigger the worker if it terminates with items still in queue.
+- Call a trivial Chrome API (e.g., `chrome.storage.local.get`) every 20 seconds inside long loops to reset the 30-second idle timer.
 
 **Warning signs:**
-- Multiple scraper processes for the same site in `ps aux`
-- Output files with mixed timestamps or out-of-order listings
-- Site anti-bot triggers occurring at regular intervals matching your cron schedule
+- Badges appear for the first N listings but stop suddenly with no visible error.
+- DevTools service worker shows "Stopped" status mid-scoring.
+- Queue counter in storage shows items remaining but no activity.
 
-**Phase to address:**
-Phase 1 (scheduler implementation). Run isolation must be built into the scheduler from the start.
+**Phase to address:** Phase 2 — Background Fetch & Data Extraction. Design the batch processing architecture before writing any fetch code.
 
 ---
 
-### Pitfall 8: Relying on Community Apify Actors That Stop Working
+### Pitfall 7: Claude API Rate Limits Hit During Burst Scoring (Tier 1)
 
 **What goes wrong:**
-You find a community-built Apify actor for Homegate or ImmoScout24, integrate it into your pipeline, and it works for 3 days. Then the target site makes a minor HTML change, the community actor maintainer doesn't update it, and your scraping pipeline for that site silently starts returning zero or garbage results. Apify Store actors have varying maintenance quality.
+On a fresh API account (Tier 1), the rate limit is 50 RPM and 30,000 ITPM for Claude Sonnet 4.x. A search result page with 20 listings and ~1,500-token prompts per listing consumes 30,000 input tokens per batch — hitting the ITPM ceiling in the first minute. The proxy returns 429 errors. Scoring stalls. The user sees badges loading forever.
 
 **Why it happens:**
-Community actors are maintained by individuals with no SLA. The actor page may show "last updated 2 months ago" which seems recent, but a site change yesterday means it is already broken. Swiss sites are lower priority for international Apify developers compared to Zillow or Realtor.com.
+Each listing evaluation sends: system prompt (~500 tokens) + user profile (~300 tokens) + listing data (~500–700 tokens) = ~1,300–1,500 tokens per call. 20 listings = ~28,000–30,000 tokens — nearly the full Tier 1 ITPM budget in one burst.
 
 **How to avoid:**
-- Before integrating any Apify actor, check: (1) last update < 30 days, (2) rating > 4 stars, (3) run success rate > 90%, (4) maintained by Apify team vs. community developer
-- Always have a fallback plan: for every Apify actor you use, understand the site's data structure well enough to build a custom scraper in 2-4 hours if the actor breaks
-- Test actors with a small run before integrating into your pipeline
-- Monitor actor output: if an actor returns <50% of expected listings, switch to fallback
-- Prefer building your own actors for critical sites (Homegate, ImmoScout24) -- you control maintenance
+- Use prompt caching on the Anthropic API: mark the system prompt and user profile as cacheable (`cache_control: {"type": "ephemeral"}`). Cached tokens don't count toward ITPM on most Claude models. This drops effective token consumption per listing from ~1,500 to ~700.
+- Add exponential backoff with jitter on 429 errors — retry after `retry-after` header duration.
+- Process listings sequentially at a controlled rate (1 every 2 seconds) rather than bursting all 20 at once.
+- For the hackathon demo, pre-score a fixed page to avoid live rate limit issues during the demo itself.
+- Upgrade API account to Tier 2 ($40 deposit) before the demo — Tier 2 allows 1,000 RPM and 450,000 ITPM.
 
 **Warning signs:**
-- Actor's Apify Store page shows last update > 60 days ago
-- Actor's issue tracker has unresolved reports of failures
-- Actor returns significantly fewer results than the site visibly has
-- Actor's success rate on its Apify Store page drops below 80%
+- Proxy logs show `429` responses from Anthropic after the first few listings score correctly.
+- First 2–3 badges appear, then all remaining listings show a loading indicator permanently.
+- `retry-after` header value is 60 seconds or more.
 
-**Phase to address:**
-Phase 1 (scraper selection). Evaluate available actors early, build custom scrapers for sites where no reliable actor exists.
+**Phase to address:** Phase 3 — LLM Scoring. Implement caching and rate limit handling before end-to-end testing.
 
 ---
 
-### Pitfall 9: No Crash Recovery -- One Failed Scrape Loses the Entire Run
+### Pitfall 8: Message Channel Closed Before Async Response (Content Script ↔ Service Worker)
 
 **What goes wrong:**
-A scraper is halfway through crawling 5,000 Homegate listings when the EC2 instance runs out of memory, the network drops, or an unhandled exception occurs. All 2,500 already-scraped listings are lost because they were held in memory and not yet written to disk. The scraper restarts from zero and re-scrapes pages it already visited, wasting time and increasing ban risk.
+The content script sends a message to the service worker requesting a score for a listing. The service worker handler does async work (fetch + LLM call) and tries to call `sendResponse()` when done. Chrome has already closed the message channel. The content script never receives the score. No error is thrown.
 
 **Why it happens:**
-Developers batch all results in memory and write them to a single JSON file at the end. This is simpler to implement but has zero fault tolerance. Node.js's default behavior on unhandled promise rejections is to crash the process.
+In Chrome's messaging API, if the listener function does not return `true` synchronously (or return a Promise in Chrome 146+), the message channel is closed immediately after the listener returns. Any attempt to call `sendResponse` asynchronously is silently dropped.
 
 **How to avoid:**
-- Write each scraped listing to disk immediately (append to JSONL file, one listing per line)
-- Maintain a cursor/checkpoint: store the last successfully scraped page number or listing ID
-- On restart, read the checkpoint and resume from where you left off
-- Use PM2 with `--max-memory-restart` to auto-restart before OOM kills the process
-- Wrap every scraper in a top-level try/catch that logs the error and saves the checkpoint before exiting
-- Use `process.on('uncaughtException')` and `process.on('unhandledRejection')` to save state before crashing
+- Return `true` from `chrome.runtime.onMessage.addListener` to keep the channel open for async responses (works in all Chrome versions).
+- Or return a `Promise` from the listener (Chrome 146+, acceptable since this is a 2026 project).
+- Better pattern for this architecture: use a persistent connection via `chrome.runtime.connect()` for streaming score updates from the service worker back to the content script.
+- Or: use `chrome.storage.session` as a shared state bus — service worker writes scores, content script reads via `chrome.storage.onChanged` listener.
 
 **Warning signs:**
-- Scraper processes disappearing from `ps aux` without log entries
-- Output files that are empty or suspiciously small
-- Scrape runs taking 2-3x longer than expected (silently restarting from zero)
+- Scores are computed (visible in service worker DevTools console) but badges never update in the page.
+- `chrome.runtime.lastError: "The message port closed before a response was received."` in content script console.
 
-**Phase to address:**
-Phase 1 (scraper framework). Incremental write + checkpoint must be in the base scraper class that all site-specific scrapers extend.
+**Phase to address:** Phase 2 — Background Fetch & Data Extraction (messaging architecture must be established).
 
 ---
 
-### Pitfall 10: Scraping Sites That Require JavaScript Rendering Without a Headless Browser
+### Pitfall 9: Extension Update Breaks Content Script in Open Tabs
 
 **What goes wrong:**
-Some Swiss real estate sites render listing data client-side via JavaScript frameworks (React, Vue, Angular). A simple HTTP GET request returns an empty HTML shell with no listing data. The scraper stores this empty shell and reports success. This is particularly common with modern agency websites (Properti, Neho, BetterHomes) that are built as single-page applications.
+User updates the extension (or Chrome auto-updates it). Existing Homegate tabs still run the old content script. The new service worker starts. Old content scripts try to send messages to the new service worker — the extension IDs match, but the runtime context is stale. `chrome.runtime.sendMessage` throws `Extension context invalidated`. All badge injection stops. The user sees a broken state with no feedback.
 
 **Why it happens:**
-Developers test by viewing the page in a browser (where JS renders) but the scraper uses `fetch` or `axios` which only gets the initial HTML. The key sites (Homegate, ImmoScout24) embed data in `window.__INITIAL_STATE__` which IS available without JS rendering, but smaller agency sites often do not.
+Chrome injects content scripts only at page load time. Open tabs from before the update still run the previous script version. The runtime context between the old content script and the new service worker is incompatible.
 
 **How to avoid:**
-- For each target site, first check if data is available in the raw HTML or `__INITIAL_STATE__` script tags (no JS rendering needed)
-- If JS rendering is required, use Puppeteer/Playwright via Apify actors (they handle browser management)
-- Never use headless browsers when plain HTTP requests suffice -- headless browsers use 10-50x more memory and CPU
-- Create a site classification during the research phase: "static" (HTTP only), "hidden-API" (JSON in script tags), "SPA" (needs browser)
-- For SPA sites, check if they have a hidden REST API by examining Network tab in DevTools -- often the SPA calls a JSON API that can be scraped directly
+- Catch `Extension context invalidated` errors around all `chrome.runtime` calls in content scripts.
+- On catching this error, display a non-intrusive "Please reload the page to update HomeMatch" notice.
+- In the service worker `chrome.runtime.onInstalled` handler, call `chrome.scripting.executeScript` to re-inject content scripts into all existing Homegate tabs.
+- Use a version handshake: the content script sends its version on connection; if the service worker detects a mismatch, it triggers re-injection.
 
 **Warning signs:**
-- Scraped HTML files that are tiny (<5KB for a listing page that should have rich content)
-- JSON parse errors when trying to extract `__INITIAL_STATE__` (the data is loaded via XHR, not embedded)
-- All listing fields are null but the scraper reports HTTP 200 success
+- After extension update, badges disappear from tabs that were already open.
+- `Uncaught Error: Extension context invalidated` in the browser console on existing tabs.
+- Reloading the Homegate tab fixes the issue — confirming stale context, not a code bug.
 
-**Phase to address:**
-Phase 1 (site feasibility research). Classify every target site before writing scrapers.
-
----
-
-## Minor Pitfalls
-
-### Pitfall 11: Timezone and Scheduling Confusion
-
-**What goes wrong:**
-EC2 instance defaults to UTC. Swiss time is CET (UTC+1) or CEST (UTC+2 in summer). Scheduled scrapes meant to run at "3 AM Swiss time" (off-peak, less anti-bot scrutiny) actually run at 1 AM or 2 AM UTC. Timestamp comparisons between scrape runs and listing "last updated" dates produce wrong results.
-
-**How to avoid:**
-- Store all timestamps in UTC in the data
-- Configure the scheduler to explicitly use `Europe/Zurich` timezone for scheduling
-- Log both UTC and local time in scrape run metadata
-
-**Phase to address:**
-Phase 1 (scheduler configuration).
+**Phase to address:** Phase 4 — Polish & Reliability. Handle gracefully before release.
 
 ---
 
-### Pitfall 12: Not Capturing Listing Removal (Sold/Rented Properties)
+### Pitfall 10: Homegate DOM Selector Fragility (No Stable IDs)
 
 **What goes wrong:**
-Scrapers only capture new and existing listings. When a property is sold or rented and removed from the site, the scraper has no way to detect this. Historical analysis cannot distinguish between "listing was never scraped" and "listing was removed because it sold."
+The content script uses CSS selectors like `.listing-card-wrapper` or `[data-test-id="listing"]` to find listing cards and inject badges. Homegate deploys a frontend update that renames CSS classes or removes `data-test-id` attributes. All badge injection silently stops working in production. Users see no badges, no error.
+
+**Why it happens:**
+Third-party sites don't provide stability guarantees for their CSS class names or DOM structure. Homegate.ch uses server-side rendered React/Next.js with hashed or generated class names on some components that change with each build.
 
 **How to avoid:**
-- Store a manifest of all listing IDs seen per site per run
-- Diff consecutive manifests to detect removed listings
-- Mark removed listings with a `last_seen` timestamp and `status: presumed_sold`
-- This is a Phase 2 concern -- for hackathon, just store snapshots and accept that removal detection comes later
+- Prefer structural selectors over class name selectors: target `<article>` tags, aria-roles, or known semantic HTML elements rather than generated class names.
+- Use `data-*` attributes where available as they tend to be more stable (often used in QA test suites internally).
+- Build a selector abstraction layer with multiple fallback strategies: try selector A, fall back to selector B, fall back to selector C, log a warning if all fail.
+- Validate selectors on page load and emit a warning badge ("HomeMatch: page structure changed — contact support") if no listing cards are found on a Homegate search URL.
+- Monitor selector health: log when the fallback selector is used.
 
-**Phase to address:**
-Phase 2 (data processing). Not critical for MVP but essential for investment analysis.
+**Warning signs:**
+- Extension works in development but no badges appear after a Homegate frontend deploy.
+- `document.querySelectorAll(LISTING_SELECTOR).length === 0` on a page that visibly shows listings.
+- Homegate's class names contain hashes like `listing-card__title--a3f9b2`.
 
----
-
-### Pitfall 13: Ignoring robots.txt and Getting a Legal Nastygram
-
-**What goes wrong:**
-Swiss real estate platforms explicitly restrict scraping in their robots.txt and terms of service. Ignoring these creates legal exposure. Comparis.ch returned a 403 even for the robots.txt file itself, suggesting very aggressive anti-scraping posture. Under the Swiss UWG (Unfair Competition Act), systematic extraction of a database can constitute unfair competition even if individual listings are publicly available.
-
-**How to avoid:**
-- Check and document the robots.txt for every target site before scraping
-- Respect Disallow directives -- they are a strong negative signal if you end up in legal proceedings
-- Use the crawl-delay directive if present
-- Do not scrape content behind login walls or paywalls
-- Consider reaching out to key platforms about data access (some may have partner APIs)
-- Keep your scraping volume "polite" -- do not scrape faster than a human could browse
-
-**Phase to address:**
-Phase 1 (site feasibility research). Document robots.txt compliance for each site before building scrapers.
+**Phase to address:** Phase 1 — Content Script Foundation. Establish the selector abstraction pattern from day one.
 
 ---
 
@@ -339,99 +247,125 @@ Phase 1 (site feasibility research). Document robots.txt compliance for each sit
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| One JSON file per listing | Simple to implement | Inode exhaustion at scale, slow to query | Never at 23+ sites -- use JSONL from the start |
-| No schema validation | Faster initial development | Silent data corruption goes undetected for days | First 24 hours only, then add validation |
-| Hardcoded CSS selectors | Quick scraper development | Breaks on any site change, no reuse across sites | Acceptable for hackathon if hidden JSON/API not available |
-| All scrapers in one process | Simple scheduling | One crash kills all scrapers, no per-site isolation | Never -- isolate per-site from day one |
-| No proxy rotation | No infrastructure cost | IP ban kills all scraping from the EC2 instance | Acceptable for low-volume sites (<100 listings), never for major aggregators |
-| Storing personal data alongside property data | Faster to implement | FADP liability, harder to comply with data requests | Never -- classify data types at scrape time |
+| Hardcoding Homegate CSS selectors | Faster development | Breaks silently on Homegate frontend deploys | Only with a monitoring/alerting strategy in place |
+| Sending full raw HTML to LLM instead of extracted JSON | Avoids writing a parser | Wastes 5-10x tokens, hits rate limits faster, increases cost and latency | Never — extract from `window.__INITIAL_STATE__` always |
+| Sequential scoring (one listing at a time) | Simpler code | User waits 3-8 minutes for 20 listings to score | Acceptable in MVP if clearly communicated; replace with parallelism post-demo |
+| No retry logic on LLM proxy calls | Faster to write | Transient errors cause permanent badge failures | Never in production; always add exponential backoff |
+| Global variables in service worker for in-flight state | Feels natural, works in dev | State lost on worker restart, hard to reproduce bugs | Never — use `chrome.storage.session` from day one |
+| Calling LLM with the listing's raw description text (multilingual, unsanitized) | No preprocessing | LLM may hallucinate on garbage HTML artifacts left in the extracted text | Acceptable in hackathon if you strip obvious HTML tags; clean up for production |
+
+---
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Apify API | Assuming free tier credits last for 23 sites | Calculate expected Apify usage upfront. Free tier gives $5/month platform usage credits. Estimate cost per actor run and decide which sites justify the cost |
-| EC2 with raw JSON | Not setting up SSH key or security group properly | Use key pair auth, restrict SSH to your IP, open only port 22 and health check port |
-| Apify dataset download | Downloading full dataset every run instead of incremental | Use Apify's dataset pagination or webhook-based export to only get new results |
-| Swiss site language | Scraping German-only URL paths | Most Swiss sites have `/de/`, `/fr/`, `/it/` paths. Check if different language paths show different listings (some agencies list in only one language) |
-| Number parsing | Using `parseInt` or `parseFloat` on Swiss-formatted numbers | `CHF 1'200'000` must strip apostrophes before parsing. Build a shared `parseSwissNumber()` utility |
+| Homegate fetch from service worker | Fetching without `credentials: 'include'` — cookies not sent, gets 403 or empty page | Use `fetch(url, {credentials: 'include', headers: {Referer: 'https://www.homegate.ch/'}})` |
+| Homegate data extraction | Parsing rendered HTML DOM selectors | Parse `window.__INITIAL_STATE__` JSON from the raw HTML string — more reliable, no DOM needed |
+| Anthropic API (via proxy) | Sending full user profile and system prompt uncached on every request | Use `cache_control: {type: "ephemeral"}` on system prompt and profile — cached tokens don't count toward ITPM |
+| Anthropic API rate limits | Ignoring the `retry-after` response header on 429 | Read `retry-after` header and wait exactly that duration before retry, with exponential backoff |
+| Chrome storage | Using `chrome.storage.sync` for the user profile | `sync` has 100KB total quota; use `chrome.storage.local` for the profile (10 MB quota) |
+| Content script ↔ service worker messaging | Not returning `true` from `onMessage` listener | Return `true` for async responses, or use `chrome.storage.onChanged` as a shared event bus |
+| Shadow DOM and Tailwind CSS | Importing Tailwind CDN inside shadow root — blocked by extension CSP | Bundle Tailwind as a static CSS file in the extension package; import via shadow root `adoptedStyleSheets` |
+
+---
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Loading all scraped data into memory for dedup | Node.js process OOM-killed | Stream-process JSONL files, never load all data at once | >10,000 listings in memory (~50-500MB depending on field richness) |
-| Running Puppeteer for every site | EC2 uses 4GB+ RAM, scrapes take hours | Only use browser rendering for SPA sites. Use HTTP requests for hidden-JSON sites | >3 concurrent Puppeteer instances on a t3.small |
-| Single-threaded sequential scraping of all sites | Full scrape cycle takes 8+ hours | Run site scrapers in parallel (different processes), stagger start times | >10 sites with 1000+ listings each |
-| No caching of already-scraped listing pages | Re-downloads full listing details every run even if listing hasn't changed | Use listing ID + last-modified date to skip unchanged listings | Daily scraping with >10,000 total listings |
+| Unbounded MutationObserver | CPU spikes on pages with live price tickers or animated elements; fan noise | Observe only `{childList: true, subtree: false}` on the listings container, not `document.body`; disconnect when processing | Immediately on heavy SPA pages |
+| Scoring all listings simultaneously | First 2-3 badges appear, remaining never resolve (rate limit hit) | Cap concurrent scoring at 3; use a self-draining queue in `chrome.storage.session` | On Tier 1 with 8+ listings per page |
+| Re-scoring already-scored listings on every DOM mutation | Exponential duplicate LLM calls; cost blow-up | Tag each listing DOM element with `data-homematch-scored="true"` before scoring; check before enqueueing | Immediately if MutationObserver fires on inject |
+| Fetching detail page for each listing card, including duplicate listings (same ID in carousel vs grid) | Duplicate LLM calls; unnecessary cost | Deduplicate by listing ID before fetching; maintain a scored ID set in `chrome.storage.session` | With paginated or carousel-style result pages |
+| Large listing HTML sent to proxy | Slow proxy response; high token count; risk of context limit | Extract only needed fields from `window.__INITIAL_STATE__` — strip image URLs, metadata noise, keep description + specs only | For listings with long marketing descriptions |
+
+---
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Storing Apify API keys in code or git | Key exposure, unauthorized usage billing | Use environment variables. Store in `.env` file excluded from git. On EC2, use instance metadata or AWS Secrets Manager |
-| EC2 with open security group (0.0.0.0/0 on all ports) | Instance compromise, data theft, crypto mining | Restrict to SSH (port 22) from your IP + health check port. No other inbound rules |
-| No HTTPS for health endpoint | Credentials in transit if you add auth later | Use self-signed cert or just accept HTTP for hackathon health check (no sensitive data flows through it) |
-| Raw JSON files readable by all users on EC2 | Any process can read scraped data | Set file permissions to 600 (owner read/write only), run scraper as dedicated user |
+| Storing Anthropic API key in extension (content script or service worker) | Key exposed to any webpage that inspects the extension's network requests or source; extractable from `.crx` | Never put API key in extension. Always route through the EC2 proxy. Proxy validates requests and holds the key in an environment variable. |
+| EC2 proxy with no authentication | Any user with the proxy URL can make unlimited Claude API calls billed to your account | Add a shared secret header that the extension sends; validate on the proxy. For hackathon: generate a UUID secret at extension install time stored in `chrome.storage.local`, sent with every proxy request. |
+| EC2 proxy open to all origins (`Access-Control-Allow-Origin: *`) | Any website can hit your proxy endpoint and consume your API credits | Restrict CORS to `chrome-extension://[your-extension-id]` or validate the `Origin` header server-side |
+| Injecting raw Homegate HTML into the page's DOM | Stored XSS: if Homegate listing descriptions contain script injection, and you `innerHTML` them, they execute in the page context | Always use Shadow DOM + `textContent` for user-visible content. Never `innerHTML` with untrusted content. |
+| Using `chrome.storage.sync` for the user profile | Sync data is transmitted to Google's servers and synced across devices — includes user's home address, budget, location preferences (PII) | Use `chrome.storage.local` — stays on the user's device. Document this choice in the privacy policy. |
+
+---
+
+## UX Pitfalls
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Showing a spinner on all badges simultaneously, then revealing all at once | Users think the extension is frozen for 30-60+ seconds; likely to disable it | Show each badge as soon as its score is ready (progressive disclosure); each listing badge is independent |
+| Showing a numeric percentage (e.g., "73%") with no context | Users question the number — "73% of what?" — and distrust it | Show label + number: "Good Match — 73%" with color coding; percentage alone is opaque |
+| Silent failure when scoring fails (LLM error, timeout) | User assumes the extension is broken for that listing permanently | Show a neutral "?" badge with "Unable to score" tooltip; never leave a listing in a permanent loading state |
+| Full-page onboarding that reloads Homegate after completion | User loses their search context; jarring | After onboarding completes, trigger badge injection on the current page state; don't force a reload |
+| Score breakdown panel covers the listing card permanently | Users can't read the listing title or price while the panel is open | Make breakdown expandable/collapsible; default to collapsed; anchor to the right side or render as a tooltip |
+
+---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Scraper "works":** Does it handle pagination? A scraper returning 20 listings when the site has 5,000 is only scraping page 1
-- [ ] **Data "stored":** Are the JSON files valid JSON? Open one and verify it is parseable, not truncated, and contains expected fields
-- [ ] **Scheduler "runs":** Does it actually run on schedule, or did the cron syntax put it on a monthly cycle? Check `crontab -l` and verify with a test run
-- [ ] **"All sites" scraped:** Did you test with sites in all three languages? A scraper working for German Homegate may fail on French Homegate (`/fr/`)
-- [ ] **Error handling "exists":** Does the scraper log errors AND continue, or does it log the error and then crash without saving partial results?
-- [ ] **Rate limiting "implemented":** Is the delay between requests truly randomized, or is it a fixed `setTimeout(1000)` that is trivially detectable?
-- [ ] **Disk space "sufficient":** Have you calculated the storage needed for daily scrapes across 23 sites for the full hackathon week?
-- [ ] **Health endpoint "works":** Does it actually report scraper status (last run time, success/failure, listing counts), or just return `{"status": "ok"}`?
+- [ ] **Badge injection:** Badges appear on page 1 — verify they also appear after SPA navigation to page 2 without full reload.
+- [ ] **Background fetch:** Fetch works in dev (where no bot detection triggers) — verify with `credentials: 'include'` and real session cookies on actual Homegate.ch.
+- [ ] **Service worker state:** Scoring works in one session — verify state survives if user leaves the tab idle for 60 seconds then returns (worker was terminated and restarted).
+- [ ] **Shadow DOM isolation:** Extension badges look correct in dev — verify Homegate's own CSS doesn't alter badge appearance (check `font-size`, `color`, `line-height` inheritance).
+- [ ] **Message passing:** Scores received in dev environment — verify `sendResponse` + `return true` pattern is used and scores still arrive under load.
+- [ ] **Rate limits:** 3 listings score correctly — verify 20 simultaneous listings complete without 429 errors; test with prompt caching enabled.
+- [ ] **Selector stability:** Selectors work on current Homegate — test on search results page, map view toggle, and after applying a filter (each can trigger DOM restructure).
+- [ ] **Extension update:** Works when extension is active — verify what happens when the extension is reloaded (DevTools "reload" button) with Homegate tab already open.
+- [ ] **Multilingual listings:** DE listing scores correctly — verify FR and IT listings also score and that the LLM response language matches the listing language.
+- [ ] **Proxy security:** Proxy accepts extension requests — verify the proxy rejects requests without the shared secret header.
+
+---
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| IP banned from major site | MEDIUM | Switch to Apify cloud actor for that site. If using custom scraper, add residential proxy. Recovery time: 1-2 hours |
-| Silent data corruption (wrong schema) | HIGH | Re-scrape affected date ranges. Build schema validator. Audit all stored data against new schema. Recovery time: 4-8 hours |
-| Disk full on EC2 | LOW | Compress old runs with gzip. Resize EBS volume (online, no restart needed with gp3). Recovery time: 30 minutes |
-| FADP compliance issue | HIGH | Audit all stored data for personal information. Strip/hash personal fields. Document legal basis. Recovery time: 1-2 days |
-| Duplicate data corrupting analysis | MEDIUM | Build post-hoc dedup pipeline using address normalization + fuzzy matching. Recovery time: 4-8 hours but imperfect results |
-| Apify actor breaks | LOW-MEDIUM | Switch to custom scraper for that site. If the site uses hidden JSON, a basic custom scraper can be built in 2-4 hours |
-| Scheduler overlap corruption | LOW | Move to timestamped output directories. Re-run affected scrapes. Add lock files. Recovery time: 1 hour |
-| EC2 instance crash, data loss | HIGH if no backup | Set up daily EBS snapshot schedule ($0.05/GB/month). Recovery: launch new instance from snapshot. Without backup: data is gone |
+| Service worker state loss discovered late | MEDIUM | Refactor all global state to `chrome.storage.session`; test by forcibly stopping the worker in DevTools |
+| DOMParser failure discovered in production | LOW | Switch to regex-based `window.__INITIAL_STATE__` extraction; no architecture change needed |
+| Homegate DOM selectors break | LOW | Update selectors; ship new extension version; add fallback selector strategy |
+| Anti-bot blocking on background fetch | MEDIUM | Add `credentials: 'include'` + headers; implement request throttling; test with real session |
+| Rate limits saturated during demo | LOW | Switch from Sonnet to Haiku for demo; add prompt caching; upgrade to Tier 2 ($40) |
+| CSS bleed-through discovered in testing | LOW | Wrap in Shadow DOM; typically a 2–4 hour fix if not designed in from the start |
+| CSS bleed-through discovered post-ship | HIGH | Shadow DOM refactor requires rewriting all injected UI component mounting logic |
+| Proxy has no auth, gets abused | MEDIUM | Add secret-header validation on proxy; rotate the key and republish extension with new key |
+
+---
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| IP banning (P1) | Phase 1: Scraper framework | Test each scraper with 100+ requests; no 403/429 errors |
-| Silent data corruption (P2) | Phase 1: Schema validation | Run scraper output through validator; >95% of records pass |
-| FADP violations (P3) | Phase 1: Data classification | Grep stored JSON for email/phone patterns; should return zero matches in property data files |
-| Duplicate listings (P4) | Phase 2: Dedup pipeline | Compare listing count vs. known market inventory; within 2x is acceptable for MVP |
-| Disk exhaustion (P5) | Phase 1: Infrastructure | `df -h` shows <50% usage after 3 days of scraping |
-| Swiss number parsing (P6) | Phase 1: Shared utilities | Unit tests pass for `1'200'000`, `3.5 Zimmer`, `sur demande` |
-| Scheduler overlap (P7) | Phase 1: Scheduler design | Run overlapping test; second instance detects lock and skips |
-| Apify actor reliability (P8) | Phase 1: Actor evaluation | Document fallback plan for each Apify-dependent site |
-| Crash recovery (P9) | Phase 1: Scraper framework | Kill scraper mid-run; restart recovers from checkpoint |
-| JS rendering misclassification (P10) | Phase 1: Site research | Site classification doc exists with rendering requirement per site |
-| Timezone confusion (P11) | Phase 1: Scheduler config | Scheduler runs at expected Swiss time; timestamps in data are UTC |
-| Listing removal (P12) | Phase 2: Data processing | Manifest diff detects removed listings between runs |
-| robots.txt compliance (P13) | Phase 1: Site research | robots.txt documented for each target site |
+| Service worker global state loss | Phase 1 — Foundation | Force-stop worker in DevTools; confirm queued items persist in `chrome.storage.session` |
+| DOMParser not available in service worker | Phase 2 — Background Fetch | Log raw HTML from a test fetch; confirm `window.__INITIAL_STATE__` JSON is extractable via string parsing |
+| Content script doesn't re-execute on SPA navigation | Phase 1 — Foundation | Navigate between search pages without reload; confirm badge injection fires |
+| CSS leakage (extension vs. host page) | Phase 1 — Foundation | Inspect Homegate card styles with extension active; toggle extension on/off and diff computed styles |
+| Homegate blocks background fetch (anti-bot) | Phase 2 — Background Fetch | Run fetch from service worker with DevTools network log; confirm 200 response and `__INITIAL_STATE__` present |
+| Service worker terminates mid-batch | Phase 2 — Background Fetch | Score 20+ listings; observe service worker lifecycle in DevTools; confirm all listings eventually score |
+| Claude API rate limits on burst scoring | Phase 3 — LLM Scoring | Run end-to-end score for 20 listings; check proxy logs for 429 errors; verify caching is applied |
+| Message channel closed before async response | Phase 2 — Background Fetch | Send a score request; add 10-second artificial delay in handler; confirm badge still updates |
+| Extension update breaks open tabs | Phase 4 — Polish & Reliability | Reload extension in DevTools with Homegate tab open; confirm graceful degradation or re-injection |
+| Homegate DOM selector fragility | Phase 1 — Foundation | Test selectors after toggling search filters (DOM re-renders); implement fallback strategy |
+
+---
 
 ## Sources
 
-- [ScrapFly: How to Scrape Homegate.ch](https://scrapfly.io/blog/posts/how-to-scrape-homegate-ch-real-estate-property-data) -- MEDIUM confidence, commercial scraping service perspective
-- [ScrapFly: How to Scrape ImmoScout24.ch](https://scrapfly.io/blog/posts/how-to-scrape-immoscout24-ch-real-estate-property-data) -- MEDIUM confidence
-- [Swiss FADP Overview (Adnovum)](https://www.adnovum.com/blog/swiss-federal-act-on-data-protection-2023) -- HIGH confidence, Swiss company analysis
-- [Swiss FADP (SecurePrivacy)](https://secureprivacy.ai/blog/switzerland-new-federal-act-data-protection-fadp-key-changes-compliance) -- MEDIUM confidence
-- [DLA Piper: Switzerland Data Protection Laws](https://www.dlapiperdataprotection.com/?t=law&c=CH) -- HIGH confidence, international law firm
-- [Is Web Scraping Legal in 2026 (Rayobyte)](https://rayobyte.com/blog/is-web-scraping-legal-2026) -- MEDIUM confidence
-- [State of Web Scraping 2026 (Browserless)](https://www.browserless.io/blog/state-of-web-scraping-2026) -- MEDIUM confidence
-- [Web Scraping Challenges 2025 (ScrapingBee)](https://www.scrapingbee.com/blog/web-scraping-challenges/) -- MEDIUM confidence
-- [How to Bypass Cloudflare 2026 (ScrapFly)](https://scrapfly.io/blog/posts/how-to-bypass-cloudflare-anti-scraping) -- MEDIUM confidence
-- [Apify: Analyzing Pages and Fixing Errors](https://docs.apify.com/academy/node-js/analyzing-pages-and-fixing-errors) -- HIGH confidence, official docs
-- [Swiss-immo-scraper (GitHub)](https://github.com/dvdblk/swiss-immo-scraper) -- MEDIUM confidence, working open-source project
-- [AWS: EC2 Volume Disk Space](https://repost.aws/knowledge-center/ec2-volume-disk-space) -- HIGH confidence, official AWS docs
-- [Small JSON Files Problem on S3 (Medium)](https://medium.com/@e.pkontou/small-files-problem-on-s3-5a5ec7f19d0a) -- MEDIUM confidence
+- [Chrome Extension Service Worker Lifecycle — Chrome for Developers](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle) — HIGH confidence
+- [Longer Extension Service Worker Lifetimes — Chrome Blog](https://developer.chrome.com/blog/longer-esw-lifetimes) — HIGH confidence
+- [Chrome Offscreen API — Chrome for Developers](https://developer.chrome.com/docs/extensions/reference/api/offscreen) — HIGH confidence
+- [Cross-origin Network Requests — Chrome Extensions Docs](https://developer.chrome.com/docs/extensions/develop/concepts/network-requests) — HIGH confidence
+- [Claude API Rate Limits — Anthropic Official Docs](https://platform.claude.com/docs/en/api/rate-limits) — HIGH confidence (Tier 1: 50 RPM, 30K ITPM for Sonnet 4.x; Tier 2: 1,000 RPM, 450K ITPM)
+- [How to Scrape Homegate.ch Real Estate Property Data — Scrapfly](https://scrapfly.io/blog/posts/how-to-scrape-homegate-ch-real-estate-property-data) — MEDIUM confidence (confirms `window.__INITIAL_STATE__` JSON structure)
+- [Solving CSS and JavaScript Interference in Chrome Extensions — DEV Community](https://dev.to/developertom01/solving-css-and-javascript-interference-in-chrome-extensions-a-guide-to-react-shadow-dom-and-best-practices-9l) — MEDIUM confidence
+- [Making Chrome Extension Smart By Supporting SPA Websites — Medium](https://medium.com/@softvar/making-chrome-extension-smart-by-supporting-spa-websites-1f76593637e8) — MEDIUM confidence
+- [Managing Concurrency in Chrome Extensions — Taboola Engineering](https://www.taboola.com/engineering/managing-concurrency-in-chrome-extensions/) — MEDIUM confidence
+- [Hackers Target Misconfigured LLM Proxies — BleepingComputer](https://www.bleepingcomputer.com/news/security/hackers-target-misconfigured-proxies-to-access-paid-llm-services/) — MEDIUM confidence (real-world attack pattern on unsecured LLM proxies)
 
 ---
-*Pitfalls research for: Swiss real estate listing scraping infrastructure*
-*Researched: 2026-03-05*
+*Pitfalls research for: Chrome extension + LLM integration on third-party real estate site (Homegate.ch)*
+*Researched: 2026-03-07*

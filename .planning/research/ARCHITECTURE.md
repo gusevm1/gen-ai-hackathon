@@ -1,525 +1,591 @@
-# Architecture Patterns
+# Architecture Research
 
-**Domain:** Multi-site web scraping infrastructure (Swiss real estate listings)
-**Researched:** 2026-03-05
-**Confidence:** HIGH
+**Domain:** Chrome Extension (Manifest V3) with LLM backend proxy
+**Researched:** 2026-03-07
+**Confidence:** HIGH (Chrome MV3 official docs + verified patterns)
 
-## Recommended Architecture
+## Standard Architecture
 
-The system is a **single-process Node.js monolith** running on EC2 that combines a cron-based scheduler, a scraper registry with a unified adapter interface, raw JSON file storage, and a minimal HTTP health server. This mirrors the proven architecture from the existing shoparoo-meals-backend codebase but is redesigned as a long-running service rather than a one-shot script.
+### System Overview
 
 ```
-                        +---------------------------+
-                        |     EC2 Instance          |
-                        |                           |
- cron tick              |  +---------------------+  |
- (node-cron)  --------->|  |    Scheduler        |  |
-                        |  |  (runs on cadence)  |  |
-                        |  +--------+------------+  |
-                        |           |               |
-                        |           v               |
-                        |  +---------------------+  |
-                        |  |  Scraper Registry   |  |
-                        |  |  (site configs +    |  |
-                        |  |   adapter lookup)   |  |
-                        |  +--------+------------+  |
-                        |           |               |
-                        |    +------+------+        |
-                        |    |             |        |
-                        |    v             v        |
-                        |  +------+   +--------+   |
-                        |  |Apify |   | Custom |   |
-                        |  |Adapter|  | Adapter|   |
-                        |  +--+---+   +---+----+   |
-                        |     |           |         |
-                        |     v           v         |
-                        |  +---------------------+  |
-                        |  |  Result Normalizer  |  |
-                        |  |  (raw -> common     |  |
-                        |  |   PropertyListing)  |  |
-                        |  +--------+------------+  |
-                        |           |               |
-                        |           v               |
-                        |  +---------------------+  |
-                        |  |   Storage Writer    |  |
-                        |  |  (JSON files to     |  |
-                        |  |   data/{site}/{ts}) |  |
-                        |  +---------------------+  |
-                        |                           |
-                        |  +---------------------+  |
- GET /health  --------->|  |  Health Server      |  |
-                        |  |  (port 3000)        |  |
-                        |  +---------------------+  |
-                        +---------------------------+
-
-External:
-  Apify Cloud  <-- ApifyClient calls actors
-  Target sites <-- Custom scrapers (HTTP/Cheerio or Playwright)
+┌──────────────────────────────────────────────────────────────────────┐
+│                        BROWSER (Chrome MV3)                          │
+│                                                                      │
+│  ┌──────────────────┐      ┌──────────────────────────────────────┐  │
+│  │  Content Script  │      │      Background Service Worker       │  │
+│  │  (homegate.cs)   │◄────►│      (background.js)                 │  │
+│  │                  │  msg │                                      │  │
+│  │  - DOM observer  │      │  - Receives scan requests            │  │
+│  │  - Badge inject  │      │  - fetch() listing detail pages      │  │
+│  │  - Shadow DOM UI │      │  - fetch() EC2 backend               │  │
+│  │  - SPA nav watch │      │  - chrome.storage read/write         │  │
+│  └────────┬─────────┘      └──────────────┬───────────────────────┘  │
+│           │                               │                          │
+│  ┌────────┴─────────┐      ┌──────────────┴───────────────────────┐  │
+│  │  Popup UI        │      │      Extension Pages                  │  │
+│  │  (popup.html)    │      │      (onboarding.html, options.html)  │  │
+│  │  - Toggle on/off │      │      - Full-page preference wizard    │  │
+│  │  - Profile summary│     │      - Weight configuration           │  │
+│  │  - Edit link     │      │      - Stored to chrome.storage.local │  │
+│  └──────────────────┘      └──────────────────────────────────────┘  │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                  chrome.storage.local                         │    │
+│  │  { userProfile, weights, scoreCache, extensionEnabled }       │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────────┘
+         │  HTTPS fetch (host_permissions declared)
+         ▼
+┌─────────────────────────────────────────┐
+│         EC2 Backend (Node.js/Express)    │
+│                                         │
+│  POST /score                            │
+│  - Validates request                    │
+│  - Proxies to Claude API                │
+│  - Returns scored analysis JSON         │
+│                                         │
+│  CORS: Allow chrome-extension:// origin │
+└─────────────────────────────────────────┘
+         │  HTTPS
+         ▼
+┌─────────────────────────────────────────┐
+│         Anthropic Claude API            │
+│  - API key stored server-side only      │
+│  - claude-3-5-sonnet (recommended)      │
+└─────────────────────────────────────────┘
 ```
 
-### Component Boundaries
+### Component Responsibilities
 
-| Component | Responsibility | Communicates With |
-|-----------|---------------|-------------------|
-| **Scheduler** | Triggers scrape runs on a cron cadence. Iterates through registered sites, invokes each adapter, handles sequential/parallel execution | Scraper Registry, Storage Writer |
-| **Scraper Registry** | Central registry of all site configurations. Maps site names to their adapter type (apify or custom) and config. Single source of truth for "what do we scrape" | Scheduler (consumed by) |
-| **Apify Adapter** | Calls Apify cloud actors via ApifyClient, waits for completion, downloads dataset items. Wraps the ApifyClient.actor().call() + dataset().listItems() pattern proven in shoparoo | Apify Cloud (external), Result Normalizer |
-| **Custom Adapter** | Runs local Crawlee-based scrapers (CheerioCrawler or PlaywrightCrawler) for sites without Apify actors or where custom logic is needed | Target websites (external), Result Normalizer |
-| **Result Normalizer** | Transforms raw site-specific data into a common PropertyListing shape. Each site has its own transform function | Adapters (receives from), Storage Writer |
-| **Storage Writer** | Writes normalized JSON to disk in `data/{site}/{timestamp}/listings.json` plus `_run_meta.json`. Identical pattern to shoparoo's writeCatalog/writeRunMeta | Filesystem |
-| **Health Server** | Minimal Express/Fastify HTTP server with a single `GET /health` endpoint. Reports process uptime, last run times, scraper statuses, next scheduled run | External monitoring |
-
-### Data Flow
-
-**End-to-end flow for a single scrape cycle:**
-
-1. **Cron fires** -- `node-cron` triggers the scheduler at the configured interval (e.g., every 6 hours).
-2. **Scheduler iterates sites** -- Pulls the list of enabled sites from the Scraper Registry. Runs them sequentially (to stay within Apify free-tier memory limits, matching shoparoo pattern).
-3. **Adapter executes** -- For each site:
-   - **Apify sites:** ApifyClient calls `actor(actorId).call(input)`, waits via `run(id).waitForFinish()`, downloads items via `dataset(id).listItems()`.
-   - **Custom sites:** Crawlee crawler runs locally, collects items into an array.
-4. **Normalization** -- Raw items pass through a site-specific `transform(rawItem): PropertyListing` function, producing uniform output.
-5. **Storage** -- `listings.json` and `_run_meta.json` written to `data/{siteName}/{YYYY-MM-DD_HHMMSS}/`.
-6. **Status update** -- Scheduler records the run result (success/failure/item count) for the health endpoint.
-7. **Health endpoint** -- Always available at `GET /health`, returns JSON with last run info, next scheduled run, and per-site status.
-
-## Patterns to Follow
-
-### Pattern 1: Scraper Adapter Interface (Strategy Pattern)
-**What:** A common TypeScript interface that both Apify-based and custom scrapers implement. The scheduler does not know which type it is running -- it just calls `scrape()`.
-**When:** Always. This is the core abstraction that makes adding new sites trivial.
-**Example:**
-```typescript
-// src/scrapers/types.ts
-
-export interface PropertyListing {
-  sourcesite: string;
-  sourceUrl: string;
-  externalId: string;
-  title: string;
-  price: number | null;
-  currency: string;
-  propertyType: string | null;      // apartment, house, land, commercial
-  transactionType: string | null;    // buy, rent
-  rooms: number | null;
-  livingAreaM2: number | null;
-  address: string | null;
-  zipCode: string | null;
-  city: string | null;
-  canton: string | null;
-  description: string | null;
-  imageUrls: string[];
-  rawData: Record<string, unknown>;  // full original payload
-  scrapedAt: string;                 // ISO timestamp
-}
-
-export interface ScrapeResult {
-  site: string;
-  status: 'SUCCEEDED' | 'FAILED' | 'PARTIAL';
-  listings: PropertyListing[];
-  durationMs: number;
-  error?: string;
-}
-
-export interface ScraperAdapter {
-  readonly site: string;
-  scrape(): Promise<ScrapeResult>;
-}
-```
-
-### Pattern 2: Site Config Registry (Data-Driven)
-**What:** All site definitions live in a single config array, similar to shoparoo's `STORES` array. Each entry declares the site name, adapter type, and type-specific config.
-**When:** Always. This is how you add a new site without touching scheduler code.
-**Example:**
-```typescript
-// src/scrapers/registry.ts
-
-export type SiteConfig =
-  | {
-      name: string;
-      enabled: boolean;
-      type: 'apify';
-      actorId: string;
-      input?: Record<string, unknown>;
-      minListings: number;
-    }
-  | {
-      name: string;
-      enabled: boolean;
-      type: 'custom';
-      scraperFactory: () => ScraperAdapter;
-      minListings: number;
-    };
-
-export const SITES: SiteConfig[] = [
-  {
-    name: 'homegate',
-    enabled: true,
-    type: 'apify',
-    actorId: 'ecomscrape~homegate-property-search-scraper',
-    input: { location: 'switzerland', maxItems: 1000 },
-    minListings: 100,
-  },
-  {
-    name: 'immoscout24',
-    enabled: true,
-    type: 'apify',
-    actorId: 'ecomscrape~immoscout24-property-search-scraper',
-    input: { location: 'switzerland', maxItems: 1000 },
-    minListings: 100,
-  },
-  {
-    name: 'comparis',
-    enabled: true,
-    type: 'custom',
-    scraperFactory: () => new ComparisScraper(),
-    minListings: 50,
-  },
-  // ... more sites added here
-];
-```
-
-### Pattern 3: Factory Function for Adapter Resolution
-**What:** A function that takes a SiteConfig and returns the appropriate ScraperAdapter, abstracting away the Apify vs custom distinction.
-**When:** Used by the scheduler to get the right adapter for each site.
-**Example:**
-```typescript
-// src/scrapers/factory.ts
-
-import { ApifyScraperAdapter } from './adapters/apify-adapter.js';
-import type { SiteConfig, ScraperAdapter } from './types.js';
-
-export function createAdapter(config: SiteConfig): ScraperAdapter {
-  switch (config.type) {
-    case 'apify':
-      return new ApifyScraperAdapter(config);
-    case 'custom':
-      return config.scraperFactory();
-    default:
-      throw new Error(`Unknown adapter type`);
-  }
-}
-```
-
-### Pattern 4: Apify Adapter Wrapper (Proven Pattern from Shoparoo)
-**What:** Reuse the exact ApifyClient call/wait/download pattern from shoparoo's ingest.ts, wrapped in the ScraperAdapter interface.
-**When:** For any site that has an existing Apify actor available (Homegate, ImmoScout24, etc.).
-**Example:**
-```typescript
-// src/scrapers/adapters/apify-adapter.ts
-
-import { ApifyClient } from 'apify-client';
-
-export class ApifyScraperAdapter implements ScraperAdapter {
-  readonly site: string;
-
-  constructor(
-    private config: ApifySiteConfig,
-    private client: ApifyClient,
-  ) {
-    this.site = config.name;
-  }
-
-  async scrape(): Promise<ScrapeResult> {
-    const start = Date.now();
-    try {
-      const run = await this.client.actor(this.config.actorId).call(this.config.input ?? {});
-      const { items } = await this.client.dataset(run.defaultDatasetId).listItems();
-
-      const listings = items.map((item) =>
-        this.config.transform(item as Record<string, unknown>)
-      );
-
-      return {
-        site: this.site,
-        status: 'SUCCEEDED',
-        listings,
-        durationMs: Date.now() - start,
-      };
-    } catch (err) {
-      return {
-        site: this.site,
-        status: 'FAILED',
-        listings: [],
-        durationMs: Date.now() - start,
-        error: err instanceof Error ? err.message : String(err),
-      };
-    }
-  }
-}
-```
-
-### Pattern 5: Storage Layout (Timestamped Snapshots)
-**What:** Each scrape run writes to `data/{site}/{YYYY-MM-DD_HHMMSS}/listings.json` plus `_run_meta.json`. This is the exact same pattern from shoparoo that has been proven to work.
-**When:** Always. Historical snapshots are a core value proposition.
-**Example directory tree:**
-```
-data/
-  homegate/
-    2026-03-05_060000/
-      listings.json        # Array of PropertyListing objects
-      _run_meta.json       # Run metadata (duration, count, status)
-    2026-03-05_120000/
-      listings.json
-      _run_meta.json
-  immoscout24/
-    2026-03-05_060000/
-      listings.json
-      _run_meta.json
-  comparis/
-    2026-03-05_060000/
-      listings.json
-      _run_meta.json
-```
+| Component | Responsibility | Implementation |
+|-----------|----------------|----------------|
+| Content Script | DOM observation, badge injection, SPA nav detection, Shadow DOM UI rendering | Vanilla JS, MutationObserver, Shadow DOM |
+| Background Service Worker | HTTP fetching (listings + backend), message broker, chrome.storage I/O | Vanilla JS, fetch(), chrome.runtime |
+| Popup | Toggle enable/disable, show profile summary, link to onboarding | Simple HTML + chrome.storage.local reads |
+| Onboarding Page | Full preference wizard (location, budget, rooms, features, weights) | React or Vanilla JS, chrome.storage.local writes |
+| EC2 Backend | LLM proxy, API key security, request validation | Node.js + Express, Anthropic SDK |
+| chrome.storage.local | User profile, weights, per-listing score cache, extension enabled flag | Chrome API — survives SW termination |
 
 ## Recommended Project Structure
 
 ```
-swiss-property-scraper/
-  package.json                    # Single package, no workspaces needed
-  tsconfig.json
-  .env                           # APIFY_TOKEN, PORT, CRON_SCHEDULE
-  .env.example
+extension/
+├── manifest.json               # MV3 manifest
+├── background/
+│   └── service-worker.js       # Background service worker (single file)
+├── content/
+│   ├── homegate-content.js     # Main content script for Homegate
+│   ├── badge-ui.js             # Shadow DOM badge component
+│   └── homegate-content.css    # Scoped styles (injected into shadow root)
+├── popup/
+│   ├── popup.html
+│   ├── popup.js
+│   └── popup.css
+├── onboarding/
+│   ├── onboarding.html         # Full-page wizard (opened as chrome tab)
+│   ├── onboarding.js
+│   └── onboarding.css
+├── shared/
+│   ├── storage.js              # Typed wrappers for chrome.storage.local
+│   ├── messages.js             # Message type constants (avoids string typos)
+│   └── profile-schema.js       # UserProfile shape, default values
+└── icons/
+    ├── icon16.png
+    ├── icon48.png
+    └── icon128.png
 
-  src/
-    index.ts                     # Entry point: starts scheduler + health server
-    config.ts                    # Environment variable loading, defaults
-
-    scheduler/
-      scheduler.ts               # Cron loop, iterates sites, calls adapters
-      types.ts                   # RunStatus, SchedulerState
-
-    scrapers/
-      types.ts                   # ScraperAdapter, ScrapeResult, PropertyListing
-      registry.ts                # SITES config array (the single place to add sites)
-      factory.ts                 # createAdapter(config) -> ScraperAdapter
-
-      adapters/
-        apify-adapter.ts         # ApifyClient-based adapter (generic)
-        custom-adapter.ts        # Base class for Crawlee-based custom scrapers
-
-      sites/                     # Per-site scraper implementations
-        homegate/
-          transform.ts           # Raw Apify output -> PropertyListing
-        immoscout24/
-          transform.ts
-        comparis/
-          scraper.ts             # Custom CheerioCrawler implementation
-          transform.ts
-        flatfox/
-          scraper.ts
-          transform.ts
-        # ... one folder per site
-
-    storage/
-      writer.ts                  # writeListings(), writeRunMeta()
-      types.ts                   # RunMeta interface
-
-    health/
-      server.ts                  # Minimal HTTP server, GET /health
-      types.ts                   # HealthResponse
-
-    utils/
-      logger.ts                  # Structured logging (matches shoparoo pattern)
-      timestamp.ts               # formatTimestamp helper
+backend/
+├── server.js                   # Express app entry point
+├── routes/
+│   └── score.js                # POST /score handler
+├── lib/
+│   └── claude.js               # Anthropic SDK wrapper
+└── package.json
 ```
 
-**Why this structure:**
-- **Flat monolith, no workspaces** -- Unlike shoparoo which used npm workspaces because actors deployed independently to Apify cloud, this project is a single EC2 process. No need for workspace overhead.
-- **`scrapers/sites/` is the extension point** -- Adding a new site means: (1) create a folder in `sites/`, (2) add a transform.ts (and optionally scraper.ts for custom), (3) add an entry to `registry.ts`. No other files change.
-- **Adapters vs Sites separation** -- Adapters are the generic Apify/Custom wrappers. Sites contain site-specific logic (transforms, custom crawlers). This keeps generic infrastructure separate from per-site details.
+### Structure Rationale
 
-## How to Add a New Scraper
+- **background/**: Single service-worker.js keeps all SW logic in one file — easier to reason about lifecycle, avoids import ordering issues
+- **content/**: Separate files for DOM logic vs UI component — content script registers observer, badge-ui handles rendering independently
+- **shared/**: Message type constants prevent content-script ↔ SW communication bugs from string typos; storage wrappers enforce schema
+- **onboarding/**: Deliberately separate from popup — opened as a full Chrome tab via `chrome.tabs.create({ url: 'onboarding/onboarding.html' })`
 
-This is the critical "plugin" workflow. Adding a new site should take under 30 minutes for an Apify-backed site or under 2 hours for a custom scraper.
+## Architectural Patterns
 
-### Adding an Apify-backed site (e.g., Homegate):
+### Pattern 1: Message-Passing Hub (Content Script → Service Worker → Backend)
 
-1. **Check Apify Store** for an existing actor (Homegate has `ecomscrape~homegate-property-search-scraper`).
-2. **Create** `src/scrapers/sites/homegate/transform.ts`:
-```typescript
-import type { PropertyListing } from '../types.js';
+**What:** Content script never calls external APIs directly. All outbound fetches go through the service worker. Content script sends messages and waits for scored responses.
 
-export function transformHomegate(raw: Record<string, unknown>): PropertyListing {
-  return {
-    sourcesite: 'homegate',
-    sourceUrl: raw.url as string,
-    externalId: raw.id as string,
-    title: raw.title as string,
-    price: raw.price as number | null,
-    currency: 'CHF',
-    propertyType: raw.propertyType as string | null,
-    transactionType: raw.offerType as string | null,
-    rooms: raw.rooms as number | null,
-    livingAreaM2: raw.livingSpace as number | null,
-    address: raw.address as string | null,
-    zipCode: raw.zip as string | null,
-    city: raw.city as string | null,
-    canton: raw.canton as string | null,
-    description: raw.description as string | null,
-    imageUrls: (raw.images as string[]) ?? [],
-    rawData: raw,
-    scrapedAt: new Date().toISOString(),
-  };
+**When to use:** Always — content scripts cannot access chrome APIs that require host_permissions for cross-origin fetches.
+
+**Trade-offs:** Adds one async hop but is the only compliant MV3 pattern. The service worker acts as the sole network authority.
+
+**Example:**
+```javascript
+// content/homegate-content.js
+async function requestScore(listingId, listingUrl) {
+  const response = await chrome.runtime.sendMessage({
+    type: MSG.SCORE_LISTING,
+    listingId,
+    listingUrl
+  });
+  renderBadge(listingId, response.score, response.analysis);
 }
-```
-3. **Register** in `src/scrapers/registry.ts`:
-```typescript
-import { transformHomegate } from './sites/homegate/transform.js';
 
-// Add to SITES array:
-{
-  name: 'homegate',
-  enabled: true,
-  type: 'apify',
-  actorId: 'ecomscrape~homegate-property-search-scraper',
-  input: { location: 'switzerland' },
-  transform: transformHomegate,
-  minListings: 100,
-},
-```
-4. **Done.** Next scheduler tick will pick it up.
-
-### Adding a custom scraper (e.g., Comparis):
-
-1. **Create** `src/scrapers/sites/comparis/scraper.ts`:
-```typescript
-import { CheerioCrawler } from 'crawlee';
-import type { ScraperAdapter, ScrapeResult, PropertyListing } from '../../types.js';
-import { transformComparis } from './transform.js';
-
-export class ComparisScraper implements ScraperAdapter {
-  readonly site = 'comparis';
-
-  async scrape(): Promise<ScrapeResult> {
-    const start = Date.now();
-    const listings: PropertyListing[] = [];
-
-    const crawler = new CheerioCrawler({
-      async requestHandler({ $, request }) {
-        // Parse listing data from HTML
-        const raw = { /* ... extract fields ... */ };
-        listings.push(transformComparis(raw));
-      },
-    });
-
-    await crawler.run(['https://www.comparis.ch/immobilien/result/list']);
-
-    return {
-      site: this.site,
-      status: 'SUCCEEDED',
-      listings,
-      durationMs: Date.now() - start,
-    };
+// background/service-worker.js
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === MSG.SCORE_LISTING) {
+    handleScoreListing(msg.listingId, msg.listingUrl)
+      .then(sendResponse);
+    return true; // Keep channel open for async response
   }
+});
+```
+
+### Pattern 2: Progressive Badge Rendering
+
+**What:** Content script injects a "pending" spinner badge immediately for each visible listing card. When the service worker returns a score, the content script updates that specific badge in place.
+
+**When to use:** User is on Homegate search results page. Listings appear immediately; scoring takes 2-5 seconds per listing.
+
+**Trade-offs:** Requires the content script to maintain a Map of `listingId → badgeElement` to update in place. Avoids blank space or layout shifts.
+
+**Example:**
+```javascript
+// content/homegate-content.js
+const pendingBadges = new Map(); // listingId → DOM node
+
+function injectPendingBadge(card, listingId) {
+  const badge = createBadgeElement('pending');
+  card.appendChild(badge);
+  pendingBadges.set(listingId, badge);
+  requestScore(listingId, listingUrl);
+}
+
+function onScoreReceived(listingId, score, analysis) {
+  const badge = pendingBadges.get(listingId);
+  if (badge) updateBadge(badge, score, analysis);
 }
 ```
-2. **Create** `src/scrapers/sites/comparis/transform.ts` (same pattern as Apify sites).
-3. **Register** in `src/scrapers/registry.ts`:
-```typescript
-import { ComparisScraper } from './sites/comparis/scraper.js';
 
-// Add to SITES array:
+### Pattern 3: Shadow DOM Badge Isolation
+
+**What:** Each injected badge lives inside an `attachShadow({ mode: 'closed' })` container to prevent Homegate's CSS from affecting extension UI.
+
+**When to use:** Always for injected UI on third-party pages. Homegate's CSS will bleed into any non-isolated element.
+
+**Trade-offs:** Slightly more DOM setup. Cannot be styled by page CSS (feature, not bug). Keeps extension UI pixel-perfect across Homegate's DE/FR/IT locale variants.
+
+**Example:**
+```javascript
+function createBadgeHost(card) {
+  const host = document.createElement('div');
+  host.classList.add('homematch-badge-host');
+  const shadow = host.attachShadow({ mode: 'closed' });
+
+  // Load extension CSS into shadow root (not page)
+  const style = document.createElement('link');
+  style.rel = 'stylesheet';
+  style.href = chrome.runtime.getURL('content/homegate-content.css');
+  shadow.appendChild(style);
+
+  card.appendChild(host);
+  return shadow;
+}
+```
+
+### Pattern 4: MutationObserver + webNavigation for SPA Navigation
+
+**What:** Homegate is a SPA. Initial content script injection handles the first page load. `MutationObserver` catches new listing cards added to the DOM (pagination, filter changes). `chrome.webNavigation.onHistoryStateUpdated` in the service worker detects full SPA navigations and re-injects the content script if needed.
+
+**When to use:** Any SPA target site where URL changes happen without full page reload.
+
+**Trade-offs:** MutationObserver has performance cost — scope it narrowly to the results list container, not `document.body`.
+
+**Example:**
+```javascript
+// content/homegate-content.js
+const resultsContainer = document.querySelector('[data-test="result-list"]');
+const observer = new MutationObserver((mutations) => {
+  for (const mutation of mutations) {
+    for (const node of mutation.addedNodes) {
+      if (node.matches?.('[data-test="result-list-item"]')) {
+        processListingCard(node);
+      }
+    }
+  }
+});
+observer.observe(resultsContainer, { childList: true, subtree: false });
+
+// background/service-worker.js — re-inject on SPA nav
+chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
+  if (details.url.includes('homegate.ch') && details.url.includes('matching-list')) {
+    chrome.scripting.executeScript({
+      target: { tabId: details.tabId },
+      files: ['content/homegate-content.js']
+    });
+  }
+}, { url: [{ hostContains: 'homegate.ch' }] });
+```
+
+### Pattern 5: chrome.storage.local as State Persistence Layer
+
+**What:** Service workers are terminated after 30s of inactivity. All state that must survive termination — user profile, weights, per-listing score cache — goes into `chrome.storage.local`. Variables in service-worker.js memory are considered ephemeral.
+
+**When to use:** Any data that must be available across service worker activations.
+
+**Trade-offs:** Async reads add latency on first access. Use an in-memory cache within a single SW activation cycle but always persist writes.
+
+**Example:**
+```javascript
+// shared/storage.js
+export async function getUserProfile() {
+  const { userProfile } = await chrome.storage.local.get('userProfile');
+  return userProfile ?? DEFAULT_PROFILE;
+}
+
+export async function cacheScore(listingId, score) {
+  const { scoreCache = {} } = await chrome.storage.local.get('scoreCache');
+  scoreCache[listingId] = { score, cachedAt: Date.now() };
+  await chrome.storage.local.set({ scoreCache });
+}
+```
+
+## Data Flow
+
+### Primary Flow: Score a Listing
+
+```
+User loads Homegate search results
+    ↓
+Content Script runs (document_idle)
+    ↓
+MutationObserver detects listing cards
+    ↓ (for each card)
+Content Script extracts listingId + URL from DOM / window.__INITIAL_STATE__
+    ↓
+Content Script injects "pending" badge (Shadow DOM)
+    ↓
+Content Script: chrome.runtime.sendMessage({ type: SCORE_LISTING, listingId, listingUrl })
+    ↓
+Service Worker receives message
+    ↓
+Service Worker reads userProfile from chrome.storage.local
+    ↓
+Service Worker checks scoreCache — cache hit? → return cached score immediately
+    ↓ (cache miss)
+Service Worker fetch() listing detail page HTML (Homegate URL)
+    ↓
+Service Worker parses listing data from __INITIAL_STATE__ JSON
+    ↓
+Service Worker POST /score to EC2 backend { listing, userProfile, weights }
+    ↓
+EC2 Backend calls Claude API, returns { score, analysis, categories }
+    ↓
+Service Worker writes score to scoreCache in chrome.storage.local
+    ↓
+Service Worker sendResponse({ score, analysis }) back to content script
+    ↓
+Content Script updates badge from "pending" → score percentage + label
+    ↓
+User clicks badge → expandable analysis panel opens (in Shadow DOM)
+```
+
+### SPA Navigation Flow
+
+```
+User changes filter / navigates to next page on Homegate
+    ↓
+Homegate SPA calls history.pushState()
+    ↓
+Service Worker: webNavigation.onHistoryStateUpdated fires
+    ↓
+Service Worker: chrome.scripting.executeScript re-injects content script
+    ↓
+Content Script runs again, re-observes new results list
+    ↓
+[Back to Primary Flow above]
+```
+
+### Profile Setup Flow
+
+```
+User installs extension
+    ↓
+background: chrome.runtime.onInstalled opens onboarding.html as new tab
+    ↓
+User completes preference wizard
+    ↓
+Onboarding page: chrome.storage.local.set({ userProfile, weights })
+    ↓
+Onboarding page: chrome.tabs.update to close/redirect
+```
+
+### State Management
+
+```
+chrome.storage.local (persistent across SW terminations)
+    ├── userProfile: { location, budget, rooms, area, features, customInterests }
+    ├── weights: { location: 0.3, price: 0.3, size: 0.2, features: 0.1, custom: 0.1 }
+    ├── scoreCache: { [listingId]: { score, analysis, cachedAt } }
+    └── extensionEnabled: boolean
+
+In-memory (within single SW activation — ephemeral)
+    └── activeRequests: Map<listingId, Promise> — dedup concurrent score requests
+```
+
+## MV3-Specific Constraints
+
+### Constraint 1: Service Worker Termination (30s idle)
+
+**Impact:** Service worker can be killed between user interactions. Any in-memory request queue is lost.
+
+**Mitigation:**
+- Persist all meaningful state to `chrome.storage.local`
+- Active fetch() requests keep the SW alive (up to 5 min per request)
+- Calling chrome.storage API resets the 30s idle timer
+- Do NOT use `setTimeout` or `setInterval` for keep-alive — use `chrome.alarms` if needed
+
+### Constraint 2: No DOM Access in Service Worker
+
+**Impact:** Cannot parse HTML in the service worker directly without a DOM parser.
+
+**Mitigation:** Use `DOMParser` (available in service workers) or extract JSON from `__INITIAL_STATE__` script tags via regex/string search. Avoid heavyweight HTML parsing libraries.
+
+```javascript
+// Parse Homegate __INITIAL_STATE__ from fetched HTML
+async function parseListingFromHtml(html) {
+  const match = html.match(/window\.__INITIAL_STATE__\s*=\s*({.+?})<\/script>/s);
+  if (match) return JSON.parse(match[1]);
+  // Fallback: DOMParser
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  // ... extract from DOM
+}
+```
+
+### Constraint 3: Content Script Isolated World
+
+**Impact:** Content script cannot access page's JavaScript variables directly (e.g., `window.__INITIAL_STATE__` if set after load).
+
+**Mitigation:** Read `__INITIAL_STATE__` from script tags via `document.querySelector('script')` text content parsing, which is DOM access (allowed). No need to run in MAIN world for this.
+
+### Constraint 4: sendResponse Must Be Synchronous or Return True
+
+**Impact:** If service worker listener is async, sendResponse may not work unless `return true` is explicitly returned from the listener.
+
+**Mitigation:** Always `return true` from `onMessage.addListener` when response is async. Avoid `async` as the listener function directly — wrap inner logic in async IIFE.
+
+```javascript
+// Correct MV3 async response pattern
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === MSG.SCORE_LISTING) {
+    (async () => {
+      const result = await handleScore(msg);
+      sendResponse(result);
+    })();
+    return true; // critical — keeps channel open
+  }
+});
+```
+
+### Constraint 5: localStorage Unavailable in Service Worker
+
+**Impact:** Cannot use `localStorage` or `sessionStorage` in background.js.
+
+**Mitigation:** Use `chrome.storage.local` exclusively. `chrome.storage.session` (cleared on browser restart) is available for session-scoped state.
+
+### Constraint 6: No Persistent Background Pages
+
+**Impact:** Unlike MV2 background pages, MV3 service workers cannot maintain WebSocket connections or persistent timers.
+
+**Mitigation:** For this project, not needed. All communication is request/response. Scoring is triggered by content script messages, not background polling.
+
+## Integration Points
+
+### External Services
+
+| Service | Integration Pattern | Notes |
+|---------|---------------------|-------|
+| Homegate.ch listing pages | Service worker `fetch()` with `host_permissions` declared | Parse `__INITIAL_STATE__` JSON from HTML. No auth needed for public listings. |
+| EC2 Backend (`/score`) | Service worker `POST` with JSON body | Add `Authorization` header or shared secret. EC2 must allow extension origin in CORS headers. |
+| Anthropic Claude API | Backend-only (not from extension) | API key never leaves server. Use `claude-3-5-sonnet-20241022`. |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| Content Script → Service Worker | `chrome.runtime.sendMessage()` / `return true` async pattern | Content script is untrusted — validate `sender.url` in SW |
+| Service Worker → Content Script | `sendResponse()` callback (same message channel) | Use long-lived port (`chrome.tabs.connect`) if streaming scores in future |
+| Popup → chrome.storage | Direct `chrome.storage.local.get/set` | Popup has direct storage access, no need to message SW |
+| Onboarding Page → chrome.storage | Direct `chrome.storage.local.set` on wizard completion | Fire `chrome.runtime.sendMessage({ type: PROFILE_UPDATED })` after save so content script refreshes |
+| Service Worker → chrome.storage | Read profile on each score request; write cache after scoring | In-memory dedup Map prevents duplicate concurrent requests for same listing |
+
+### EC2 Backend CORS Configuration
+
+The EC2 backend must explicitly allow the Chrome extension origin. The extension origin is `chrome-extension://<EXTENSION_ID>`. For development and production, configure:
+
+```javascript
+// backend/server.js
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || origin.startsWith('chrome-extension://')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
+```
+
+Note: Anthropic's API now supports `anthropic-dangerous-direct-browser-access: true` header for direct browser access, but for this project the EC2 proxy is still preferred to keep the API key out of the extension bundle.
+
+## Manifest Configuration
+
+```json
 {
-  name: 'comparis',
-  enabled: true,
-  type: 'custom',
-  scraperFactory: () => new ComparisScraper(),
-  minListings: 50,
-},
-```
-4. **Done.**
-
-## Anti-Patterns to Avoid
-
-### Anti-Pattern 1: God Scheduler
-**What:** Putting site-specific scraping logic directly in the scheduler.
-**Why bad:** Adding a new site requires modifying the scheduler. Scheduler becomes a massive file with mixed concerns. This is how the shoparoo ingest.ts could have gone wrong -- but it wisely delegated to Apify actors.
-**Instead:** Scheduler only orchestrates. All site-specific logic lives in `scrapers/sites/`. Scheduler calls `adapter.scrape()` and does not know what happens inside.
-
-### Anti-Pattern 2: Shared Mutable State Between Scrapers
-**What:** Using global variables or shared objects to pass data between scraper runs.
-**Why bad:** Race conditions if you later parallelize. Harder to test. Leaks between runs.
-**Instead:** Each `scrape()` call is fully self-contained. Returns a `ScrapeResult`. State is write-only to disk.
-
-### Anti-Pattern 3: Storing Raw + Normalized in the Same File
-**What:** Mixing the raw API response with normalized fields in one JSON file.
-**Why bad:** Raw data schema changes per site and over time. Downstream consumers need a stable schema.
-**Instead:** Store `rawData` as a nested field inside each `PropertyListing` object. The top-level fields are the normalized contract. Raw data is preserved for debugging and re-processing.
-
-### Anti-Pattern 4: Building a Database Too Early
-**What:** Setting up PostgreSQL/MongoDB before you have stable scrapers and a known data shape.
-**Why bad:** Schema migrations before you understand the data. Setup overhead during hackathon. JSON files are sufficient for data collection phase.
-**Instead:** JSON files first. Add a database when you build the analysis/API layer. The `PropertyListing` interface becomes your future DB schema.
-
-### Anti-Pattern 5: Overengineering the Health Endpoint
-**What:** Building full REST API, authentication, metrics dashboards before scrapers work.
-**Why bad:** Wasted hackathon time. The only consumer is "is the process alive?"
-**Instead:** A single `GET /health` returning `{ status: "ok", uptime, lastRun, nextRun, scraperStatuses }`. Under 30 lines of code. Use Node.js built-in `http` module or minimal `express`.
-
-### Anti-Pattern 6: Running All Scrapers in Parallel Initially
-**What:** Using `Promise.all()` to run 23 scrapers simultaneously.
-**Why bad:** Apify free-tier has memory limits. EC2 instance memory constraints. Rate limiting from target sites. Harder to debug failures.
-**Instead:** Sequential execution (same as shoparoo), with future option to add controlled concurrency. The scheduler can later be enhanced with a concurrency parameter per site.
-
-## Build Order (Dependency Analysis)
-
-The components have clear dependencies. Build them in this order:
-
-```
-Phase 1: Foundation (must build first)
-  1. Project scaffold (package.json, tsconfig, .env)
-  2. Config loader (src/config.ts)
-  3. Logger utility (src/utils/logger.ts)
-  4. PropertyListing type + ScraperAdapter interface (src/scrapers/types.ts)
-  5. Storage writer (src/storage/writer.ts)
-     ^ These have ZERO external dependencies on each other
-
-Phase 2: First Scraper (validates the architecture)
-  6. Apify adapter (src/scrapers/adapters/apify-adapter.ts)
-     ^ Depends on: types (5), apify-client package
-  7. First site transform (e.g., homegate/transform.ts)
-     ^ Depends on: types (5)
-  8. Registry with one site (src/scrapers/registry.ts)
-     ^ Depends on: transform (7), adapter (6)
-  9. Manual test script (run one site, verify JSON output)
-     ^ Validates: adapter -> transform -> storage pipeline
-
-Phase 3: Scheduler + Health (makes it a service)
-  10. Scheduler (src/scheduler/scheduler.ts)
-      ^ Depends on: registry (8), factory, storage (5)
-  11. Health server (src/health/server.ts)
-      ^ Depends on: scheduler state (10)
-  12. Entry point (src/index.ts) wiring scheduler + health
-      ^ Depends on: scheduler (10), health (11)
-
-Phase 4: Scale Out (add more sites)
-  13-N. Additional site transforms/scrapers
-      ^ Each only depends on: types (5), registry addition
+  "manifest_version": 3,
+  "name": "HomeMatch",
+  "version": "1.0.0",
+  "description": "AI match scores on Homegate.ch listings",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "https://www.homegate.ch/*",
+    "https://<EC2-HOST>/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.homegate.ch/*matching-list*"],
+      "js": ["content/homegate-content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": { "48": "icons/icon48.png" }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["content/homegate-content.css", "icons/*"],
+      "matches": ["https://www.homegate.ch/*"]
+    }
+  ]
+}
 ```
 
-**Critical path:** Types -> Storage -> Apify Adapter -> First Site Transform -> Registry -> Manual Test. This validates the full pipeline before adding the scheduler. Do NOT build the scheduler before you have proven one scraper works end-to-end.
+## Scaling Considerations
 
-## Scalability Considerations
+| Scale | Architecture Adjustments |
+|-------|--------------------------|
+| 1 user (hackathon demo) | Current architecture as described — no changes needed |
+| 100 users | Add simple rate limiting on EC2 `/score` endpoint (token bucket per IP). Score cache already helps. |
+| 10k users | EC2 auto-scaling group behind ALB. Consider Redis for shared score cache (currently per-user in extension storage). |
+| 100k+ users | Separate scoring queue (SQS + Lambda). Per-user cache moves server-side with user accounts. Out of scope for v1. |
 
-| Concern | 5 sites (hackathon) | 23 sites (full target) | 50+ sites (future) |
-|---------|---------------------|------------------------|---------------------|
-| Execution time | Sequential, ~30 min total | Sequential, ~2-3 hours | Add concurrency (3-5 parallel), use queue |
-| Apify costs | Free tier sufficient | May exceed free tier | Evaluate paid plan or shift to custom scrapers |
-| Disk space | Negligible (~10MB/day) | ~100MB/day | Add retention policy, compress old snapshots |
-| Error handling | Log and continue | Add per-site retry (1x) | Dead letter queue, alerting |
-| Monitoring | Health endpoint only | Add per-site status tracking | Add metrics (Prometheus/CloudWatch) |
-| Memory (EC2) | t3.micro sufficient | t3.small for Playwright scrapers | t3.medium if running many browser instances |
+### Scaling Priorities
+
+1. **First bottleneck:** EC2 cost from LLM API calls per listing per user. Mitigation: `chrome.storage.local` score cache with TTL (scores valid for 24h, listings don't change often).
+2. **Second bottleneck:** Homegate rate limiting extension's fetch requests for detail pages. Mitigation: add 200-500ms delay between fetches per tab, respect `Retry-After` headers.
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Keeping State in Service Worker Variables
+
+**What people do:** `let userProfile = null;` at top of service-worker.js, loaded once on startup.
+
+**Why it's wrong:** Service worker is terminated after 30s of idle. Next activation starts fresh — `userProfile` is null. Extension breaks silently.
+
+**Do this instead:** Always read from `chrome.storage.local` at the start of each message handler. Use a local variable as a within-activation cache if needed, but always re-read on new activations.
+
+### Anti-Pattern 2: Injecting Styles Without Shadow DOM
+
+**What people do:** Append `<style>` or `<link>` tags directly to Homegate's `<head>` or `<body>`.
+
+**Why it's wrong:** Homegate's CSS (including their component library classes) will bleed into extension UI. Extension UI will look broken after any Homegate CSS update.
+
+**Do this instead:** Always create Shadow DOM roots for injected UI. Load extension CSS inside the shadow root via `chrome.runtime.getURL()`.
+
+### Anti-Pattern 3: Making Cross-Origin Requests from Content Script
+
+**What people do:** `fetch('https://ec2-host/score', ...)` directly from the content script.
+
+**Why it's wrong:** Content scripts are subject to Homegate's Content Security Policy. Cross-origin fetches from content scripts are blocked by CSP regardless of extension host_permissions.
+
+**Do this instead:** Send a message to the service worker. Service worker makes all external fetches. Content script only manipulates DOM.
+
+### Anti-Pattern 4: Async Function as onMessage Listener
+
+**What people do:**
+```javascript
+chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
+  const result = await doWork();
+  sendResponse(result); // TOO LATE — channel already closed
+});
+```
+
+**Why it's wrong:** An async function immediately returns a Promise (not `true`). Chrome closes the message channel before the async work finishes. `sendResponse` is called on a closed channel and silently fails.
+
+**Do this instead:** Return `true` synchronously, run async work in an inner IIFE:
+```javascript
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  (async () => {
+    const result = await doWork();
+    sendResponse(result);
+  })();
+  return true;
+});
+```
+
+### Anti-Pattern 5: Observing document.body for Listing Card Changes
+
+**What people do:** `observer.observe(document.body, { childList: true, subtree: true })` to catch new cards.
+
+**Why it's wrong:** Homegate is a React SPA that makes frequent DOM updates. Observing the entire body with `subtree: true` fires the callback hundreds of times per second during navigation, causing severe performance degradation.
+
+**Do this instead:** Scope the observer to the results list container: `observer.observe(resultsContainer, { childList: true, subtree: false })`. Only observe direct children of the list.
+
+## Build Order (Dependency Graph)
+
+Based on component dependencies, build in this order:
+
+```
+1. shared/messages.js + shared/storage.js   ← no deps, used by everything
+2. manifest.json                             ← defines all entry points
+3. background/service-worker.js             ← needs messages.js, storage.js
+4. onboarding/ (wizard + storage writes)    ← needs storage.js; user can't score without profile
+5. content/badge-ui.js (Shadow DOM badge)   ← isolated UI component
+6. content/homegate-content.js             ← needs badge-ui.js, messages.js
+7. popup/popup.html + popup.js             ← reads storage, links to onboarding
+8. backend/server.js + routes/score.js     ← parallel to extension work
+```
+
+**Rationale:**
+- Shared utilities first — everything else imports them
+- Service worker before content script — content script messages won't be handled otherwise
+- Onboarding before content script goes live — content script needs a valid profile to send with score requests
+- Backend can be built in parallel with extension but must be deployed before end-to-end testing
 
 ## Sources
 
-- [Apify SDK for JavaScript - Overview](https://docs.apify.com/sdk/js/docs/overview) -- HIGH confidence, official docs
-- [Apify API Client for JavaScript](https://docs.apify.com/api/client/js/docs) -- HIGH confidence, official docs
-- [Crawlee GitHub - Architecture](https://github.com/apify/crawlee) -- HIGH confidence, official repo
-- [Crawlee Quick Start](https://crawlee.dev/js/docs/quick-start) -- HIGH confidence, official docs
-- [Homegate Property Search Scraper on Apify](https://apify.com/ecomscrape/homegate-property-search-scraper/api) -- MEDIUM confidence, third-party actor
-- [ImmoScout24 Property Search Scraper on Apify](https://apify.com/ecomscrape/immoscout24-property-search-scraper) -- MEDIUM confidence, third-party actor
-- [Node.js Schedulers Comparison (Better Stack)](https://betterstack.com/community/guides/scaling-nodejs/best-nodejs-schedulers/) -- MEDIUM confidence, community guide
-- [ZenRows TypeScript Web Scraping Guide](https://www.zenrows.com/blog/web-scraping-typescript) -- LOW confidence, commercial blog
-- [Web Scraping Health Checks (WebScraping.AI)](https://webscraping.ai/faq/apis/how-do-you-implement-api-health-checks-for-scraping-services) -- LOW confidence, single source
-- Existing shoparoo-meals-backend codebase at `/Users/maximgusev/workspace/shoparoo-group/shoparoo-meals-backend` -- HIGH confidence, developer's own working code
+- [Chrome Extension Service Worker Lifecycle](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle) — HIGH confidence (official docs)
+- [Longer Extension Service Worker Lifetimes](https://developer.chrome.com/blog/longer-esw-lifetimes) — HIGH confidence (official blog)
+- [Chrome Extension Message Passing](https://developer.chrome.com/docs/extensions/develop/concepts/messaging) — HIGH confidence (official docs)
+- [Cross-Origin Network Requests in Extensions](https://developer.chrome.com/docs/extensions/develop/concepts/network-requests) — HIGH confidence (official docs)
+- [chrome.webNavigation API](https://developer.chrome.com/docs/extensions/reference/api/webNavigation) — HIGH confidence (official docs)
+- [Homegate.ch Data Structure](https://scrapfly.io/blog/posts/how-to-scrape-homegate-ch-real-estate-property-data) — MEDIUM confidence (third-party scraping guide, verified `__INITIAL_STATE__` pattern and URL structure)
+- [Making Chrome Extension Smart for SPA](https://medium.com/@softvar/making-chrome-extension-smart-by-supporting-spa-websites-1f76593637e8) — MEDIUM confidence (community article)
+
+---
+*Architecture research for: HomeMatch Chrome Extension (MV3)*
+*Researched: 2026-03-07*
