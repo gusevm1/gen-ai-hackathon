@@ -5,7 +5,6 @@ import { wizardStateStorage } from '@/storage/profile-storage';
 import { toggleTheme, themeStorage } from '@/lib/theme';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StepFilters } from './StepFilters';
@@ -189,6 +188,9 @@ export function WizardShell({ isEditMode = false }: WizardShellProps) {
   // -- Progress --
 
   const progressPercent = ((wizard.currentStep + 1) / wizard.totalSteps) * 100;
+  const lineFill = wizard.totalSteps > 1
+    ? Math.max(0, Math.min(100, (wizard.currentStep / (wizard.totalSteps - 1)) * 100))
+    : 0;
 
   // -- Derive categories for Step 3 --
 
@@ -214,41 +216,79 @@ export function WizardShell({ isEditMode = false }: WizardShellProps) {
                 : 'Set up your property preferences to get personalized match scores'}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Sun className="h-4 w-4 text-muted-foreground" />
-            <Switch
-              checked={isDark}
-              onCheckedChange={handleThemeToggle}
-              aria-label="Toggle dark mode"
-            />
-            <Moon className="h-4 w-4 text-muted-foreground" />
-          </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="mb-8 space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">
-              Step {wizard.currentStep + 1} of {wizard.totalSteps}
-            </span>
-            <span className="font-medium text-foreground">
-              {STEP_LABELS[wizard.currentStep]}
-            </span>
-          </div>
-          <Progress value={progressPercent} className="h-2" />
-          <div className="flex justify-between">
-            {STEP_LABELS.map((label, i) => (
-              <span
-                key={label}
-                className={`text-xs transition-colors ${
-                  i <= wizard.currentStep
-                    ? 'text-primary font-medium'
-                    : 'text-muted-foreground'
-                }`}
-              >
-                {label}
-              </span>
-            ))}
+        {/* Stepper */}
+        <div className="mb-8">
+          <div className="rounded-2xl border border-teal-200/70 bg-gradient-to-r from-teal-50 to-cyan-50 p-4 shadow-sm">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase text-teal-600">
+                  Step {wizard.currentStep + 1} of {wizard.totalSteps}
+                </p>
+                <h2 className="text-lg font-bold text-slate-900">
+                  {STEP_LABELS[wizard.currentStep]}
+                </h2>
+              </div>
+              <div className="flex items-center gap-2 text-slate-700">
+                <Sun className="h-4 w-4" />
+                <Switch
+                  checked={isDark}
+                  onCheckedChange={handleThemeToggle}
+                  aria-label="Toggle dark mode"
+                  className="scale-90"
+                />
+                <Moon className="h-4 w-4" />
+              </div>
+            </div>
+
+            <div className="relative px-4 py-3">
+              <div className="absolute left-8 right-8 top-1/2 h-0.5 -translate-y-1/2 bg-teal-100" aria-hidden />
+              <div
+                className="absolute left-8 top-1/2 h-0.5 -translate-y-1/2 bg-teal-500 transition-all"
+                style={{ width: `${lineFill}%` }}
+                aria-hidden
+              />
+
+              <div className="relative flex justify-between">
+                {STEP_LABELS.map((label, index) => {
+                  const status = index < wizard.currentStep
+                    ? 'done'
+                    : index === wizard.currentStep
+                      ? 'current'
+                      : 'upcoming';
+
+                  const baseCircle =
+                    'flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors shadow-sm';
+
+                  const circleClasses = {
+                    done: `${baseCircle} border-teal-500 bg-teal-500 text-white`,
+                    current: `${baseCircle} border-teal-500 bg-white text-teal-600`,
+                    upcoming: `${baseCircle} border-teal-200 bg-white text-slate-400`,
+                  }[status];
+
+                  return (
+                    <div key={label} className="flex flex-col items-center gap-1 text-center">
+                      <div className={circleClasses}>
+                        {status === 'done' ? (
+                          <CheckCircle className="h-4 w-4" />
+                        ) : (
+                          <span className="text-sm font-semibold">
+                            {index + 1}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs font-semibold text-slate-800">
+                        {label}
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        {status === 'current' ? 'In progress' : status === 'done' ? 'Completed' : 'Pending'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
