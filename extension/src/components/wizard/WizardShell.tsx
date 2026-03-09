@@ -220,17 +220,17 @@ export function WizardShell({ isEditMode = false }: WizardShellProps) {
 
         {/* Stepper */}
         <div className="mb-8">
-          <div className="rounded-2xl border border-teal-200/70 bg-gradient-to-r from-teal-50 to-cyan-50 p-4 shadow-sm">
+          <div className="rounded-2xl border border-border/60 bg-[#111015] p-4 shadow-sm">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <p className="text-xs font-semibold uppercase text-teal-600">
+                <p className="text-xs font-semibold uppercase text-primary">
                   Step {wizard.currentStep + 1} of {wizard.totalSteps}
                 </p>
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className="text-lg font-bold text-foreground">
                   {STEP_LABELS[wizard.currentStep]}
                 </h2>
               </div>
-              <div className="flex items-center gap-2 text-slate-700">
+              <div className="flex items-center gap-2 text-foreground">
                 <Sun className="h-4 w-4" />
                 <Switch
                   checked={isDark}
@@ -243,9 +243,9 @@ export function WizardShell({ isEditMode = false }: WizardShellProps) {
             </div>
 
             <div className="relative px-4 py-3">
-              <div className="absolute left-8 right-8 top-1/2 h-0.5 -translate-y-1/2 bg-teal-100" aria-hidden />
+              <div className="absolute left-8 right-8 top-1/2 h-0.5 -translate-y-1/2 bg-muted/40" aria-hidden />
               <div
-                className="absolute left-8 top-1/2 h-0.5 -translate-y-1/2 bg-teal-500 transition-all"
+                className="absolute left-8 top-1/2 h-0.5 -translate-y-1/2 bg-primary transition-all"
                 style={{ width: `${lineFill}%` }}
                 aria-hidden
               />
@@ -262,9 +262,9 @@ export function WizardShell({ isEditMode = false }: WizardShellProps) {
                     'flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors shadow-sm';
 
                   const circleClasses = {
-                    done: `${baseCircle} border-teal-500 bg-teal-500 text-white`,
-                    current: `${baseCircle} border-teal-500 bg-white text-teal-600`,
-                    upcoming: `${baseCircle} border-teal-200 bg-white text-slate-400`,
+                    done: `${baseCircle} border-primary bg-primary text-white`,
+                    current: `${baseCircle} border-primary bg-[#1c1822] text-primary`,
+                    upcoming: `${baseCircle} border-border bg-[#1c1822] text-muted-foreground`,
                   }[status];
 
                   return (
@@ -278,10 +278,10 @@ export function WizardShell({ isEditMode = false }: WizardShellProps) {
                           </span>
                         )}
                       </div>
-                      <div className="text-xs font-semibold text-slate-800">
+                      <div className="text-xs font-semibold text-foreground">
                         {label}
                       </div>
-                      <div className="text-[11px] text-slate-500">
+                      <div className="text-[11px] text-muted-foreground">
                         {status === 'current' ? 'In progress' : status === 'done' ? 'Completed' : 'Pending'}
                       </div>
                     </div>
