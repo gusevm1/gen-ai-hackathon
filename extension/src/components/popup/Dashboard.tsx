@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Moon, Sun, Settings, Power } from 'lucide-react';
+import { ensureNormalizedWeights } from '@/utils/weight-redistribution';
 
 // -- Storage for extension toggle --
 
@@ -129,8 +130,14 @@ export default function Dashboard() {
     return parts.join(', ');
   };
 
-  // Top 3 weights
-  const sortedWeights = Object.entries(profile.weights)
+  // Top 3 weights (normalized for display/scoring)
+  const normalizedWeights = ensureNormalizedWeights(
+    Object.keys(profile.weightInputs || {}).length > 0
+      ? profile.weightInputs
+      : profile.weights,
+  );
+
+  const sortedWeights = Object.entries(normalizedWeights)
     .sort(([, a], [, b]) => b - a);
   const topWeights = sortedWeights.slice(0, 3);
   const remainingCount = Math.max(0, sortedWeights.length - 3);
@@ -240,14 +247,14 @@ export default function Dashboard() {
                   <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
                     <div
                       className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${weight}%` }}
+                      style={{ width: `${weight * 100}%` }}
                     />
                   </div>
                   <span className="text-xs text-foreground min-w-[80px] truncate">
                     {category}
                   </span>
                   <span className="text-xs text-muted-foreground tabular-nums w-[40px] text-right">
-                    {weight.toFixed(0)}%
+                    {(weight * 100).toFixed(0)}%
                   </span>
                 </div>
               ))}

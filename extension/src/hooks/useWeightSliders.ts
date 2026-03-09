@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { redistributeWeights } from '@/utils/weight-redistribution';
 
 export interface UseWeightSlidersOptions {
   categories: string[];
@@ -14,26 +13,15 @@ export interface UseWeightSlidersReturn {
 }
 
 /**
- * Distributes 100 equally across the given categories, handling rounding
- * so the total is exactly 100.
- *
- * Example: 3 categories -> 33.4, 33.3, 33.3
+ * Initializes all categories to a neutral midpoint (50).
  */
-function distributeEqually(categories: string[]): Record<string, number> {
+function defaultWeights(categories: string[]): Record<string, number> {
   if (categories.length === 0) return {};
 
-  const base = Math.floor((100 / categories.length) * 10) / 10;
   const result: Record<string, number> = {};
-
   categories.forEach((cat) => {
-    result[cat] = base;
+    result[cat] = 50;
   });
-
-  // Fix rounding remainder -- add difference to the first category
-  const currentTotal = Math.round(base * categories.length * 10) / 10;
-  if (currentTotal !== 100) {
-    result[categories[0]] = Math.round((result[categories[0]] + (100 - currentTotal)) * 10) / 10;
-  }
 
   return result;
 }
@@ -61,7 +49,7 @@ export function useWeightSliders(options: UseWeightSlidersOptions): UseWeightSli
         return result;
       }
     }
-    return distributeEqually(categories);
+    return defaultWeights(categories);
   });
 
   // Track previous categories to detect changes
@@ -86,82 +74,33 @@ export function useWeightSliders(options: UseWeightSlidersOptions): UseWeightSli
     const retained = categories.filter((cat) => cat in weights);
     const added = categories.filter((cat) => !(cat in weights));
 
+    // Preserve retained values; initialize new categories to neutral 50
     if (retained.length === 0) {
-      // All categories are new -- distribute equally
-      setWeights(distributeEqually(categories));
+      setWeights(defaultWeights(categories));
       return;
     }
 
-    // Calculate how much weight the retained categories use
-    const retainedSum = retained.reduce((sum, cat) => sum + weights[cat], 0);
+    const next: Record<string, number> = {};
+    retained.forEach((cat) => {
+      next[cat] = weights[cat];
+    });
+    added.forEach((cat) => {
+      next[cat] = 50;
+    });
 
-    // Removed categories free up weight; new categories need weight allocated
-    // Redistribute: keep retained weights proportionally, share remainder among new
-    const removed = prev.filter((cat) => !categories.includes(cat));
-    const freedWeight = removed.reduce((sum, cat) => sum + (weights[cat] || 0), 0);
-
-    if (added.length === 0) {
-      // Categories were only removed -- scale up retained to fill 100
-      if (retainedSum === 0) {
-        setWeights(distributeEqually(retained));
-      } else {
-        const newWeights: Record<string, number> = {};
-        retained.forEach((cat) => {
-          newWeights[cat] = Math.round(((weights[cat] / retainedSum) * 100) * 10) / 10;
-        });
-        // Fix rounding
-        const total = Object.values(newWeights).reduce((s, v) => s + v, 0);
-        const roundedTotal = Math.round(total * 10) / 10;
-        if (roundedTotal !== 100 && retained.length > 0) {
-          newWeights[retained[0]] = Math.round((newWeights[retained[0]] + (100 - roundedTotal)) * 10) / 10;
-        }
-        setWeights(newWeights);
-      }
-    } else {
-      // Some categories added -- give them a share of freed weight (or equal share if none freed)
-      const weightForNew = freedWeight > 0 ? freedWeight : (100 / categories.length) * added.length;
-      const weightForRetained = 100 - weightForNew;
-
-      const newWeights: Record<string, number> = {};
-
-      // Scale retained proportionally
-      if (retainedSum > 0) {
-        retained.forEach((cat) => {
-          newWeights[cat] = Math.round(((weights[cat] / retainedSum) * weightForRetained) * 10) / 10;
-        });
-      } else {
-        const share = weightForRetained / retained.length;
-        retained.forEach((cat) => {
-          newWeights[cat] = Math.round(share * 10) / 10;
-        });
-      }
-
-      // Distribute among new categories equally
-      const newShare = Math.round((weightForNew / added.length) * 10) / 10;
-      added.forEach((cat) => {
-        newWeights[cat] = newShare;
-      });
-
-      // Fix rounding
-      const total = Object.values(newWeights).reduce((s, v) => s + v, 0);
-      const roundedTotal = Math.round(total * 10) / 10;
-      if (roundedTotal !== 100 && categories.length > 0) {
-        newWeights[categories[0]] = Math.round((newWeights[categories[0]] + (100 - roundedTotal)) * 10) / 10;
-      }
-
-      setWeights(newWeights);
-    }
+    setWeights(next);
   }, [categories]);
 
   const setWeight = useCallback(
     (category: string, value: number) => {
-      setWeights((current) => redistributeWeights(current, category, value));
+      const clamped = Math.max(0, Math.min(100, value));
+      setWeights((current) => ({ ...current, [category]: clamped }));
     },
     [],
   );
 
   const resetToEqual = useCallback(() => {
-    setWeights(distributeEqually(categories));
+    setWeights(defaultWeights(categories));
   }, [categories]);
 
   const total = useMemo(() => {

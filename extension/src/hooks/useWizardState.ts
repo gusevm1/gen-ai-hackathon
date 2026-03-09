@@ -41,11 +41,15 @@ export function useWizardState(): UseWizardStateReturn {
           setPartialData(state.partialData);
         } else if (existingProfile) {
           // Edit mode with cleared wizard state — decompose saved profile into step data
-          const { schemaVersion, softCriteria, weights, createdAt, updatedAt, ...filters } = existingProfile;
+          const { schemaVersion, softCriteria, weights, weightInputs, createdAt, updatedAt, ...filters } = existingProfile;
           const restored: WizardPartialData = {
             filters: Object.keys(filters).length > 0 ? filters as StepFiltersData : undefined,
             softCriteria: softCriteria?.length ? softCriteria : undefined,
-            weights: weights && Object.keys(weights).length > 0 ? weights : undefined,
+            weights: weightInputs && Object.keys(weightInputs).length > 0
+              ? weightInputs
+              : weights && Object.keys(weights).length > 0
+                ? weights
+                : undefined,
           };
           setPartialData(restored);
           // Persist so subsequent navigations work

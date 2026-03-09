@@ -4,7 +4,6 @@ import { StepFiltersSchema, type StepFiltersData } from '@/schema/profile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
@@ -31,49 +30,91 @@ import { Separator } from '@/components/ui/separator';
 
 // -- Constants ---------------------------------------------------------------
 
-const PROPERTY_TYPES = [
+const RADIUS_OPTIONS = [0, 1, 2, 3, 4, 5, 7, 10, 15, 20, 30, 50];
+
+const CATEGORY_OPTIONS = [
+  'Apartment and house',
   'Apartment',
-  'House',
-  'Studio',
-  'Room',
-  'Parking',
-  'Commercial',
+  'House, chalet, rustico',
+  'Furnished dwelling',
+  'Parking space, garage',
+  'Office',
+  'Commercial and industry',
+  'Storage room',
 ] as const;
+
+const PRICE_OPTIONS = [
+  'Any',
+  500,
+  600,
+  700,
+  800,
+  900,
+  1000,
+  1100,
+  1200,
+  1300,
+  1400,
+  1500,
+  1600,
+  1700,
+  1800,
+  1900,
+  2000,
+  2200,
+  2400,
+  2600,
+  2800,
+  3000,
+  3500,
+  4000,
+  4500,
+  5000,
+  5500,
+  6000,
+  7000,
+  8000,
+  9000,
+  10000,
+] as const;
+
+const ROOM_OPTIONS = ['Any', 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8] as const;
+
+const LIVING_SPACE_OPTIONS = ['Any', 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 140, 160, 180, 200, 250, 300] as const;
 
 const FLOOR_OPTIONS = [
   { value: 'any', label: 'Any' },
-  { value: 'ground', label: 'Ground floor (Erdgeschoss)' },
-  { value: 'upper', label: 'Upper floors' },
-  { value: 'top', label: 'Top floor' },
-  { value: 'basement', label: 'Basement' },
+  { value: 'on_gf', label: 'On GF' },
+  { value: 'not_on_gf', label: 'Not on GF' },
 ] as const;
 
 const AVAILABILITY_OPTIONS = [
+  { value: 'any', label: 'Any' },
   { value: 'immediately', label: 'Immediately' },
-  { value: 'within-1-month', label: 'Within 1 month' },
-  { value: 'within-3-months', label: 'Within 3 months' },
-  { value: 'within-6-months', label: 'Within 6 months' },
-  { value: 'by-agreement', label: 'By agreement' },
-  { value: 'no-preference', label: 'No preference' },
+  { value: '1m', label: 'In 1 month' },
+  { value: '2m', label: 'In 2 months' },
+  { value: '3m', label: 'In 3 months' },
+  { value: '4m', label: 'In 4 months' },
+  { value: '5m', label: 'In 5 months' },
+  { value: '6m', label: 'In 6 months' },
+  { value: '7m', label: 'In 7 months' },
+  { value: '8m', label: 'In 8 months' },
+  { value: '9m', label: 'In 9 months' },
+  { value: '10m', label: 'In 10 months' },
+  { value: '11m', label: 'In 11 months' },
+  { value: '12m', label: 'In 12 months' },
 ] as const;
 
 const FEATURE_OPTIONS = [
-  'Balcony/Terrace',
+  'Balcony / terrace',
   'Elevator',
-  'Parking',
-  'Garage',
-  'Garden',
-  'Minergie',
-  'Wheelchair accessible',
-  'Dishwasher',
-  'Washing machine',
-  'Tumble dryer',
-  'Cable TV',
-  'Fireplace',
+  'New building',
+  'Old building',
   'Swimming pool',
-  'View',
   'Pets allowed',
-  'Child-friendly',
+  'Wheelchair access',
+  'Parking space / garage',
+  'Minergie',
 ] as const;
 
 // -- Props -------------------------------------------------------------------
@@ -92,10 +133,11 @@ export function StepFilters({ defaultValues, onComplete, onBack }: StepFiltersPr
     defaultValues: {
       listingType: undefined,
       location: '',
-      radiusKm: 10,
-      propertyTypes: [],
+      radiusKm: 0,
+      propertyCategory: undefined,
       priceMin: undefined,
       priceMax: undefined,
+      onlyWithPrice: false,
       roomsMin: undefined,
       roomsMax: undefined,
       livingSpaceMin: undefined,
@@ -105,18 +147,27 @@ export function StepFilters({ defaultValues, onComplete, onBack }: StepFiltersPr
       floorPreference: undefined,
       availability: undefined,
       features: [],
+      free_text_search: '',
       ...defaultValues,
     },
   });
 
-  const radiusValue = form.watch('radiusKm') ?? 10;
+  const handleSubmit = form.handleSubmit((data) => {
+    onComplete({
+      ...data,
+      free_text_search: data.free_text_search ?? '',
+    });
+  });
 
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(onComplete)}
+        onSubmit={handleSubmit}
         className="space-y-6 max-w-3xl mx-auto"
       >
+        {/* Hidden free text search field (kept in data as empty string) */}
+        <input type="hidden" {...form.register('free_text_search')} value="" />
+
         {/* ---------------------------------------------------------------- */}
         {/* Section 1 - Search Basics                                        */}
         {/* ---------------------------------------------------------------- */}
@@ -150,27 +201,29 @@ export function StepFilters({ defaultValues, onComplete, onBack }: StepFiltersPr
               name="radiusKm"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel>Radius</FormLabel>
-                    <span className="text-sm text-muted-foreground font-medium">
-                      {radiusValue} km
-                    </span>
-                  </div>
-                  <FormControl>
-                    <Slider
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={[field.value ?? 10]}
-                      onValueChange={(vals) => field.onChange(vals[0])}
-                      className="py-2"
-                    />
-                  </FormControl>
+                  <FormLabel>Radius</FormLabel>
+                  <Select
+                    value={field.value !== undefined ? String(field.value) : undefined}
+                    onValueChange={(val) => field.onChange(Number(val))}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="rounded-lg">
+                        <SelectValue placeholder="Choose radius" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {RADIUS_OPTIONS.map((km) => (
+                        <SelectItem key={km} value={String(km)}>
+                          +{km} km
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </FormItem>
               )}
             />
 
-            {/* Listing type */}
+            {/* Listing type (unchanged) */}
             <FormField
               control={form.control}
               name="listingType"
@@ -211,44 +264,30 @@ export function StepFilters({ defaultValues, onComplete, onBack }: StepFiltersPr
             <CardTitle className="text-lg font-semibold">Property</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Property types */}
+            {/* Property category dropdown */}
             <FormField
               control={form.control}
-              name="propertyTypes"
-              render={() => (
+              name="propertyCategory"
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Property type</FormLabel>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-1">
-                    {PROPERTY_TYPES.map((type) => (
-                      <FormField
-                        key={type}
-                        control={form.control}
-                        name="propertyTypes"
-                        render={({ field }) => {
-                          const current = field.value ?? [];
-                          return (
-                            <FormItem className="flex items-center space-x-2 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={current.includes(type)}
-                                  onCheckedChange={(checked) => {
-                                    field.onChange(
-                                      checked
-                                        ? [...current, type]
-                                        : current.filter((t) => t !== type),
-                                    );
-                                  }}
-                                />
-                              </FormControl>
-                              <Label className="text-sm font-normal cursor-pointer">
-                                {type}
-                              </Label>
-                            </FormItem>
-                          );
-                        }}
-                      />
-                    ))}
-                  </div>
+                  <FormLabel>Category</FormLabel>
+                  <Select
+                    value={field.value ?? undefined}
+                    onValueChange={(val) => field.onChange(val)}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="rounded-lg">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {CATEGORY_OPTIONS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </FormItem>
               )}
             />
@@ -261,8 +300,8 @@ export function StepFilters({ defaultValues, onComplete, onBack }: StepFiltersPr
                 <FormItem>
                   <FormLabel>Floor preference</FormLabel>
                   <Select
-                    value={field.value ?? ''}
-                    onValueChange={field.onChange}
+                    value={field.value ?? undefined}
+                    onValueChange={(val) => field.onChange(val)}
                   >
                     <FormControl>
                       <SelectTrigger className="rounded-lg">
@@ -301,20 +340,23 @@ export function StepFilters({ defaultValues, onComplete, onBack }: StepFiltersPr
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Min CHF"
-                          className="rounded-lg"
-                          {...field}
-                          value={field.value ?? ''}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value === ''
-                                ? undefined
-                                : Number(e.target.value),
-                            )
+                        <Select
+                          value={field.value !== undefined ? String(field.value) : 'Any'}
+                          onValueChange={(val) =>
+                            field.onChange(val === 'Any' ? undefined : Number(val))
                           }
-                        />
+                        >
+                          <SelectTrigger className="rounded-lg">
+                            <SelectValue placeholder="Min" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PRICE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={String(opt)}>
+                                {opt === 'Any' ? 'Any' : `${opt} CHF`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                     </FormItem>
                   )}
@@ -325,25 +367,43 @@ export function StepFilters({ defaultValues, onComplete, onBack }: StepFiltersPr
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Max CHF"
-                          className="rounded-lg"
-                          {...field}
-                          value={field.value ?? ''}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value === ''
-                                ? undefined
-                                : Number(e.target.value),
-                            )
+                        <Select
+                          value={field.value !== undefined ? String(field.value) : 'Any'}
+                          onValueChange={(val) =>
+                            field.onChange(val === 'Any' ? undefined : Number(val))
                           }
-                        />
+                        >
+                          <SelectTrigger className="rounded-lg">
+                            <SelectValue placeholder="Max" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PRICE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={String(opt)}>
+                                {opt === 'Any' ? 'Any' : `${opt} CHF`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                     </FormItem>
                   )}
                 />
               </div>
+              <FormField
+                control={form.control}
+                name="onlyWithPrice"
+                render={({ field }) => (
+                  <FormItem className="flex items-center space-x-2 pt-2">
+                    <FormControl>
+                      <Checkbox
+                        checked={!!field.value}
+                        onCheckedChange={(checked) => field.onChange(!!checked)}
+                      />
+                    </FormControl>
+                    <Label className="text-sm font-normal">Only Listings With Price</Label>
+                  </FormItem>
+                )}
+              />
             </div>
 
             <Separator />
@@ -358,21 +418,23 @@ export function StepFilters({ defaultValues, onComplete, onBack }: StepFiltersPr
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.5"
-                          placeholder="Min"
-                          className="rounded-lg"
-                          {...field}
-                          value={field.value ?? ''}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value === ''
-                                ? undefined
-                                : Number(e.target.value),
-                            )
+                        <Select
+                          value={field.value !== undefined ? String(field.value) : 'Any'}
+                          onValueChange={(val) =>
+                            field.onChange(val === 'Any' ? undefined : Number(val))
                           }
-                        />
+                        >
+                          <SelectTrigger className="rounded-lg">
+                            <SelectValue placeholder="Min" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ROOM_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={String(opt)}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                     </FormItem>
                   )}
@@ -383,21 +445,23 @@ export function StepFilters({ defaultValues, onComplete, onBack }: StepFiltersPr
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.5"
-                          placeholder="Max"
-                          className="rounded-lg"
-                          {...field}
-                          value={field.value ?? ''}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value === ''
-                                ? undefined
-                                : Number(e.target.value),
-                            )
+                        <Select
+                          value={field.value !== undefined ? String(field.value) : 'Any'}
+                          onValueChange={(val) =>
+                            field.onChange(val === 'Any' ? undefined : Number(val))
                           }
-                        />
+                        >
+                          <SelectTrigger className="rounded-lg">
+                            <SelectValue placeholder="Max" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ROOM_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={String(opt)}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                     </FormItem>
                   )}
@@ -417,20 +481,23 @@ export function StepFilters({ defaultValues, onComplete, onBack }: StepFiltersPr
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Min sqm"
-                          className="rounded-lg"
-                          {...field}
-                          value={field.value ?? ''}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value === ''
-                                ? undefined
-                                : Number(e.target.value),
-                            )
+                        <Select
+                          value={field.value !== undefined ? String(field.value) : 'Any'}
+                          onValueChange={(val) =>
+                            field.onChange(val === 'Any' ? undefined : Number(val))
                           }
-                        />
+                        >
+                          <SelectTrigger className="rounded-lg">
+                            <SelectValue placeholder="Min" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LIVING_SPACE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={String(opt)}>
+                                {opt === 'Any' ? 'Any' : `${opt} m²`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                     </FormItem>
                   )}
@@ -441,20 +508,23 @@ export function StepFilters({ defaultValues, onComplete, onBack }: StepFiltersPr
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Max sqm"
-                          className="rounded-lg"
-                          {...field}
-                          value={field.value ?? ''}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value === ''
-                                ? undefined
-                                : Number(e.target.value),
-                            )
+                        <Select
+                          value={field.value !== undefined ? String(field.value) : 'Any'}
+                          onValueChange={(val) =>
+                            field.onChange(val === 'Any' ? undefined : Number(val))
                           }
-                        />
+                        >
+                          <SelectTrigger className="rounded-lg">
+                            <SelectValue placeholder="Max" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LIVING_SPACE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={String(opt)}>
+                                {opt === 'Any' ? 'Any' : `${opt} m²`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                     </FormItem>
                   )}
@@ -535,8 +605,8 @@ export function StepFilters({ defaultValues, onComplete, onBack }: StepFiltersPr
               render={({ field }) => (
                 <FormItem>
                   <Select
-                    value={field.value ?? ''}
-                    onValueChange={field.onChange}
+                    value={field.value ?? undefined}
+                    onValueChange={(val) => field.onChange(val)}
                   >
                     <FormControl>
                       <SelectTrigger className="rounded-lg">

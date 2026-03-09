@@ -13,6 +13,7 @@ import { StepSoftCriteria } from './StepSoftCriteria';
 import { StepWeights } from './StepWeights';
 import { CheckCircle, Moon, Sun } from 'lucide-react';
 import { useEffect } from 'react';
+import { normalizeWeights } from '@/utils/weight-redistribution';
 
 import type { StepFiltersData, SoftCriterion, PreferenceProfile } from '@/schema/profile';
 
@@ -38,7 +39,7 @@ function deriveCategories(
       filters.livingSpaceMax
     )
       cats.push('Size & Rooms');
-    if (filters.propertyTypes?.length) cats.push('Property Type');
+    if (filters.propertyCategory) cats.push('Property Type');
     if (
       filters.yearBuiltMin ||
       filters.yearBuiltMax ||
@@ -105,6 +106,8 @@ export function WizardShell({ isEditMode = false }: WizardShellProps) {
   const handleWeightsComplete = async (weights: Record<string, number>) => {
     await wizard.saveStepData(2, weights);
 
+    const normalizedWeights = normalizeWeights(weights);
+
     // Read authoritative data from storage (not React state which can be stale)
     const stored = await wizardStateStorage.getValue();
     const storedPartial = stored?.partialData ?? {};
@@ -118,7 +121,8 @@ export function WizardShell({ isEditMode = false }: WizardShellProps) {
       // Step 2 data
       softCriteria: storedPartial.softCriteria ?? [],
       // Step 3 data
-      weights,
+      weights: normalizedWeights,
+      weightInputs: weights,
       // Metadata
       createdAt: isEditMode && profile?.createdAt ? profile.createdAt : now,
       updatedAt: now,

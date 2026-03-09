@@ -1,50 +1,45 @@
 /**
- * Proportional weight redistribution algorithm.
- *
- * When a user moves one weight slider, all other sliders adjust proportionally
- * so the total always equals exactly 100%.
- *
- * @param weights - Current weight values keyed by category
- * @param changedKey - The key of the slider that was moved
- * @param newValue - The new value for the changed slider
- * @returns New weights record with all values summing to exactly 100
+ * Weight utilities: simple normalization (value / sum of values).
+ * This keeps the raw slider inputs independent while producing
+ * relative weights that always sum to 1.
  */
-export function redistributeWeights(
-  weights: Record<string, number>,
-  changedKey: string,
-  newValue: number,
-): Record<string, number> {
-  const clampedValue = Math.max(0, Math.min(100, newValue));
-  const otherKeys = Object.keys(weights).filter((k) => k !== changedKey);
-  const otherSum = otherKeys.reduce((sum, k) => sum + weights[k], 0);
-  const remaining = 100 - clampedValue;
 
-  const result: Record<string, number> = { [changedKey]: clampedValue };
+/**
+ * Normalize raw weights by dividing each by the sum of all values.
+ * Returns 0 for all categories if the sum is 0.
+ */
+export function normalizeWeights(weights: Record<string, number>): Record<string, number> {
+  const entries = Object.entries(weights || {});
+  if (entries.length === 0) return {};
 
-  if (otherKeys.length === 0) {
-    return result;
+  const sum = entries.reduce((acc, [, val]) => acc + (val ?? 0), 0);
+  if (sum <= 0) {
+    // Avoid NaN — keep everything at 0
+    return Object.fromEntries(entries.map(([key]) => [key, 0]));
   }
 
-  if (otherSum === 0) {
-    // Edge case: all others are 0, distribute remaining equally
-    const equalShare = remaining / otherKeys.length;
-    otherKeys.forEach((k) => {
-      result[k] = Math.max(0, Math.round(equalShare * 10) / 10);
-    });
-  } else {
-    // Proportional redistribution
-    otherKeys.forEach((k) => {
-      result[k] = Math.max(0, Math.round(((weights[k] / otherSum) * remaining) * 10) / 10);
-    });
-  }
+  const normalized: Record<string, number> = {};
+  entries.forEach(([key, val]) => {
+    normalized[key] = Number(((val ?? 0) / sum).toFixed(6));
+  });
 
-  // Fix rounding to ensure exact 100% sum
-  const total = Object.values(result).reduce((s, v) => s + v, 0);
-  const roundedTotal = Math.round(total * 10) / 10;
-  if (roundedTotal !== 100 && otherKeys.length > 0) {
-    const adjusted = Math.round((result[otherKeys[0]] + (100 - roundedTotal)) * 10) / 10;
-    result[otherKeys[0]] = Math.max(0, adjusted);
-  }
+  return normalized;
+}
 
-  return result;
+/**
+ * Ensure values sum to 1 by normalizing when needed.
+ * If they already look normalized (sum ~= 1 and max <= 1), return as-is.
+ */
+export function ensureNormalizedWeights(weights: Record<string, number>): Record<string, number> {
+  const entries = Object.entries(weights || {});
+  if (entries.length === 0) return {};
+
+  const values = entries.map(([, value]) => value ?? 0);
+  const max = Math.max(...values);
+  const sum = values.reduce((s, v) => s + v, 0);
+
+  const looksNormalized = max <= 1 && sum > 0 && Math.abs(sum - 1) < 0.05;
+  if (looksNormalized) return weights;
+
+  return normalizeWeights(weights);
 }
