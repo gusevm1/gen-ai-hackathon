@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-03-10T15:47:01.219Z"
-last_activity: 2026-03-10 -- Phase 3 Plan 1 core scoring engine
+status: checkpoint
+stopped_at: "Checkpoint: 03-02-PLAN.md Task 3 (human-verify)"
+last_updated: "2026-03-10T15:51:18Z"
+last_activity: 2026-03-10 -- Phase 3 Plan 2 scoring endpoint + edge function
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 7
-  completed_plans: 7
-  percent: 62
+  completed_plans: 8
+  percent: 75
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 3 of 4 (LLM Scoring Pipeline) -- IN PROGRESS
-Plan: 1 of 2 complete
-Status: Phase 3 Plan 1 complete (core scoring engine), Plan 2 pending (endpoint + edge function)
-Last activity: 2026-03-10 -- Phase 3 Plan 1 core scoring engine
+Plan: 2 of 2 complete (awaiting human verification checkpoint)
+Status: Phase 3 Plan 2 automated tasks complete, checkpoint pending human verification
+Last activity: 2026-03-10 -- Phase 3 Plan 2 scoring endpoint + edge function
 
-Progress: [======----] 62%
+Progress: [========--] 75%
 
 ## Architecture Pivot (2026-03-10)
 
@@ -88,6 +88,10 @@ Progress: [======----] 62%
 - [Phase 03-01]: match_tier uses Literal type (excellent/good/fair/poor) for compile-time validation
 - [Phase 03]: alias_generator=to_camel with populate_by_name=True for UserPreferences camelCase JSONB support
 - [Phase 03]: messages.parse(output_format=ScoreResponse) for guaranteed valid structured Claude output
+- [Phase 03-02]: asyncio.to_thread wraps synchronous SupabaseService calls in scoring endpoint
+- [Phase 03-02]: save_analysis is fire-and-forget (log error, don't fail response)
+- [Phase 03-02]: Edge function injects authenticated user_id from JWT into backend request body
+- [Phase 03-02]: Edge function uses npm:@supabase/supabase-js@2 import for Deno compatibility
 
 ### Pending Todos
 
@@ -101,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-10T15:46:52.669Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-03-10T15:51:18Z
+Stopped at: "Checkpoint: 03-02-PLAN.md Task 3 (human-verify)"
 Resume file: None
