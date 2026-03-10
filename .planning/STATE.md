@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Phase 3 context gathered
-last_updated: "2026-03-10T15:09:00.848Z"
-last_activity: 2026-03-10 -- Phase 2 preferences form + Flatfox API integration
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-03-10T15:47:01.219Z"
+last_activity: 2026-03-10 -- Phase 3 Plan 1 core scoring engine
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 6
-  percent: 50
+  total_plans: 7
+  completed_plans: 7
+  percent: 62
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website.
-**Current focus:** Phase 2 - Preferences & Data Pipeline
+**Current focus:** Phase 3 - LLM Scoring Pipeline
 
 ## Current Position
 
-Phase: 2 of 4 (Preferences & Data Pipeline) -- IN PROGRESS
-Plan: 2 of 2 complete
-Status: Phase 2 complete (both plans executed)
-Last activity: 2026-03-10 -- Phase 2 preferences form + Flatfox API integration
+Phase: 3 of 4 (LLM Scoring Pipeline) -- IN PROGRESS
+Plan: 1 of 2 complete
+Status: Phase 3 Plan 1 complete (core scoring engine), Plan 2 pending (endpoint + edge function)
+Last activity: 2026-03-10 -- Phase 3 Plan 1 core scoring engine
 
-Progress: [=====-----] 50%
+Progress: [======----] 62%
 
 ## Architecture Pivot (2026-03-10)
 
@@ -81,6 +81,13 @@ Progress: [=====-----] 50%
 - [Phase 02-01]: zodResolver needs cast as Resolver<T> for Zod v4 type compatibility with RHF v7
 - [Phase 02-01]: watch/setValue pattern for string array form fields (not useFieldArray)
 - [Phase 02]: Scaffolded Next.js app from scratch (Phase 1 not re-executed after Flatfox pivot)
+- [Phase 03-01]: alias_generator=to_camel with populate_by_name=True for UserPreferences camelCase JSONB support
+- [Phase 03-01]: Claude model default: claude-haiku-4-5-20250514 via CLAUDE_MODEL env var
+- [Phase 03-01]: SupabaseService uses synchronous client (wrap with asyncio.to_thread in async endpoints)
+- [Phase 03-01]: messages.parse(output_format=ScoreResponse) for guaranteed valid structured output
+- [Phase 03-01]: match_tier uses Literal type (excellent/good/fair/poor) for compile-time validation
+- [Phase 03]: alias_generator=to_camel with populate_by_name=True for UserPreferences camelCase JSONB support
+- [Phase 03]: messages.parse(output_format=ScoreResponse) for guaranteed valid structured Claude output
 
 ### Pending Todos
 
@@ -94,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-10T15:09:00.846Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-llm-scoring-pipeline/03-CONTEXT.md
+Last session: 2026-03-10T15:46:52.669Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None

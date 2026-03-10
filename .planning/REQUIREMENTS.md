@@ -33,11 +33,11 @@ Requirements for hackathon MVP. Each maps to roadmap phases.
 
 - [x] **DATA-01**: Backend fetches listing details from Flatfox public API (`/api/v1/flat/`)
 - [x] **DATA-02**: Backend parses Flatfox listing data into structured format (price, rooms, address, description, features, etc.)
-- [ ] **EVAL-01**: Each listing is evaluated by Claude against the user's preference profile and weights
-- [ ] **EVAL-02**: Evaluation returns a score (0-100) with weighted category breakdown
-- [ ] **EVAL-03**: Each category includes bullet-point reasoning with references to listing details
-- [ ] **EVAL-04**: Evaluation explicitly states "I don't know" for data points not available in the listing
-- [ ] **EVAL-05**: Analysis is returned in the listing's language (DE/FR/IT)
+- [x] **EVAL-01**: Each listing is evaluated by Claude against the user's preference profile and weights
+- [x] **EVAL-02**: Evaluation returns a score (0-100) with weighted category breakdown
+- [x] **EVAL-03**: Each category includes bullet-point reasoning with references to listing details
+- [x] **EVAL-04**: Evaluation explicitly states "I don't know" for data points not available in the listing
+- [x] **EVAL-05**: Analysis is returned in the listing's language (DE/FR/IT)
 
 ### Extension UI
 
@@ -115,11 +115,11 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | PREF-10 | Phase 2 | Complete |
 | DATA-01 | Phase 2 | Complete |
 | DATA-02 | Phase 2 | Complete |
-| EVAL-01 | Phase 3 | Pending |
-| EVAL-02 | Phase 3 | Pending |
-| EVAL-03 | Phase 3 | Pending |
-| EVAL-04 | Phase 3 | Pending |
-| EVAL-05 | Phase 3 | Pending |
+| EVAL-01 | Phase 3 | Complete |
+| EVAL-02 | Phase 3 | Complete |
+| EVAL-03 | Phase 3 | Complete |
+| EVAL-04 | Phase 3 | Complete |
+| EVAL-05 | Phase 3 | Complete |
 | EXT-01 | Phase 4 | Pending |
 | EXT-02 | Phase 4 | Pending |
 | EXT-03 | Phase 4 | Pending |

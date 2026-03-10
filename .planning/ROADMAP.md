@@ -130,5 +130,5 @@ Within phases, parallel tracks execute simultaneously where marked.
 |-------|----------------|--------|-----------|
 | 1. Infrastructure & Auth | 0/3 | Planned | - |
 | 2. Preferences & Data Pipeline | 0/2 | Planned | - |
-| 3. LLM Scoring Pipeline | 0/2 | Planned | - |
+| 3. LLM Scoring Pipeline | 1/2 | In Progress | - |
 | 4. Extension UI & Analysis Page | 0/? | Not started | - |
