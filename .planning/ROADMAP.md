@@ -24,7 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Infrastructure & Auth** - Scaffold all codebases, deploy, configure Supabase auth + DB
 - [ ] **Phase 2: Preferences & Data Pipeline** - Next.js preferences form + FastAPI Flatfox integration (parallel tracks)
-- [ ] **Phase 3: LLM Scoring Pipeline** - Claude-powered evaluation endpoint + Supabase edge function proxy
+- [x] **Phase 3: LLM Scoring Pipeline** - Claude-powered evaluation endpoint + Supabase edge function proxy (completed 2026-03-10)
 - [ ] **Phase 4: Extension UI & Analysis Page** - Flatfox content script, FAB, badges, summary panel, full analysis page
 
 ## Phase Details
@@ -130,5 +130,5 @@ Within phases, parallel tracks execute simultaneously where marked.
 |-------|----------------|--------|-----------|
 | 1. Infrastructure & Auth | 0/3 | Planned | - |
 | 2. Preferences & Data Pipeline | 0/2 | Planned | - |
-| 3. LLM Scoring Pipeline | 1/2 | In Progress | - |
+| 3. LLM Scoring Pipeline | 2/2 | Complete   | 2026-03-10 |
 | 4. Extension UI & Analysis Page | 0/? | Not started | - |
