@@ -31,8 +31,8 @@ Requirements for hackathon MVP. Each maps to roadmap phases.
 
 ### Data & Scoring
 
-- [ ] **DATA-01**: Backend fetches listing details from Flatfox public API (`/api/v1/flat/`)
-- [ ] **DATA-02**: Backend parses Flatfox listing data into structured format (price, rooms, address, description, features, etc.)
+- [x] **DATA-01**: Backend fetches listing details from Flatfox public API (`/api/v1/flat/`)
+- [x] **DATA-02**: Backend parses Flatfox listing data into structured format (price, rooms, address, description, features, etc.)
 - [ ] **EVAL-01**: Each listing is evaluated by Claude against the user's preference profile and weights
 - [ ] **EVAL-02**: Evaluation returns a score (0-100) with weighted category breakdown
 - [ ] **EVAL-03**: Each category includes bullet-point reasoning with references to listing details
@@ -113,8 +113,8 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | PREF-08 | Phase 2 | Pending |
 | PREF-09 | Phase 2 | Pending |
 | PREF-10 | Phase 2 | Pending |
-| DATA-01 | Phase 2 | Pending |
-| DATA-02 | Phase 2 | Pending |
+| DATA-01 | Phase 2 | Complete |
+| DATA-02 | Phase 2 | Complete |
 | EVAL-01 | Phase 3 | Pending |
 | EVAL-02 | Phase 3 | Pending |
 | EVAL-03 | Phase 3 | Pending |

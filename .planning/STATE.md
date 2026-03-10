@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Fresh start after Flatfox pivot
-stopped_at: Phase 1 context gathered (post-Flatfox pivot)
-last_updated: "2026-03-10T13:37:40.404Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-03-10T14:16:51.381Z"
 last_activity: 2026-03-10 -- Roadmap rewrite
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 4
+  total_plans: 5
+  completed_plans: 5
   percent: 0
 ---
 
@@ -72,6 +72,9 @@ Progress: [░░░░░░░░░░] 0%
 - [Features]: Presented as reusable soft criteria suggestions (not separate checklist)
 - [Analysis]: 3-5 bullets in extension, full analysis page on website
 - [Edge functions]: Supabase edge functions proxy to EC2
+- [Phase 02]: Used /api/v1/public-listing/{pk}/ endpoint (NOT /api/v1/flat/ which returns 404)
+- [Phase 02]: Singleton FlatfoxClient with lazy httpx.AsyncClient init and 30s timeout
+- [Phase 02]: number_of_rooms stored as Optional[str] matching Flatfox convention (Swiss 3.5 rooms)
 
 ### Pending Todos
 
@@ -85,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-10T12:35:36.233Z
-Stopped at: Phase 1 context gathered (post-Flatfox pivot)
-Resume file: .planning/phases/01-foundation-onboarding/01-CONTEXT.md
+Last session: 2026-03-10T14:16:51.380Z
+Stopped at: Completed 02-02-PLAN.md
+Resume file: None
