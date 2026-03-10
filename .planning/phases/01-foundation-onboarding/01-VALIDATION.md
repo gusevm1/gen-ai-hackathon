@@ -4,7 +4,7 @@ slug: foundation-onboarding
 status: draft
 nyquist_compliant: false
 wave_0_complete: false
-created: 2026-03-07
+created: 2026-03-10
 ---
 
 # Phase 01 — Validation Strategy
@@ -17,19 +17,19 @@ created: 2026-03-07
 
 | Property | Value |
 |----------|-------|
-| **Framework** | Vitest (via WXT `WxtVitest` plugin) |
-| **Config file** | `vitest.config.ts` (Wave 0 creation) |
-| **Quick run command** | `pnpm vitest run --reporter=verbose` |
-| **Full suite command** | `pnpm vitest run` |
-| **Estimated runtime** | ~5 seconds |
+| **Framework** | Vitest 4.x (extension), Vitest (web - Wave 0 setup) |
+| **Config file** | `extension/vitest.config.ts` (exists), `web/vitest.config.ts` (Wave 0) |
+| **Quick run command** | `pnpm test` (in respective directory) |
+| **Full suite command** | `cd extension && pnpm test && cd ../web && pnpm test` |
+| **Estimated runtime** | ~10 seconds |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `pnpm vitest run --reporter=verbose`
-- **After every plan wave:** Run `pnpm vitest run`
-- **Before `/gsd:verify-work`:** Full suite must be green
+- **After every task commit:** Run `pnpm test` in modified directory
+- **After every plan wave:** Run full suite across all directories
+- **Before `/gsd:verify-work`:** Full suite must be green + all manual smoke tests pass
 - **Max feedback latency:** 10 seconds
 
 ---
@@ -38,20 +38,12 @@ created: 2026-03-07
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 01-01-01 | 01 | 0 | ONBD-01 | unit | `pnpm vitest run src/__tests__/background.test.ts -t "onInstalled"` | ❌ W0 | ⬜ pending |
-| 01-01-02 | 01 | 0 | ONBD-02 | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "location"` | ❌ W0 | ⬜ pending |
-| 01-01-03 | 01 | 0 | ONBD-03 | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "listingType"` | ❌ W0 | ⬜ pending |
-| 01-01-04 | 01 | 0 | ONBD-04 | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "propertyType"` | ❌ W0 | ⬜ pending |
-| 01-01-05 | 01 | 0 | ONBD-05 | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "price"` | ❌ W0 | ⬜ pending |
-| 01-01-06 | 01 | 0 | ONBD-06 | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "rooms"` | ❌ W0 | ⬜ pending |
-| 01-01-07 | 01 | 0 | ONBD-07 | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "livingSpace"` | ❌ W0 | ⬜ pending |
-| 01-01-08 | 01 | 0 | ONBD-08 | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "yearBuilt"` | ❌ W0 | ⬜ pending |
-| 01-01-09 | 01 | 0 | ONBD-09 | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "floor"` | ❌ W0 | ⬜ pending |
-| 01-01-10 | 01 | 0 | ONBD-10 | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "availability"` | ❌ W0 | ⬜ pending |
-| 01-01-11 | 01 | 0 | ONBD-11 | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "features"` | ❌ W0 | ⬜ pending |
-| 01-01-12 | 01 | 0 | ONBD-12 | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "softCriteria"` | ❌ W0 | ⬜ pending |
-| 01-01-13 | 01 | 0 | ONBD-13 | unit | `pnpm vitest run src/__tests__/weight-redistribution.test.ts` | ❌ W0 | ⬜ pending |
-| 01-01-14 | 01 | 0 | ONBD-14 | unit | `pnpm vitest run src/__tests__/profile-storage.test.ts` | ❌ W0 | ⬜ pending |
+| 01-01-01 | 01 | 1 | AUTH-01 | smoke (manual) | Manual: visit site, sign up, log in | N/A | ⬜ pending |
+| 01-01-02 | 01 | 1 | AUTH-02 | smoke (manual) | Manual: open popup, enter credentials | N/A | ⬜ pending |
+| 01-01-03 | 01 | 1 | AUTH-03 | integration | `supabase functions serve` + curl with JWT | ❌ W0 | ⬜ pending |
+| 01-01-04 | 01 | 1 | INFRA-01 | smoke (manual) | `curl -f https://[deployment-url]` | N/A | ⬜ pending |
+| 01-01-05 | 01 | 1 | INFRA-02 | smoke | `curl -f http://[ec2-ip]:8000/health` | N/A | ⬜ pending |
+| 01-01-06 | 01 | 1 | INFRA-03 | integration (manual) | `supabase db push` + verify in dashboard | N/A | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -59,12 +51,11 @@ created: 2026-03-07
 
 ## Wave 0 Requirements
 
-- [ ] `vitest.config.ts` — WXT Vitest plugin configuration
-- [ ] `src/__tests__/background.test.ts` — stubs for ONBD-01 (onInstalled handler)
-- [ ] `src/__tests__/profile-schema.test.ts` — Zod schema validation for ONBD-02 through ONBD-12
-- [ ] `src/__tests__/weight-redistribution.test.ts` — Proportional redistribution algorithm (ONBD-13)
-- [ ] `src/__tests__/profile-storage.test.ts` — WXT storage read/write/persist (ONBD-14)
-- [ ] Install test deps: `pnpm add -D vitest @testing-library/react @testing-library/jest-dom jsdom`
+- [ ] Extension Vitest config — reuse existing pattern for fresh scaffold
+- [ ] Web app Vitest setup — if unit tests desired (not critical for Phase 1)
+- [ ] No automated integration tests for auth flows — all manual verification for Phase 1
+
+*Phase 1 is primarily infrastructure/deployment — most validation is manual smoke testing of deployed services.*
 
 ---
 
@@ -72,8 +63,12 @@ created: 2026-03-07
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Onboarding page opens automatically on first install | ONBD-01 | Requires browser runtime and extension lifecycle event | 1. Load unpacked extension 2. Verify onboarding tab opens 3. Close and reopen browser — should NOT reopen |
-| Full wizard visual flow and step navigation | ONBD-01 | UI/UX flow requires visual inspection | 1. Walk through all wizard steps 2. Verify step indicators, back/next buttons 3. Verify responsive layout |
+| Login/signup on Next.js website | AUTH-01 | Browser interaction required | Visit site, sign up with email/password, verify redirect to dashboard |
+| Login in extension popup | AUTH-02 | Extension popup browser interaction | Install extension, open popup, enter credentials, verify login state |
+| Next.js deployed on Vercel | INFRA-01 | Deployment verification | `curl -f https://[deployment-url]` returns 200 |
+| FastAPI on EC2 health check | INFRA-02 | External service check | `curl -f http://[ec2-ip]:8000/health` returns 200 |
+| Supabase tables + auth configured | INFRA-03 | Dashboard verification | Check Supabase dashboard for tables, RLS policies, auth config |
+| Edge function proxies to EC2 | AUTH-03 | End-to-end integration | `supabase functions serve` + curl with valid JWT header |
 
 ---
 
