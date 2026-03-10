@@ -2,83 +2,76 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 01-04-PLAN.md (Phase 1 complete)
-last_updated: "2026-03-07T15:53:15.870Z"
-last_activity: 2026-03-07 -- Completed Plan 01-04 (wizard shell wiring, popup dashboard, e2e verification)
+status: Fresh start after Flatfox pivot
+stopped_at: Phase 1 context gathered (post-Flatfox pivot)
+last_updated: "2026-03-10T12:35:36.235Z"
+last_activity: 2026-03-10 -- Roadmap rewrite
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 4
   completed_plans: 4
-  percent: 100
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-07)
+See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website.
-**Current focus:** Phase 1 - Foundation & Onboarding
+**Current focus:** Phase 1 - Infrastructure & Auth
 
 ## Current Position
 
-Phase: 1 of 4 (Foundation & Onboarding) -- COMPLETE
-Plan: 4 of 4 complete
-Status: Phase 1 Complete
-Last activity: 2026-03-07 -- Completed Plan 01-04 (wizard shell wiring, popup dashboard, e2e verification)
+Phase: 1 of 4 (Infrastructure & Auth) -- NOT STARTED
+Plan: 0 of ? complete
+Status: Fresh start after Flatfox pivot
+Last activity: 2026-03-10 -- Roadmap rewrite
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
+
+## Architecture Pivot (2026-03-10)
+
+**What changed:**
+- Target site: Homegate → Flatfox (has public API, agent-validated)
+- Preferences: Extension onboarding wizard → Separate Next.js website on Vercel
+- Auth: None → Supabase (email/password) from day 1
+- Backend: Node.js Hono → Python FastAPI (matches jobbmatch reference)
+- Data extraction: DOM scraping / __INITIAL_STATE__ → Flatfox public API
+- Scoring trigger: Automatic → On-demand via floating action button
+- Analysis: All in extension → Quick summary in extension, full analysis on website
+- Storage: chrome.storage.local → Supabase PostgreSQL
+- API routing: Direct → Supabase edge functions as proxy
+
+**What stayed:**
+- Chrome extension (Manifest V3, WXT)
+- EC2 backend for LLM calls
+- Claude API for scoring
+- Weighted category preferences with soft criteria
+- "I don't know" over guessing philosophy
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 11min
-- Total execution time: 0.77 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01-foundation-onboarding | 4/4 | 45min | 11min |
-
-**Recent Trend:**
-- Last 5 plans: 01-01 (9min), 01-02 (3min), 01-03 (2min), 01-04 (31min)
-- Trend: Plan 04 was the integration plan with e2e verification and 3 bug fixes
-
-*Updated after each plan completion*
-| Phase 01 P02 | 3min | 2 tasks | 3 files |
-| Phase 01 P04 | 31min | 3 tasks | 8 files |
+- Previous milestone (Homegate Phase 1): 4 plans in 0.77 hours
+- Current milestone: Starting fresh
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- [Pivot]: Abandoned scraper infrastructure in favor of Chrome extension overlay approach
-- [Architecture]: Thin EC2 backend for LLM proxy only -- no database, no user accounts
-- [UX]: Full-page onboarding wizard, compact popup dashboard after setup
-- [Technical]: Background service worker fetch() for detail pages -- no tab opening
-- [Scoring]: Weighted categories with honest "I don't know" for unavailable data
-- [01-01]: Used wxt/utils/storage import path (WXT 0.20 export map)
-- [01-01]: Replaced jsdom with happy-dom for ESM compatibility
-- [01-01]: Exported handleInstalled from background.ts for testability
-- [01-01]: Kept React 19.2 (WXT template default, shadcn compatible)
-- [01-03]: Used lucide-react icons for wizard step buttons (already a project dependency)
-- [01-03]: Category tooltips use static map for known categories with generic fallback for soft criteria
-- [01-03]: Responsive 2-column grid on desktop, stacked on mobile for weight sliders
-- [Phase 01]: [01-02]: Used shadcn FormField/FormControl wrappers for consistent validation UX across all filter fields
-- [Phase 01]: [01-02]: Keyword-matching SoftCriteriaChat with 15 bilingual DE/EN patterns as Phase 1 LLM placeholder
-- [Phase 01]: [01-02]: Used crypto.randomUUID() for SoftCriterion IDs (native browser API, no dependency)
-- [01-04]: Dynamic category derivation from filled filter fields and soft criteria for weight step
-- [01-04]: Read wizard partialData from storage.getValue() to avoid stale React state closure bugs
-- [01-04]: Clamp weight redistribution results to >= 0 to prevent negative weights from rounding errors
-- [01-04]: Decompose saved profile back into step data for edit mode pre-population
+- [Pivot]: Flatfox over Homegate -- real estate agent feedback + public API
+- [Architecture]: Next.js (Vercel) + FastAPI (EC2) + Supabase (auth/DB) + WXT extension
+- [Auth]: Supabase email/password from day 1
+- [Scoring]: On-demand via FAB (not automatic -- Claude API calls expensive)
+- [Data]: Backend calls Flatfox API (not extension-side scraping)
+- [UI]: Minimal design, function over form, redesign later
+- [Preferences]: Single page with collapsible sections (not multi-step wizard)
+- [Features]: Presented as reusable soft criteria suggestions (not separate checklist)
+- [Analysis]: 3-5 bullets in extension, full analysis page on website
+- [Edge functions]: Supabase edge functions proxy to EC2
 
 ### Pending Todos
 
@@ -86,12 +79,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- Homegate DOM selectors for listing cards need live validation before Phase 4 badge injection
-- Homegate __INITIAL_STATE__ JSON path needs live verification before Phase 2 parser implementation
-- Claude API account tier should be checked before Phase 3 testing (Tier 1 rate limits may be too restrictive for demo)
+- Flatfox API endpoint structure needs live verification (found `/api/v1/flat/` from reverse engineering, needs confirmation)
+- Claude API account tier should be checked before Phase 3 testing
+- Existing Phase 1 extension code (Homegate wizard) will be replaced -- may want to archive
 
 ## Session Continuity
 
-Last session: 2026-03-07T16:41:02.000Z
-Stopped at: Completed 01-04-PLAN.md (Phase 1 complete)
-Resume file: None
+Last session: 2026-03-10T12:35:36.233Z
+Stopped at: Phase 1 context gathered (post-Flatfox pivot)
+Resume file: .planning/phases/01-foundation-onboarding/01-CONTEXT.md
