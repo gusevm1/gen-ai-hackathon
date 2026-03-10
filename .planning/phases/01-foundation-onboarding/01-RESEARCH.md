@@ -1,47 +1,55 @@
-# Phase 1: Foundation & Onboarding - Research
+# Phase 1: Infrastructure & Auth - Research
 
-**Researched:** 2026-03-07
-**Domain:** Chrome Extension (MV3) with WXT framework, React onboarding wizard, chrome.storage.local persistence
+**Researched:** 2026-03-10
+**Domain:** Full-stack scaffolding (Next.js + FastAPI + WXT Chrome Extension + Supabase)
 **Confidence:** HIGH
 
 ## Summary
 
-Phase 1 builds a Chrome extension from scratch using WXT (the leading MV3 extension framework) with React, shadcn/ui, and Tailwind CSS. The extension must scaffold four entrypoints (background service worker, content script for Homegate.ch, popup dashboard, and a full-page onboarding wizard), implement a 3-step wizard that mirrors Homegate's filter panel plus soft-criteria capture and weight allocation, and persist the complete user profile in `chrome.storage.local` with Zod v4 validation.
+Phase 1 is primarily a scaffolding and wiring phase. All four codebases (Next.js web app, FastAPI backend, WXT Chrome extension, Supabase project) are greenfield and can be scaffolded in parallel. The critical convergence point is wiring Supabase auth across the web app and extension, plus creating an edge function that proxies to the EC2 backend.
 
-The WXT framework provides file-based entrypoints, auto-generated manifest, Vite-powered HMR, and a built-in typed storage layer (`wxt/storage`) with versioning and migrations -- eliminating the need for hand-rolled storage wrappers. shadcn/ui provides accessible, customizable React components (Slider, Select, Checkbox, Form, Card, Tabs, Button) that align with the warm/friendly design aesthetic. The project already uses Zod v4 (`^4.3.6`) and TypeScript, so schema validation for the preference profile can leverage existing patterns from `src/schema/listing.ts`.
+The standard stack is well-documented and mature: Next.js App Router with `@supabase/ssr` for cookie-based server-side auth, WXT with React for the Chrome extension, FastAPI with Docker/uvicorn for the backend, and Supabase for auth + PostgreSQL + edge functions. The trickiest integration point is Supabase auth in the Chrome extension, which requires a custom `chrome.storage.local` adapter since Manifest V3 service workers lack `localStorage`.
 
-**Primary recommendation:** Use WXT 0.20.x with `@wxt-dev/module-react`, shadcn/ui with Tailwind CSS v3 (not v4 -- v3 is battle-tested in WXT context), React Hook Form with `@hookform/resolvers` for form management, and WXT's built-in `storage.defineItem` for typed profile persistence with versioning.
+**Primary recommendation:** Use Supabase's official Next.js SSR patterns (`@supabase/ssr` with middleware for token refresh), a custom Chrome storage adapter for the extension, and keep the FastAPI backend minimal (health check + CORS only in Phase 1). Create database tables via Supabase SQL editor or migrations with RLS from day 1.
 
 <user_constraints>
 ## User Constraints (from CONTEXT.md)
 
 ### Locked Decisions
-- **Wizard flow**: 3-step wizard -- (1) Standard filters, (2) Soft criteria with LLM-assisted chat, (3) Weight allocation
-- **Step 1 mirrors Homegate's filter panel**: Location+radius, buy/rent, category, price range, rooms, living space, year built, type, floor, availability, features/furnishings
-- **Step 2 hybrid approach**: Category prompts with curated suggestions PLUS LLM-assisted chat for free-form criteria refinement
-- **Step 3 weight allocation**: Sliders summing to 100%, proportional redistribution, dynamic categories from Steps 1+2 only
-- **Linear navigation**: Back/next buttons, no step jumping
-- **Per-step auto-save**: Resume where user left off if browser closed mid-wizard
-- **Visual stack**: React + shadcn/ui + Tailwind CSS
-- **Visual tone**: Warm & friendly, soft colors, rounded elements (Airbnb/Zillow warmth)
-- **Accent color**: Homegate #E4006E pink/magenta
-- **Light + dark mode**: Manual toggle
-- **Full-page layout**: For onboarding (not popup)
-- **Storage**: chrome.storage.local with Zod validation on save/load
-- **Schema versioning**: `schemaVersion: 1` from day 1
-- **Profile editing**: Popup has "Edit preferences" link reopening wizard in edit mode
-- **Profile schema informs scoring pipeline**: Created here, consumed by Phases 2-4
+- Archive existing `extension/` directory to `.planning/archive/extension-homegate/` for reference
+- Scaffold a fresh WXT extension from scratch with pnpm + shadcn/ui + Tailwind CSS
+- All three entrypoints scaffolded: popup, background worker, content script
+- Keep `extension/` at repo root (not monorepo `packages/` structure)
+- Repository layout: `extension/`, `web/`, `backend/` at repo root, no monorepo tooling
+- Next.js App Router (not Pages Router)
+- Landing page: centered login/signup form only -- no product pitch, no branding beyond minimal
+- After login: empty dashboard shell showing user email, logout button, placeholder for preferences
+- Single profile per user
+- "Minimal UI, functionality first"
+- Extension popup logged out: inline email/password login form directly in popup (no redirect to website)
+- Extension popup logged in: user email + logout button + "Open HomeMatch" link to Next.js site
+- Content script activates on flatfox.ch only (not all sites)
+- Content script is scaffold only in Phase 1 -- no visible output
+- Single JSONB column for user preferences (validated by Zod on frontend/backend)
+- Separate analyses table for stored scores (user_id, listing_id, score, breakdown, created_at)
+- All tables created in Phase 1
+- Row-Level Security (RLS) enabled from day 1
+- Supabase: CLI + account need to be set up (no existing setup)
+- AWS CLI already configured
+- Vercel CLI already configured
+- EC2 backend deployed via Docker
 
 ### Claude's Discretion
-- Exact LLM prompt design for the soft criteria chat assistant
-- Suggested category prompts and their curated suggestion lists
-- Proportional redistribution algorithm for weight sliders
-- Loading states and transitions between wizard steps
-- Dark mode color palette specifics (warm & friendly tone maintained)
-- Popup dashboard layout and content (profile summary, on/off toggle, edit link)
+- Exact Supabase table column definitions and types
+- Docker configuration for FastAPI deployment
+- Supabase edge function implementation details
+- Next.js project configuration (ESLint, TypeScript settings)
+- Extension manifest permissions and icon assets
+- Auth error handling and loading states
 
 ### Deferred Ideas (OUT OF SCOPE)
-None -- discussion stayed within phase scope
+- Multi-profile support (user mentioned wanting profile selection) -- future milestone per PROJECT.md
+- Product pitch / branded landing page -- can be added later, functionality first
 </user_constraints>
 
 <phase_requirements>
@@ -49,20 +57,12 @@ None -- discussion stayed within phase scope
 
 | ID | Description | Research Support |
 |----|-------------|-----------------|
-| ONBD-01 | Full-page onboarding wizard on first install | WXT unlisted page entrypoint + `chrome.runtime.onInstalled` in background.ts |
-| ONBD-02 | Location + radius preference | shadcn/ui Input + Slider components; location autocomplete deferred to simple text input |
-| ONBD-03 | Buy or rent selection | shadcn/ui RadioGroup or ToggleGroup component |
-| ONBD-04 | Property type selection | shadcn/ui Select or multi-select pattern |
-| ONBD-05 | Budget range (min/max CHF) | shadcn/ui dual Input fields with number formatting |
-| ONBD-06 | Rooms range (min/max) | shadcn/ui dual Input or Slider with range |
-| ONBD-07 | Living area range (min/max sqm) | shadcn/ui dual Input fields |
-| ONBD-08 | Year built range (Baujahr) | shadcn/ui dual Input fields |
-| ONBD-09 | Floor preference | shadcn/ui Select or RadioGroup |
-| ONBD-10 | Availability preference | shadcn/ui Select or date-related input |
-| ONBD-11 | Features/furnishings toggles | shadcn/ui Checkbox group (balcony, elevator, parking, Minergie, etc.) |
-| ONBD-12 | Custom soft-criteria text fields | shadcn/ui Input with dynamic add/remove; LLM chat component for refinement |
-| ONBD-13 | Importance weights per category via sliders | shadcn/ui Slider components with proportional redistribution algorithm |
-| ONBD-14 | Profile persistence in chrome.storage.local | WXT `storage.defineItem` with Zod v4 validation and schema versioning |
+| AUTH-01 | User can sign up and log in on the Next.js website via Supabase (email/password) | Next.js + @supabase/ssr cookie-based auth with middleware, server actions for login/signup |
+| AUTH-02 | User can log in via the Chrome extension popup using the same Supabase credentials | Custom chrome.storage.local adapter for Supabase client, signInWithPassword in popup |
+| AUTH-03 | Supabase edge functions proxy scoring requests to EC2 backend with auth validation | Deno edge function with JWT verification via jose library, fetch to EC2 |
+| INFRA-01 | Next.js app deployed on Vercel | create-next-app with App Router, Vercel auto-deploys from git |
+| INFRA-02 | FastAPI backend deployed on EC2 via Docker | Python 3.12-slim base image, uvicorn, health check endpoint, CORS middleware |
+| INFRA-03 | Supabase project configured with auth, database tables, and edge functions | supabase init + link, SQL migrations for tables with RLS, edge function deploy |
 </phase_requirements>
 
 ## Standard Stack
@@ -70,432 +70,603 @@ None -- discussion stayed within phase scope
 ### Core
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
-| wxt | ^0.20.17 | Extension framework (MV3) | Leading MV3 framework, file-based entrypoints, Vite-powered, auto-manifest generation |
-| @wxt-dev/module-react | ^1.1.5 | React integration for WXT | Official WXT React module, adds @vitejs/plugin-react and React auto-imports |
-| react | ^19.0.0 | UI framework | Locked decision from CONTEXT.md |
-| react-dom | ^19.0.0 | React DOM renderer | Required by React |
-| tailwindcss | ^3.4.x | Utility-first CSS | Locked decision; v3 recommended for WXT compatibility (v4 not battle-tested in extension context) |
-| zod | ^4.3.6 | Schema validation | Already in project, use for profile schema validation on save/load |
+| Next.js | 15.x (latest) | Web app framework | App Router is stable, Vercel-native deployment |
+| @supabase/ssr | 0.5.x+ | SSR auth for Next.js | Official replacement for deprecated @supabase/auth-helpers |
+| @supabase/supabase-js | 2.x | Supabase client (browser + extension) | Official client for auth, DB, edge functions |
+| WXT | 0.20.x | Chrome extension framework | File-based entrypoints, Vite-powered, best MV3 DX |
+| @wxt-dev/module-react | 1.x | React support for WXT | Official module for React in WXT |
+| FastAPI | 0.115.x+ | Python backend framework | Fast, typed, OpenAPI auto-docs |
+| uvicorn | 0.34.x+ | ASGI server for FastAPI | Standard production server for FastAPI |
+| React | 19.x | UI framework | Already used in existing extension code |
+| Tailwind CSS | 3.4.x | Utility-first CSS | Already established in project |
+| shadcn/ui | latest | Component library | Already configured in existing extension, reuse in Next.js |
+| Zod | 4.x | Schema validation | Already used in project for preference schemas |
+| pnpm | latest | Package manager | Already established in project |
 
 ### Supporting
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| @hookform/resolvers | ^5.x | React Hook Form + Zod v4 bridge | Form validation in wizard steps |
-| react-hook-form | ^7.x | Form state management | All wizard form steps |
-| class-variance-authority | ^0.7.x | Component variants | Required by shadcn/ui |
-| clsx | ^2.x | Conditional class names | Required by shadcn/ui |
-| tailwind-merge | ^2.x | Tailwind class merging | Required by shadcn/ui `cn()` utility |
-| lucide-react | ^0.x | Icons | Required by shadcn/ui components |
-| autoprefixer | ^10.x | PostCSS plugin | Required by Tailwind CSS v3 |
-| postcss | ^8.x | CSS processing | Required by Tailwind CSS v3 |
-
-### shadcn/ui Components Needed
-| Component | Purpose |
-|-----------|---------|
-| Button | Navigation (Back/Next/Save), actions |
-| Input | Text fields (location, price, rooms, area, year) |
-| Label | Form field labels |
-| Select | Property type, floor, availability |
-| Checkbox | Features/furnishings toggles |
-| RadioGroup | Buy/rent selection |
-| Slider | Weight allocation sliders, radius |
-| Card | Step containers, summary cards |
-| Form | React Hook Form integration |
-| Separator | Visual dividers between sections |
-| Switch | Dark mode toggle, extension on/off |
-| Badge | Category labels, status indicators |
-| Progress | Wizard step progress indicator |
-| Textarea | Soft-criteria free text |
-| ScrollArea | Long feature lists |
-| Tooltip | Help text for weight sliders |
+| class-variance-authority | 0.7.x | Component variant styling | Used by shadcn/ui components |
+| clsx + tailwind-merge | latest | Class name composition | Used by shadcn/ui cn() utility |
+| lucide-react | latest | Icon library | Consistent icons across web + extension |
+| Vitest | 4.x | Test framework | Already configured in extension |
+| happy-dom | latest | DOM environment for tests | Already configured as Vitest environment |
+| jose | 6.x (jsr) | JWT verification in edge functions | Used in Deno edge function for auth validation |
 
 ### Alternatives Considered
 | Instead of | Could Use | Tradeoff |
 |------------|-----------|----------|
-| Tailwind v3 | Tailwind v4 | v4 has CSS-first config (no tailwind.config.js) but unproven in WXT/extension context; v3 has established WXT templates |
-| React Hook Form | Formik | RHF has better shadcn/ui integration, smaller bundle, native Zod v4 resolver |
-| WXT storage.defineItem | Raw chrome.storage.local | WXT storage provides type safety, versioning, migrations, watchers -- no reason to go raw |
-| Zustand | React Context | Zustand adds per-step persistence middleware; but WXT storage + React Hook Form may suffice without extra state lib |
+| @supabase/ssr | @supabase/auth-helpers | auth-helpers is DEPRECATED -- do not use |
+| WXT | Plasmo | WXT has better React DX, already used in project |
+| shadcn/ui | Radix primitives directly | shadcn/ui is already configured, provides styled defaults |
+| pnpm | npm/yarn | pnpm already established, faster installs |
 
-**Installation:**
+**Installation (Next.js web app):**
 ```bash
-# Initialize WXT project
-pnpm dlx wxt@latest init extension --template react --pm pnpm
+pnpm create next-app@latest web --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
+cd web && pnpm add @supabase/supabase-js @supabase/ssr
+```
 
-# Core dependencies
-pnpm add react-hook-form @hookform/resolvers zod
+**Installation (Extension -- fresh scaffold):**
+```bash
+pnpm dlx wxt@latest init extension --template react
+cd extension && pnpm add @supabase/supabase-js
+```
 
-# Tailwind CSS v3 + PostCSS
-pnpm add -D tailwindcss postcss autoprefixer
-pnpm dlx tailwindcss init -p
-
-# shadcn/ui dependencies
-pnpm add tailwindcss-animate class-variance-authority clsx tailwind-merge lucide-react
-
-# Initialize shadcn/ui (manual steps required for WXT)
-pnpm dlx shadcn@latest init
+**Installation (FastAPI backend):**
+```bash
+pip install fastapi uvicorn[standard]
 ```
 
 ## Architecture Patterns
 
 ### Recommended Project Structure
 ```
-extension/                    # WXT extension root (separate from legacy src/)
-├── src/
-│   ├── entrypoints/
-│   │   ├── background.ts           # Service worker: onInstalled handler
-│   │   ├── content.ts              # Content script for homegate.ch (placeholder)
-│   │   ├── popup/                   # Popup dashboard
-│   │   │   ├── index.html
-│   │   │   ├── main.tsx
-│   │   │   └── App.tsx
-│   │   └── onboarding/             # Full-page onboarding wizard
-│   │       ├── index.html
-│   │       ├── main.tsx
-│   │       └── App.tsx
-│   ├── components/
-│   │   ├── ui/                      # shadcn/ui components (auto-generated)
-│   │   ├── wizard/
-│   │   │   ├── WizardShell.tsx      # Step container, nav, progress
-│   │   │   ├── StepFilters.tsx      # Step 1: Standard filters
-│   │   │   ├── StepSoftCriteria.tsx # Step 2: Soft criteria + LLM chat
-│   │   │   └── StepWeights.tsx      # Step 3: Weight allocation
-│   │   └── popup/
-│   │       └── Dashboard.tsx        # Profile summary, toggle, edit link
-│   ├── hooks/
-│   │   ├── useProfile.ts           # Profile read/write hook
-│   │   ├── useWizardState.ts       # Wizard step navigation + auto-save
-│   │   └── useWeightSliders.ts     # Proportional redistribution logic
-│   ├── lib/
-│   │   ├── utils.ts                # shadcn cn() utility
-│   │   └── theme.ts                # Dark/light mode management
-│   ├── schema/
-│   │   ├── profile.ts              # Zod v4 preference profile schema
-│   │   └── weights.ts              # Weight allocation schema
-│   ├── storage/
-│   │   └── profile-storage.ts      # WXT storage.defineItem for profile
-│   ├── utils/
-│   │   └── weight-redistribution.ts # Proportional slider algorithm
-│   ├── assets/
-│   │   └── styles/
-│   │       └── globals.css          # Tailwind directives + shadcn theme
-│   └── public/
-│       ├── icon-16.png
-│       ├── icon-32.png
-│       ├── icon-48.png
-│       └── icon-128.png
-├── components.json                   # shadcn/ui config
-├── tailwind.config.js                # Tailwind v3 config
-├── postcss.config.js                 # PostCSS config
-├── tsconfig.json                     # TypeScript config (extends .wxt/)
-└── wxt.config.ts                     # WXT configuration
+/
++-- extension/                  # WXT Chrome extension (fresh scaffold)
+|   +-- src/
+|   |   +-- entrypoints/
+|   |   |   +-- popup/         # Popup with login form (index.html, App.tsx, main.tsx)
+|   |   |   +-- background.ts  # Service worker -- Supabase client host
+|   |   |   +-- content.ts     # Content script for flatfox.ch (scaffold only)
+|   |   +-- components/
+|   |   |   +-- ui/            # shadcn/ui components
+|   |   |   +-- popup/         # Popup-specific components (LoginForm, Dashboard)
+|   |   +-- lib/
+|   |   |   +-- supabase.ts    # Supabase client with chrome.storage adapter
+|   |   |   +-- utils.ts       # cn() utility
+|   |   +-- assets/styles/
+|   |   |   +-- globals.css    # Tailwind directives + shadcn CSS variables
+|   |   +-- public/            # Extension icons
+|   +-- wxt.config.ts
+|   +-- tailwind.config.js
+|   +-- package.json
+|
++-- web/                        # Next.js App Router
+|   +-- src/
+|   |   +-- app/
+|   |   |   +-- layout.tsx     # Root layout
+|   |   |   +-- page.tsx       # Landing page (login/signup form)
+|   |   |   +-- login/
+|   |   |   |   +-- page.tsx   # Login page (or combined on landing)
+|   |   |   |   +-- actions.ts # Server actions for signIn/signUp
+|   |   |   +-- dashboard/
+|   |   |       +-- page.tsx   # Protected dashboard shell
+|   |   +-- lib/
+|   |   |   +-- supabase/
+|   |   |       +-- client.ts  # Browser client (createBrowserClient)
+|   |   |       +-- server.ts  # Server client (createServerClient + cookies)
+|   |   |       +-- middleware.ts # updateSession helper
+|   |   +-- components/
+|   |       +-- ui/            # shadcn/ui components
+|   +-- middleware.ts           # Root middleware calling updateSession
+|   +-- .env.local             # NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+|
++-- backend/                    # FastAPI Python backend
+|   +-- app/
+|   |   +-- main.py            # FastAPI app with health check + CORS
+|   |   +-- __init__.py
+|   +-- requirements.txt       # fastapi, uvicorn
+|   +-- Dockerfile
+|   +-- .env                   # Backend secrets (not committed)
+|
++-- supabase/                   # Supabase CLI project (created by supabase init)
+|   +-- functions/
+|   |   +-- score-proxy/       # Edge function to proxy to EC2
+|   |       +-- index.ts
+|   +-- migrations/
+|   |   +-- 001_initial_schema.sql  # Tables + RLS policies
+|   +-- config.toml
 ```
 
-### Pattern 1: WXT File-Based Entrypoints
-**What:** Each file/directory in `entrypoints/` automatically becomes an extension entrypoint. WXT generates the manifest from these files.
-**When to use:** Always -- this is how WXT works.
+### Pattern 1: Next.js Supabase SSR Auth (Cookie-Based)
+**What:** Server-side auth with cookie persistence via `@supabase/ssr`
+**When to use:** All Next.js pages that need auth state
 **Example:**
 ```typescript
-// entrypoints/background.ts
-// Source: https://wxt.dev/guide/essentials/entrypoints.html
-export default defineBackground(() => {
-  browser.runtime.onInstalled.addListener(({ reason }) => {
-    if (reason === 'install') {
-      browser.tabs.create({
-        url: browser.runtime.getURL('/onboarding.html'),
-      });
+// Source: https://supabase.com/docs/guides/auth/server-side/creating-a-client
+
+// lib/supabase/client.ts -- Browser client
+import { createBrowserClient } from '@supabase/ssr'
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+  )
+}
+
+// lib/supabase/server.ts -- Server client
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+export async function createClient() {
+  const cookieStore = await cookies()
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options))
+          } catch {
+            // Server Component context -- middleware handles persistence
+          }
+        },
+      },
     }
-  });
-});
-```
+  )
+}
 
-### Pattern 2: WXT Typed Storage with Versioning
-**What:** Use `storage.defineItem` for type-safe, versioned profile storage with automatic migration support.
-**When to use:** For all persistent data (profile, wizard state, settings).
-**Example:**
-```typescript
-// storage/profile-storage.ts
-// Source: https://wxt.dev/guide/essentials/storage.html
-import { storage } from 'wxt/storage';
-import type { UserProfile } from '../schema/profile';
+// lib/supabase/middleware.ts -- Session refresh
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
-export const profileStorage = storage.defineItem<UserProfile>(
-  'local:userProfile',
-  {
-    fallback: null,
-    version: 1,
-    // Future: add migrations when schema changes
-    // migrations: {
-    //   2: (oldProfile) => migrateV1toV2(oldProfile),
-    // },
-  },
-);
+export async function updateSession(request: NextRequest) {
+  let response = NextResponse.next({ request })
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+  await supabase.auth.getUser()
+  return response
+}
 
-export const wizardStateStorage = storage.defineItem<WizardState>(
-  'local:wizardState',
-  {
-    fallback: { currentStep: 0, completedSteps: [], partialData: {} },
-    version: 1,
-  },
-);
-```
+// middleware.ts (root)
+import { type NextRequest } from 'next/server'
+import { updateSession } from '@/lib/supabase/middleware'
 
-### Pattern 3: React Hook Form per Wizard Step
-**What:** Each wizard step is its own form with independent validation via React Hook Form + Zod resolver. On step completion, data is saved to WXT storage.
-**When to use:** For the 3-step wizard flow.
-**Example:**
-```typescript
-// components/wizard/StepFilters.tsx
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { stepFiltersSchema, type StepFiltersData } from '../../schema/profile';
+export async function middleware(request: NextRequest) {
+  return updateSession(request)
+}
 
-export function StepFilters({ defaultValues, onComplete }: StepFiltersProps) {
-  const form = useForm<StepFiltersData>({
-    resolver: zodResolver(stepFiltersSchema),
-    defaultValues,
-  });
-
-  const onSubmit = async (data: StepFiltersData) => {
-    // Save partial profile to storage (auto-save on step complete)
-    await wizardStateStorage.setValue({
-      currentStep: 1,
-      partialData: { ...existingData, filters: data },
-    });
-    onComplete(data);
-  };
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        {/* Form fields using shadcn/ui components */}
-      </form>
-    </Form>
-  );
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }
 ```
 
-### Pattern 4: Proportional Weight Redistribution
-**What:** When a weight slider moves, all other sliders adjust proportionally so the total always equals 100%.
-**When to use:** Step 3 weight allocation.
+### Pattern 2: Chrome Extension Supabase Auth (Custom Storage Adapter)
+**What:** Supabase client in extension using chrome.storage.local instead of localStorage
+**When to use:** Extension popup and background script
 **Example:**
 ```typescript
-// utils/weight-redistribution.ts
-export function redistributeWeights(
-  weights: Record<string, number>,
-  changedKey: string,
-  newValue: number,
-): Record<string, number> {
-  const clampedValue = Math.max(0, Math.min(100, newValue));
-  const otherKeys = Object.keys(weights).filter((k) => k !== changedKey);
-  const otherSum = otherKeys.reduce((sum, k) => sum + weights[k], 0);
-  const remaining = 100 - clampedValue;
+// Source: https://github.com/orgs/supabase/discussions/21923 + community patterns
 
-  const result: Record<string, number> = { [changedKey]: clampedValue };
+// lib/supabase.ts -- Extension Supabase client
+import { createClient } from '@supabase/supabase-js'
 
-  if (otherSum === 0) {
-    // Edge case: all others are 0, distribute equally
-    const equalShare = remaining / otherKeys.length;
-    otherKeys.forEach((k) => {
-      result[k] = Math.round(equalShare * 10) / 10;
-    });
-  } else {
-    // Proportional redistribution
-    otherKeys.forEach((k) => {
-      result[k] = Math.round(((weights[k] / otherSum) * remaining) * 10) / 10;
-    });
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+// Custom storage adapter for chrome.storage.local
+const chromeStorageAdapter = {
+  getItem: async (key: string): Promise<string | null> => {
+    const result = await chrome.storage.local.get(key)
+    return result[key] ?? null
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    await chrome.storage.local.set({ [key]: value })
+  },
+  removeItem: async (key: string): Promise<void> => {
+    await chrome.storage.local.remove(key)
+  },
+}
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage: chromeStorageAdapter,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+})
+```
+
+### Pattern 3: Supabase Edge Function as Auth Proxy
+**What:** Deno edge function that verifies JWT and proxies to EC2 backend
+**When to use:** All requests from extension/web to EC2 backend
+**Example:**
+```typescript
+// Source: https://supabase.com/docs/guides/functions/auth
+
+// supabase/functions/score-proxy/index.ts
+import { createClient } from 'npm:@supabase/supabase-js@2'
+
+const EC2_BACKEND_URL = Deno.env.get('EC2_BACKEND_URL')!
+
+Deno.serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization, content-type',
+      },
+    })
   }
 
-  // Fix rounding to ensure exact 100%
-  const total = Object.values(result).reduce((s, v) => s + v, 0);
-  if (total !== 100 && otherKeys.length > 0) {
-    result[otherKeys[0]] += Math.round((100 - total) * 10) / 10;
+  // Verify auth
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) {
+    return Response.json({ error: 'Missing auth' }, { status: 401 })
   }
 
-  return result;
-}
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } } }
+  )
+
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) {
+    return Response.json({ error: 'Invalid token' }, { status: 401 })
+  }
+
+  // Proxy to EC2 backend
+  const body = await req.json()
+  const backendResponse = await fetch(`${EC2_BACKEND_URL}/score`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, user_id: user.id }),
+  })
+
+  const data = await backendResponse.json()
+  return Response.json(data, {
+    headers: { 'Access-Control-Allow-Origin': '*' },
+  })
+})
 ```
 
-### Pattern 5: Onboarding Page as Unlisted WXT Entrypoint
-**What:** The onboarding wizard is an "unlisted page" -- a full HTML page accessible via `browser.runtime.getURL('/onboarding.html')` but not declared in the manifest's `chrome_url_overrides`.
-**When to use:** For the full-page onboarding experience.
+### Pattern 4: FastAPI Health Check + CORS
+**What:** Minimal FastAPI setup for Phase 1
+**When to use:** EC2 backend
 **Example:**
-```html
-<!-- entrypoints/onboarding/index.html -->
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HomeMatch - Setup</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="./main.tsx"></script>
-  </body>
-</html>
-```
-```typescript
-// entrypoints/onboarding/main.tsx
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import '../../assets/styles/globals.css';
-import App from './App';
+```python
+# Source: FastAPI official docs + Docker best practices
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+# app/main.py
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI(title="HomeMatch API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Tighten in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "homematch-api"}
 ```
 
-### Pattern 6: Dark Mode via CSS Class Toggle
-**What:** Since `next-themes` assumes Next.js, use a simple class-based dark mode toggle stored in WXT storage. Toggle `.dark` class on `<html>` element and persist preference.
-**When to use:** Light/dark mode toggle in onboarding and popup.
+### Pattern 5: WXT Entrypoint Definitions
+**What:** Convention-based entrypoint structure
+**When to use:** All extension entrypoints
 **Example:**
 ```typescript
-// lib/theme.ts
-import { storage } from 'wxt/storage';
+// Source: https://wxt.dev/guide/essentials/entrypoints.html
 
-export const themeStorage = storage.defineItem<'light' | 'dark'>(
-  'local:theme',
-  { fallback: 'light' },
-);
+// entrypoints/background.ts
+export default defineBackground(() => {
+  console.log('HomeMatch background loaded')
+  // Future: handle messaging between popup and content script
+})
 
-export async function initTheme() {
-  const theme = await themeStorage.getValue();
-  document.documentElement.classList.toggle('dark', theme === 'dark');
-}
-
-export async function toggleTheme() {
-  const current = await themeStorage.getValue();
-  const next = current === 'light' ? 'dark' : 'light';
-  await themeStorage.setValue(next);
-  document.documentElement.classList.toggle('dark', next === 'dark');
-}
+// entrypoints/content.ts
+export default defineContentScript({
+  matches: ['*://*.flatfox.ch/*'],
+  main(ctx) {
+    console.log('HomeMatch content script loaded on Flatfox')
+    // Phase 1: scaffold only, no visible output
+  },
+})
 ```
 
 ### Anti-Patterns to Avoid
-- **Storing state in background service worker variables:** MV3 service workers terminate when idle. All state MUST go to `chrome.storage.local` via WXT storage utilities.
-- **Using `localStorage` or `sessionStorage` in extension pages:** These are per-origin and don't share across popup/onboarding/background. Use `chrome.storage.local` (via WXT `storage.defineItem`).
-- **Single monolithic form for all wizard steps:** Each step should be its own form with independent validation. This keeps forms lightweight and enables per-step auto-save.
-- **Manually editing manifest.json:** WXT generates the manifest. Configure via `wxt.config.ts` and entrypoint file exports.
-- **Using Tailwind CSS rem units in content scripts:** Content scripts inject into host pages where the root `font-size` varies. Convert to px for content script UI. (Not critical for Phase 1's full-page onboarding, but important for Phase 4 badges.)
-- **Putting component files inside `entrypoints/`:** WXT expects entrypoints directory to be flat. Shared components go in `components/`, hooks in `hooks/`, utils in `utils/`.
+- **Using @supabase/auth-helpers:** DEPRECATED. Use @supabase/ssr instead.
+- **Trusting getSession() on server:** Always use `getUser()` for server-side auth validation -- it actually verifies the JWT with Supabase auth server.
+- **Using localStorage in extension background:** MV3 service workers do not have localStorage. Must use chrome.storage.local adapter.
+- **Hardcoding Supabase URL/key in extension source:** Use WXT environment variables via `import.meta.env.VITE_*` (WXT uses Vite).
+- **Creating Supabase tables without RLS:** Always enable RLS immediately. Tables without RLS are publicly accessible via the anon key.
+- **Async main() in defineBackground:** WXT explicitly states background main() CANNOT be async.
 
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
 |---------|-------------|-------------|-----|
-| Extension manifest generation | Manual manifest.json | WXT auto-generation from `wxt.config.ts` + entrypoint files | WXT handles MV2/MV3 differences, permissions, CSP automatically |
-| Typed storage with migrations | Custom chrome.storage wrapper | WXT `storage.defineItem` with version + migrations | Built-in type safety, versioning, watchers, cross-context sync |
-| Form validation | Custom validation logic | React Hook Form + Zod resolver (`@hookform/resolvers`) | RHF handles dirty tracking, touched state, error display; Zod handles schema |
-| Accessible UI components | Custom slider/select/checkbox | shadcn/ui components (built on Radix UI) | ARIA attributes, keyboard navigation, focus management all handled |
-| Hot module reloading for extension | Manual reload scripts | WXT built-in HMR | WXT handles HMR for content scripts, popup, and background |
-| Browser API polyfills | Manual `chrome.*` / `browser.*` wrapping | WXT's `browser` global (from `webextension-polyfill`) | Cross-browser compatibility handled automatically |
-| CSS class utilities | Manual conditional class joining | `cn()` from shadcn/ui (`clsx` + `tailwind-merge`) | Handles Tailwind class conflicts and conditional composition |
+| Auth token refresh | Manual token refresh logic | @supabase/ssr middleware + autoRefreshToken | Race conditions, token expiry edge cases |
+| Cookie-based sessions in Next.js | Manual cookie management | @supabase/ssr createServerClient | Handles chunking large JWTs across cookies |
+| Extension session persistence | Manual chrome.storage wiring | Supabase client with custom storage adapter | Handles token refresh, expiry, session lifecycle |
+| CORS in FastAPI | Manual header injection | FastAPI CORSMiddleware | Handles preflight, credentials, methods correctly |
+| JWT verification in edge functions | Manual token parsing | supabase.auth.getUser() with service role | Verifies against auth server, handles key rotation |
+| Component styling | Custom CSS | shadcn/ui + Tailwind | Already configured, consistent across web + extension |
 
-**Key insight:** WXT + shadcn/ui + React Hook Form cover 90% of the infrastructure needed. The only custom logic is the wizard flow orchestration, profile schema definition, and weight redistribution algorithm.
+**Key insight:** Auth flows have enormous surface area for bugs (token refresh timing, cookie chunking, storage adapter edge cases). Using the official libraries is critical for a hackathon timeline.
 
 ## Common Pitfalls
 
-### Pitfall 1: WXT tsconfig.json Path Conflicts with shadcn/ui
-**What goes wrong:** shadcn/ui CLI requires `baseUrl` and `paths` in `tsconfig.json`, but WXT generates its own tsconfig in `.wxt/` and advises against manual path additions.
-**Why it happens:** WXT uses its own alias system; shadcn expects standard TS paths.
-**How to avoid:** Add `baseUrl: "."` and `paths: { "@/*": ["./src/*"] }` to `tsconfig.json` despite WXT's advice -- shadcn CLI won't resolve paths correctly otherwise. WXT's own aliases still work fine alongside these.
-**Warning signs:** shadcn component install fails with "could not resolve path" errors.
+### Pitfall 1: Extension Auth Session Desync
+**What goes wrong:** Extension popup and background script have separate Supabase client instances with separate sessions. Login in popup does not propagate to background.
+**Why it happens:** Each context (popup, background, content script) can create its own Supabase client instance.
+**How to avoid:** Use a single Supabase client shared via the chrome.storage.local adapter. The adapter ensures all contexts read/write the same session tokens. Alternatively, centralize auth operations in the background script and use message passing.
+**Warning signs:** User appears logged in on popup but API calls from content script fail with 401.
 
-### Pitfall 2: MV3 Service Worker State Loss
-**What goes wrong:** Background service worker stores state in variables that disappear when Chrome terminates the worker (after ~30 seconds of inactivity).
-**Why it happens:** MV3 replaced persistent background pages with ephemeral service workers.
-**How to avoid:** Never store state in JS variables in background.ts. Always use `chrome.storage.local` (via WXT `storage.defineItem`). Register all event listeners synchronously at the top level of the background script.
-**Warning signs:** State mysteriously resets; `onInstalled` listener not firing.
+### Pitfall 2: Supabase Email Confirmation Blocking Login
+**What goes wrong:** After signup, user cannot log in because email confirmation is required.
+**Why it happens:** Supabase hosted projects have email confirmation enabled by default. The built-in SMTP is rate-limited to 2 emails/hour.
+**How to avoid:** For hackathon development, disable "Confirm email" in Supabase dashboard (Auth > Providers > Email > toggle off). Or configure a custom SMTP provider.
+**Warning signs:** signUp succeeds but signInWithPassword immediately fails.
 
-### Pitfall 3: Auto-Save Timing with React Hook Form
-**What goes wrong:** Auto-save fires on every keystroke, flooding storage writes and causing lag.
-**Why it happens:** Naive `onChange` handler without debouncing.
-**How to avoid:** Debounce auto-save (300-500ms). Better yet: save on step navigation (Next/Back) rather than continuous auto-save. Use `form.watch()` with debounce for partial saves, and `handleSubmit` for step completion saves.
-**Warning signs:** Extension feels sluggish; chrome.storage write errors.
+### Pitfall 3: Next.js Server Component Cookie Write Error
+**What goes wrong:** Auth state not persisting, or errors about cookies being read-only.
+**Why it happens:** Server Components in Next.js App Router cannot write cookies. Only middleware and Route Handlers can.
+**How to avoid:** The `createServerClient` in server.ts wraps `setAll` in a try/catch (which silently fails in Server Components). The middleware then handles the actual cookie writes.
+**Warning signs:** User appears logged out on page refresh despite successful login.
 
-### Pitfall 4: Zod v4 Import Path Confusion
-**What goes wrong:** Mixing `import { z } from 'zod'` (v4 default) with v3 patterns like `z.string().email()`.
-**Why it happens:** Project already has `zod@^4.3.6`. Zod v4 changed string validators to top-level functions and `z.record()` now requires two arguments.
-**How to avoid:** Use v4 patterns: `z.email()` instead of `z.string().email()`. Use `z.record(z.string(), z.number())` instead of `z.record(z.number())`. Use `error` instead of `message` in validation configs.
-**Warning signs:** Runtime validation errors; TypeScript errors about missing methods.
+### Pitfall 4: Missing RLS Policies After Table Creation
+**What goes wrong:** Users can read/write all rows in the table, or no rows at all.
+**Why it happens:** RLS is enabled but no policies are defined (blocks all access), or RLS is not enabled (allows all access via anon key).
+**How to avoid:** Always create policies in the same migration as the table. Minimum: SELECT, INSERT, UPDATE, DELETE policies using `auth.uid() = user_id`.
+**Warning signs:** 403 errors from Supabase client, or seeing other users' data.
 
-### Pitfall 5: shadcn/ui CSS Not Loading in Extension Pages
-**What goes wrong:** Components render unstyled in popup or onboarding page.
-**Why it happens:** CSS file not imported in the entrypoint's `main.tsx`, or Tailwind `content` paths don't cover the right directories.
-**How to avoid:** Import `globals.css` in every entrypoint's `main.tsx`. Ensure `tailwind.config.js` content includes `"./src/**/*.{html,js,ts,jsx,tsx}"`.
-**Warning signs:** Components render with wrong styles or no styles; shadcn components look like plain HTML.
+### Pitfall 5: Edge Function JWT Verification Confusion
+**What goes wrong:** Edge function accepts invalid tokens or rejects valid ones.
+**Why it happens:** Supabase edge functions no longer implicitly verify JWTs. You must explicitly verify using supabase.auth.getUser() or jose library.
+**How to avoid:** Always call `supabase.auth.getUser()` in the edge function with the auth header passed through. This verifies the token against the auth server.
+**Warning signs:** Edge function works without auth header, or returns 500 on valid tokens.
 
-### Pitfall 6: Weight Sliders Rounding Errors
-**What goes wrong:** Sliders don't sum to exactly 100% due to floating-point arithmetic, or UI shows values like 33.333333%.
-**Why it happens:** Dividing 100 by 3 (or other non-clean divisions) produces repeating decimals.
-**How to avoid:** Round to 1 decimal place. After proportional redistribution, compute the difference from 100 and add it to the first "other" slider. Display with `.toFixed(1)`. Validate the sum in the Zod schema with a tolerance check.
-**Warning signs:** Total shows 99.9% or 100.1%; Zod validation rejects profile.
-
-### Pitfall 7: chrome.storage.local 10MB Limit
-**What goes wrong:** Storage quota exceeded errors.
-**Why it happens:** Unlike `chrome.storage.sync` (100KB limit), `local` has a generous ~10MB limit, but storing huge objects or binary data can hit it.
-**How to avoid:** A preference profile is small (< 5KB). This is not a real risk for Phase 1, but avoid storing images or large blobs.
-**Warning signs:** `QUOTA_BYTES_PER_ITEM` error.
+### Pitfall 6: WXT Build-Time Code in Background Script
+**What goes wrong:** Build errors or runtime errors in background script.
+**Why it happens:** WXT imports background.ts during build in a Node.js environment. Any runtime code (chrome API calls, DOM access) outside the `main()` function causes errors.
+**How to avoid:** All runtime code must be inside the `main()` function of `defineBackground()`.
+**Warning signs:** Build fails with "chrome is not defined" or similar Node.js errors.
 
 ## Code Examples
 
-### Preference Profile Schema (Zod v4)
-```typescript
-// schema/profile.ts
-import { z } from 'zod';
+### Database Schema (Supabase SQL Migration)
+```sql
+-- Source: Supabase RLS docs + CONTEXT.md schema decisions
 
-export const SoftCriterionSchema = z.object({
-  id: z.string(),
-  category: z.string(),
-  text: z.string(),
-  isCustom: z.boolean().default(false),
-});
+-- User preferences table (single JSONB column for flexibility)
+CREATE TABLE IF NOT EXISTS public.user_preferences (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
+  preferences JSONB DEFAULT '{}'::jsonb NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
 
-export const WeightsSchema = z.record(z.string(), z.number().min(0).max(100));
+ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
 
-export const PreferenceProfileSchema = z.object({
-  schemaVersion: z.literal(1),
+CREATE POLICY "Users can view own preferences"
+  ON public.user_preferences FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
 
-  // Step 1: Standard filters (all optional -- user fills what they care about)
-  listingType: z.enum(['rent', 'buy']).optional(),
-  location: z.string().optional(),
-  radiusKm: z.number().min(0).max(100).optional(),
-  propertyTypes: z.array(z.string()).optional(),
-  priceMin: z.number().min(0).optional(),
-  priceMax: z.number().min(0).optional(),
-  roomsMin: z.number().min(0).optional(),
-  roomsMax: z.number().min(0).optional(),
-  livingSpaceMin: z.number().min(0).optional(),
-  livingSpaceMax: z.number().min(0).optional(),
-  yearBuiltMin: z.number().optional(),
-  yearBuiltMax: z.number().optional(),
-  floorPreference: z.string().optional(),
-  availability: z.string().optional(),
-  features: z.array(z.string()).optional(),
+CREATE POLICY "Users can insert own preferences"
+  ON public.user_preferences FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
 
-  // Step 2: Soft criteria
-  softCriteria: z.array(SoftCriterionSchema).default([]),
+CREATE POLICY "Users can update own preferences"
+  ON public.user_preferences FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
-  // Step 3: Weights
-  weights: WeightsSchema.default({}),
+-- Analyses table for stored scores
+CREATE TABLE IF NOT EXISTS public.analyses (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  listing_id TEXT NOT NULL,
+  score INTEGER NOT NULL CHECK (score >= 0 AND score <= 100),
+  breakdown JSONB DEFAULT '{}'::jsonb NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+  UNIQUE(user_id, listing_id)
+);
 
-  // Metadata
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
+ALTER TABLE public.analyses ENABLE ROW LEVEL SECURITY;
 
-export type PreferenceProfile = z.infer<typeof PreferenceProfileSchema>;
-export type SoftCriterion = z.infer<typeof SoftCriterionSchema>;
+CREATE POLICY "Users can view own analyses"
+  ON public.analyses FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own analyses"
+  ON public.analyses FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own analyses"
+  ON public.analyses FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own analyses"
+  ON public.analyses FOR DELETE
+  TO authenticated
+  USING (auth.uid() = user_id);
 ```
 
-### WXT Config
+### Next.js Login/Signup Server Actions
+```typescript
+// Source: https://supabase.com/docs/guides/auth/server-side/nextjs
+
+// app/login/actions.ts
+'use server'
+
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+
+export async function login(formData: FormData) {
+  const supabase = await createClient()
+  const { error } = await supabase.auth.signInWithPassword({
+    email: formData.get('email') as string,
+    password: formData.get('password') as string,
+  })
+  if (error) {
+    return { error: error.message }
+  }
+  redirect('/dashboard')
+}
+
+export async function signup(formData: FormData) {
+  const supabase = await createClient()
+  const { error } = await supabase.auth.signUp({
+    email: formData.get('email') as string,
+    password: formData.get('password') as string,
+  })
+  if (error) {
+    return { error: error.message }
+  }
+  redirect('/dashboard')
+}
+
+export async function logout() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  redirect('/')
+}
+```
+
+### Protected Dashboard Page
+```typescript
+// Source: Supabase Next.js auth docs
+
+// app/dashboard/page.tsx
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+
+export default async function DashboardPage() {
+  const supabase = await createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    redirect('/')
+  }
+
+  return (
+    <div>
+      <p>Logged in as: {user.email}</p>
+      {/* Logout button, preferences placeholder */}
+    </div>
+  )
+}
+```
+
+### Extension Popup Login Component
+```tsx
+// Extension popup login form
+import { useState } from 'react'
+import { supabase } from '@/lib/supabase'
+
+export function LoginForm() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      setError(error.message)
+    }
+    setLoading(false)
+  }
+
+  return (
+    <form onSubmit={handleLogin}>
+      <input type="email" value={email} onChange={e => setEmail(e.target.value)} />
+      <input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+      {error && <p className="text-red-500">{error}</p>}
+      <button type="submit" disabled={loading}>
+        {loading ? 'Signing in...' : 'Sign In'}
+      </button>
+    </form>
+  )
+}
+```
+
+### Dockerfile for FastAPI
+```dockerfile
+# Source: FastAPI Docker best practices 2025
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install dependencies first (Docker layer caching)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY app/ ./app/
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+### WXT Config for Flatfox Extension
 ```typescript
 // wxt.config.ts
-import { defineConfig } from 'wxt';
+import { defineConfig } from 'wxt'
 
 export default defineConfig({
   srcDir: 'src',
@@ -503,192 +674,108 @@ export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
     name: 'HomeMatch',
-    description: 'AI-powered property match scoring for Homegate.ch',
+    description: 'AI-powered property match scoring for Flatfox.ch',
     version: '0.1.0',
     permissions: ['storage'],
-    host_permissions: ['*://*.homegate.ch/*'],
+    host_permissions: ['*://*.flatfox.ch/*'],
   },
-});
-```
-
-### Background Script with onInstalled
-```typescript
-// entrypoints/background.ts
-export default defineBackground(() => {
-  browser.runtime.onInstalled.addListener(async ({ reason }) => {
-    if (reason === 'install') {
-      // Open onboarding wizard on first install
-      await browser.tabs.create({
-        url: browser.runtime.getURL('/onboarding.html'),
-      });
-    }
-  });
-});
-```
-
-### Content Script Placeholder
-```typescript
-// entrypoints/content.ts
-export default defineContentScript({
-  matches: ['*://*.homegate.ch/*'],
-  main() {
-    console.log('[HomeMatch] Content script loaded on Homegate.ch');
-    // Phase 1: placeholder only -- scoring UI added in Phase 4
-  },
-});
-```
-
-### Wizard Step Navigation Hook
-```typescript
-// hooks/useWizardState.ts
-import { useState, useEffect, useCallback } from 'react';
-import { wizardStateStorage } from '../storage/profile-storage';
-
-const TOTAL_STEPS = 3;
-
-export function useWizardState() {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Restore wizard state on mount
-    wizardStateStorage.getValue().then((state) => {
-      if (state) {
-        setCurrentStep(state.currentStep);
-      }
-      setIsLoading(false);
-    });
-  }, []);
-
-  const goNext = useCallback(async () => {
-    const next = Math.min(currentStep + 1, TOTAL_STEPS - 1);
-    setCurrentStep(next);
-    const state = await wizardStateStorage.getValue();
-    await wizardStateStorage.setValue({ ...state, currentStep: next });
-  }, [currentStep]);
-
-  const goBack = useCallback(async () => {
-    const prev = Math.max(currentStep - 1, 0);
-    setCurrentStep(prev);
-    const state = await wizardStateStorage.getValue();
-    await wizardStateStorage.setValue({ ...state, currentStep: prev });
-  }, [currentStep]);
-
-  return {
-    currentStep,
-    totalSteps: TOTAL_STEPS,
-    isFirst: currentStep === 0,
-    isLast: currentStep === TOTAL_STEPS - 1,
-    isLoading,
-    goNext,
-    goBack,
-  };
-}
+})
 ```
 
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
 |--------------|------------------|--------------|--------|
-| Manifest V2 background pages | MV3 service workers | Chrome 88 (Jan 2021), enforced 2024 | No persistent state in background; must use storage API |
-| Plasmo framework | WXT framework | WXT became dominant 2024-2025 | WXT has superior DX, Vite integration, and community adoption |
-| `z.string().email()` (Zod v3) | `z.email()` (Zod v4) | Zod 4.0.0 (2025) | String validators moved to top-level functions |
-| `tailwind.config.js` (Tailwind v3) | CSS-first config (Tailwind v4) | Tailwind 4.0 (Jan 2025) | Recommend staying on v3 for WXT extension compatibility |
-| `chrome.storage.local` raw | WXT `storage.defineItem` | WXT 0.18+ | Type-safe, versioned, migratable, cross-context storage |
+| @supabase/auth-helpers | @supabase/ssr | 2024 | Must use ssr package; auth-helpers is deprecated |
+| getSession() for server auth | getUser() for server auth | 2024 | getUser() validates JWT with auth server; getSession() does not |
+| Manifest V2 extensions | Manifest V3 (MV3) | 2024 enforced | Service workers instead of background pages, no localStorage |
+| Supabase auto JWT verification in edge functions | Manual verification required | Late 2024 | Must explicitly verify JWTs (incompatible with new JWT signing keys) |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY | NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY | 2025 | New publishable key format; both work interchangeably |
+| Next.js Pages Router | Next.js App Router | Stable since Next.js 13.4+ | App Router is the default and recommended approach |
 
 **Deprecated/outdated:**
-- Manifest V2: Chrome Web Store no longer accepts new MV2 extensions
-- `webextension-polyfill` standalone: WXT bundles this internally as `browser` global
-- Custom webpack extension configs: WXT/Vite replaces the need for webpack
+- `@supabase/auth-helpers-nextjs`: Replaced by `@supabase/ssr`
+- `supabase.auth.getSession()` on server: Unsafe; use `getUser()` instead
+- Implicit JWT verification in edge functions: Must be done explicitly now
 
 ## Open Questions
 
-1. **Homegate filter field exact values**
-   - What we know: Filter categories are documented (location, rooms, price, etc.)
-   - What's unclear: Exact dropdown values for property types, floor options, feature names in German/French/Italian
-   - Recommendation: Use reasonable defaults now; can be refined in Phase 4 when content script reads actual Homegate page data. Property types: Wohnung, Haus, Zimmer, etc.
+1. **Supabase Project Setup Method**
+   - What we know: Supabase CLI needs to be installed, project needs to be created
+   - What's unclear: Whether to create via dashboard (easier) or CLI (more reproducible)
+   - Recommendation: Create project via Supabase dashboard (faster for hackathon), then `supabase link` to CLI for migrations and edge function deployment
 
-2. **LLM chat integration in Step 2**
-   - What we know: User decision calls for Claude-assisted soft criteria refinement
-   - What's unclear: Whether to call Claude API directly from extension (API key exposure risk) or defer LLM calls to Phase 2's backend
-   - Recommendation: In Phase 1, implement the chat UI as a local-only experience (category prompts + free text input). The actual LLM refinement can be wired up once the backend exists in Phase 2. This keeps Phase 1 self-contained with no backend dependency.
+2. **EC2 Instance Details**
+   - What we know: AWS CLI is configured, Docker deployment
+   - What's unclear: Whether an EC2 instance already exists or needs to be provisioned, SSH key setup, security group config
+   - Recommendation: Plan should include EC2 provisioning step or verify existing instance. Open ports 8000 (API) and 22 (SSH).
 
-3. **React 18 vs React 19 with WXT**
-   - What we know: React 19 is stable; WXT module-react works with React 18+
-   - What's unclear: Whether all shadcn/ui components are React 19 compatible
-   - Recommendation: Use React 18 for maximum compatibility. Can upgrade to 19 later.
+3. **Extension Environment Variables**
+   - What we know: WXT uses Vite, so `import.meta.env.VITE_*` works
+   - What's unclear: Whether to use .env files or hardcode for hackathon
+   - Recommendation: Use `.env` file in extension directory with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. WXT/Vite handles this natively.
 
 ## Validation Architecture
 
 ### Test Framework
 | Property | Value |
 |----------|-------|
-| Framework | Vitest (via WXT `WxtVitest` plugin) |
-| Config file | `vitest.config.ts` (Wave 0 creation) |
-| Quick run command | `pnpm vitest run --reporter=verbose` |
-| Full suite command | `pnpm vitest run` |
+| Framework | Vitest 4.x (already configured in extension) |
+| Config file | `extension/vitest.config.ts` (exists), `web/vitest.config.ts` (Wave 0) |
+| Quick run command | `pnpm test` (in respective directory) |
+| Full suite command | `cd extension && pnpm test && cd ../web && pnpm test` |
 
-### Phase Requirements -> Test Map
+### Phase Requirements Test Map
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| ONBD-01 | Onboarding page opens on first install | unit | `pnpm vitest run src/__tests__/background.test.ts -t "onInstalled"` | Wave 0 |
-| ONBD-02 | Location + radius saved to profile | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "location"` | Wave 0 |
-| ONBD-03 | Buy/rent selection persists | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "listingType"` | Wave 0 |
-| ONBD-04 | Property type selection persists | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "propertyType"` | Wave 0 |
-| ONBD-05 | Budget range validates and persists | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "price"` | Wave 0 |
-| ONBD-06 | Rooms range validates and persists | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "rooms"` | Wave 0 |
-| ONBD-07 | Living area range validates and persists | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "livingSpace"` | Wave 0 |
-| ONBD-08 | Year built range validates and persists | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "yearBuilt"` | Wave 0 |
-| ONBD-09 | Floor preference persists | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "floor"` | Wave 0 |
-| ONBD-10 | Availability preference persists | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "availability"` | Wave 0 |
-| ONBD-11 | Features toggles persist | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "features"` | Wave 0 |
-| ONBD-12 | Soft criteria text fields persist | unit | `pnpm vitest run src/__tests__/profile-schema.test.ts -t "softCriteria"` | Wave 0 |
-| ONBD-13 | Weight sliders sum to 100% | unit | `pnpm vitest run src/__tests__/weight-redistribution.test.ts` | Wave 0 |
-| ONBD-14 | Profile persists across sessions | unit | `pnpm vitest run src/__tests__/profile-storage.test.ts` | Wave 0 |
+| AUTH-01 | Login/signup on Next.js website | smoke (manual) | Manual: visit site, sign up, log in | N/A |
+| AUTH-02 | Login in extension popup | smoke (manual) | Manual: open popup, enter credentials | N/A |
+| AUTH-03 | Edge function proxies with auth | integration | `supabase functions serve` + curl with JWT | Wave 0 |
+| INFRA-01 | Next.js deployed on Vercel | smoke (manual) | `curl -f https://[deployment-url]` | N/A |
+| INFRA-02 | FastAPI on EC2 with health check | smoke | `curl -f http://[ec2-ip]:8000/health` | N/A |
+| INFRA-03 | Supabase tables + auth + edge functions | integration (manual) | `supabase db push` + verify in dashboard | N/A |
 
 ### Sampling Rate
-- **Per task commit:** `pnpm vitest run --reporter=verbose`
-- **Per wave merge:** `pnpm vitest run`
-- **Phase gate:** Full suite green before `/gsd:verify-work`
+- **Per task commit:** Manual smoke tests (curl endpoints, visit pages)
+- **Per wave merge:** All smoke tests pass
+- **Phase gate:** All 5 success criteria verified manually
 
 ### Wave 0 Gaps
-- [ ] `vitest.config.ts` -- WXT Vitest plugin configuration
-- [ ] `src/__tests__/profile-schema.test.ts` -- Zod schema validation for all ONBD-02 through ONBD-12
-- [ ] `src/__tests__/weight-redistribution.test.ts` -- Proportional redistribution algorithm (ONBD-13)
-- [ ] `src/__tests__/profile-storage.test.ts` -- WXT storage read/write/persist (ONBD-14)
-- [ ] `src/__tests__/background.test.ts` -- onInstalled handler fires correctly (ONBD-01)
-- [ ] Vitest + `@testing-library/react` install: `pnpm add -D vitest @testing-library/react @testing-library/jest-dom jsdom`
+- [ ] Extension Vitest config already exists -- reuse pattern for fresh scaffold
+- [ ] Web app needs Vitest setup if unit tests are desired (not critical for Phase 1 -- all verifications are smoke/integration)
+- [ ] No automated integration tests for auth flows -- all manual verification for Phase 1 (auth flows involve browser interactions)
+
+*(Phase 1 is primarily infrastructure/deployment -- most validation is manual smoke testing of deployed services)*
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [WXT Entrypoints](https://wxt.dev/guide/essentials/entrypoints.html) -- Entrypoint types, file naming, popup/background/content/unlisted pages
-- [WXT Project Structure](https://wxt.dev/guide/essentials/project-structure) -- Directory layout, srcDir, auto-imports
-- [WXT Storage](https://wxt.dev/guide/essentials/storage.html) -- `storage.defineItem`, versioning, migrations, watchers
-- [WXT Unit Testing](https://wxt.dev/guide/essentials/unit-testing) -- Vitest plugin, fakeBrowser, test configuration
-- [shadcn/ui Installation (Vite)](https://ui.shadcn.com/docs/installation/vite) -- Setup steps, components.json, path aliases
-- [shadcn/ui Components](https://ui.shadcn.com/docs/components) -- Full component catalog
-- [Zod v4 Migration Guide](https://zod.dev/v4/changelog) -- Breaking changes, new APIs, import paths
-- [@hookform/resolvers npm](https://www.npmjs.com/package/@hookform/resolvers) -- Zod v4 support in v5.x
+- [Supabase SSR auth docs](https://supabase.com/docs/guides/auth/server-side/nextjs) - Next.js server-side auth setup, middleware, client creation
+- [Supabase password auth docs](https://supabase.com/docs/guides/auth/passwords) - signUp, signInWithPassword API
+- [Supabase edge functions docs](https://supabase.com/docs/guides/functions/quickstart) - Function creation, deployment, JWT verification
+- [Supabase RLS docs](https://supabase.com/docs/guides/database/postgres/row-level-security) - Policy syntax, auth.uid() helper
+- [WXT entrypoints docs](https://wxt.dev/guide/essentials/entrypoints.html) - File conventions, defineBackground, defineContentScript
+- [WXT content scripts docs](https://wxt.dev/guide/essentials/content-scripts.html) - Match patterns, Shadow DOM React rendering
+- [Supabase edge function auth docs](https://supabase.com/docs/guides/functions/auth) - JWT verification with jose, getUser pattern
 
 ### Secondary (MEDIUM confidence)
-- [WXT + React + shadcn + Tailwind Setup Guide](https://aabidk.dev/blog/building-modern-cross-web-extensions-project-setup/) -- Verified project structure and tsconfig workaround for shadcn paths
-- [WXT + React Extension Dev Guide](https://dev.to/seryllns_/build-modern-browser-extensions-with-wxt-react-and-typescript-h3h) -- React entrypoint patterns, popup setup
-- [WXT React shadcn Template](https://github.com/imtiger/wxt-react-shadcn-tailwindcss-chrome-extension) -- Reference implementation for WXT + React + shadcn + Tailwind
-- [shadcn Chrome Extension Template](https://github.com/phantridungdz/shadcn-chrome-extension) -- WXT + shadcn with theme provider and i18n
-- [React Hook Form Multi-Step Patterns](https://www.buildwithmatija.com/blog/master-multi-step-forms-build-a-dynamic-react-form-in-6-simple-steps) -- Zustand + Zod + shadcn wizard pattern
+- [Supabase Chrome extension storage adapter discussion](https://github.com/orgs/supabase/discussions/21923) - Custom chrome.storage adapter pattern, verified by multiple community members
+- [Akos Komuves - Browser extensions + Supabase](https://akoskm.com/how-to-connect-browser-extensions-to-supabase/) - Background script auth centralization pattern
+- [Ryan Katayi - Next.js Supabase SSR setup](https://www.ryankatayi.com/blog/server-side-auth-in-next-js-with-supabase-my-setup) - Complete server.ts, middleware.ts, actions.ts code
+- [FastAPI Docker best practices](https://betterstack.com/community/guides/scaling-python/fastapi-docker-best-practices/) - Dockerfile structure, health checks, layer caching
 
 ### Tertiary (LOW confidence)
-- [Proportional slider algorithm](https://saturncloud.io/blog/algorithm-to-always-sum-sliders-to-100-failing-due-to-zeroes/) -- Algorithm guidance for zero-handling edge case (needs validation in implementation)
+- EC2 deployment specifics -- depends on existing AWS setup, needs validation during implementation
+- Extension-to-web shared auth -- user decided inline popup login (not redirect), simplifies this significantly
 
 ## Metadata
 
 **Confidence breakdown:**
-- Standard stack: HIGH -- WXT, React, shadcn/ui, Tailwind, Zod are all verified with current docs and established templates
-- Architecture: HIGH -- WXT's file-based entrypoints, storage API, and project structure are well-documented
-- Pitfalls: HIGH -- MV3 service worker limitations, tsconfig conflicts, and Zod v4 changes are documented across multiple sources
-- Weight redistribution algorithm: MEDIUM -- Algorithm is straightforward math but edge cases (zeros, rounding) need implementation testing
-- LLM chat integration: MEDIUM -- UI can be built but actual Claude API integration deferred to Phase 2 backend
+- Standard stack: HIGH - All libraries are well-documented, official, and have up-to-date guides
+- Architecture: HIGH - Supabase + Next.js + WXT patterns are well-established with official examples
+- Pitfalls: HIGH - Known issues documented in official docs and community discussions
+- Edge function proxy: MEDIUM - JWT verification approach changed recently, needs careful implementation
+- Chrome extension auth: MEDIUM - Custom storage adapter is community pattern, not officially documented by Supabase
 
-**Research date:** 2026-03-07
-**Valid until:** 2026-04-07 (30 days -- stable technology stack, WXT under active development)
+**Research date:** 2026-03-10
+**Valid until:** 2026-04-10 (stable stack, no fast-moving components)
