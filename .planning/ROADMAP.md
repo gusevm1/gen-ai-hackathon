@@ -58,11 +58,11 @@ Plans:
   3. FastAPI backend can fetch listing details from Flatfox API given a listing ID/URL
   4. Backend parses Flatfox API response into a structured listing object (price, rooms, address, description, features, images, coordinates)
   5. Backend has a test endpoint that accepts a listing ID and returns the parsed listing data
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD (frontend preferences)
-- [ ] 02-02: TBD (backend Flatfox integration)
+- [ ] 02-01-PLAN.md — Next.js preferences form (Zod schema, React Hook Form, Accordion UI, Supabase save/load)
+- [ ] 02-02-PLAN.md — FastAPI Flatfox API integration (Pydantic models, httpx client, /listings/{pk} endpoint)
 
 ### Phase 3: LLM Scoring Pipeline
 **Goal**: Backend can score a Flatfox listing against a user's weighted preferences via Claude, returning a structured score with category breakdown and reasoning
@@ -127,6 +127,6 @@ Within phases, parallel tracks execute simultaneously where marked.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Infrastructure & Auth | 0/3 | Planned | - |
-| 2. Preferences & Data Pipeline | 0/? | Not started | - |
+| 2. Preferences & Data Pipeline | 0/2 | Planned | - |
 | 3. LLM Scoring Pipeline | 0/? | Not started | - |
 | 4. Extension UI & Analysis Page | 0/? | Not started | - |
