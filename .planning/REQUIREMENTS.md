@@ -1,70 +1,68 @@
 # Requirements: HomeMatch
 
-**Defined:** 2026-03-07
+**Defined:** 2026-03-10
 **Core Value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website.
 
 ## v1 Requirements
 
 Requirements for hackathon MVP. Each maps to roadmap phases.
 
-### Onboarding & Profile
+### Auth & Infrastructure
 
-- [x] **ONBD-01**: User sees a full-page onboarding wizard on first install
-- [x] **ONBD-02**: User can set location + radius preference (e.g., Stadelhofen + 50km)
-- [x] **ONBD-03**: User can select buy or rent
-- [x] **ONBD-04**: User can select property type (apartment, house, etc.)
-- [x] **ONBD-05**: User can set budget range (min/max CHF)
-- [x] **ONBD-06**: User can set rooms range (min/max)
-- [x] **ONBD-07**: User can set living area range (min/max sqm)
-- [x] **ONBD-08**: User can set year built range (Baujahr)
-- [x] **ONBD-09**: User can select floor preference (Erdgeschoss vs not)
-- [x] **ONBD-10**: User can set availability preference
-- [x] **ONBD-11**: User can toggle features/furnishings (balcony, elevator, parking, Minergie, etc.)
-- [x] **ONBD-12**: User can add custom soft-criteria text fields (e.g., "near Bahnhof", "low tax canton", "good schools")
-- [x] **ONBD-13**: User can configure importance weights per category via sliders
-- [x] **ONBD-14**: User profile is stored as JSON in chrome.storage.local and persists across sessions
+- [ ] **AUTH-01**: User can sign up and log in on the Next.js website via Supabase (email/password)
+- [ ] **AUTH-02**: User can log in via the Chrome extension popup using the same Supabase credentials
+- [ ] **AUTH-03**: Supabase edge functions proxy scoring requests to EC2 backend with auth validation
+- [ ] **INFRA-01**: Next.js app deployed on Vercel
+- [ ] **INFRA-02**: FastAPI backend deployed on EC2 via Docker
+- [ ] **INFRA-03**: Supabase project configured with auth, database tables, and edge functions
 
-### Data Extraction
+### Preferences
 
-- [ ] **EXTR-01**: Extension background worker fetches listing detail pages without opening visible tabs
-- [ ] **EXTR-02**: Extension extracts listing data from Homegate's `__INITIAL_STATE__` JSON
-- [ ] **EXTR-03**: Fetches are throttled to 2-3 concurrent requests to avoid rate limiting
+- [ ] **PREF-01**: User can set location/city preference
+- [ ] **PREF-02**: User can select buy or rent
+- [ ] **PREF-03**: User can select property type (apartment, house, etc.)
+- [ ] **PREF-04**: User can set budget range (min/max CHF)
+- [ ] **PREF-05**: User can set rooms range (min/max)
+- [ ] **PREF-06**: User can set living space range (min/max sqm)
+- [ ] **PREF-07**: User can add soft criteria text fields (e.g., "near Bahnhof", "quiet neighborhood")
+- [ ] **PREF-08**: Reusable soft criteria suggestions for common features (balcony, parking, elevator, etc.)
+- [ ] **PREF-09**: User can configure importance weights per category via sliders
+- [ ] **PREF-10**: Preferences saved to Supabase PostgreSQL and persist across sessions
 
-### LLM Scoring
+### Data & Scoring
 
+- [ ] **DATA-01**: Backend fetches listing details from Flatfox public API (`/api/v1/flat/`)
+- [ ] **DATA-02**: Backend parses Flatfox listing data into structured format (price, rooms, address, description, features, etc.)
 - [ ] **EVAL-01**: Each listing is evaluated by Claude against the user's preference profile and weights
-- [ ] **EVAL-02**: Evaluation returns a percentage match score with weighted category breakdown
-- [ ] **EVAL-03**: Each category includes bullet-point reasoning with references to listing description text
+- [ ] **EVAL-02**: Evaluation returns a score (0-100) with weighted category breakdown
+- [ ] **EVAL-03**: Each category includes bullet-point reasoning with references to listing details
 - [ ] **EVAL-04**: Evaluation explicitly states "I don't know" for data points not available in the listing
 - [ ] **EVAL-05**: Analysis is returned in the listing's language (DE/FR/IT)
 
 ### Extension UI
 
-- [ ] **UI-01**: Score badge (percentage + match label) is injected next to each listing on Homegate search results
-- [ ] **UI-02**: Loading skeleton badges appear immediately while scores are being computed
-- [ ] **UI-03**: Scores appear progressively as each LLM call resolves
-- [ ] **UI-04**: User can click a score badge to expand an inline analysis panel with category breakdowns
-- [ ] **UI-05**: Extension popup shows profile summary, on/off toggle, and edit preferences link
-- [ ] **UI-06**: Weights are adjustable from extension settings after onboarding
+- [ ] **EXT-01**: Chrome extension activates on Flatfox.ch search results pages
+- [ ] **EXT-02**: Floating action button appears on Flatfox search results for on-demand scoring
+- [ ] **EXT-03**: Extension extracts listing IDs from Flatfox search results DOM
+- [ ] **EXT-04**: Score badges (0-100 + match label) injected next to each listing after scoring
+- [ ] **EXT-05**: Clicking a badge expands a 3-5 bullet summary panel with key match/mismatch points
+- [ ] **EXT-06**: Summary panel includes "See full analysis" button linking to the website
+- [ ] **EXT-07**: Extension popup shows login form, profile summary, and link to preferences website
+- [ ] **EXT-08**: Loading state shown while scores are being computed
 
-### Backend
+### Website Analysis Page
 
-- [ ] **BACK-01**: Thin EC2 backend receives listing data + user profile and proxies to Claude API
-- [ ] **BACK-02**: Backend keeps API keys secure (not exposed in extension)
-- [ ] **BACK-03**: Backend returns structured scoring response (percentage, categories, reasoning)
+- [ ] **WEB-01**: Full analysis page on Next.js site for each scored listing
+- [ ] **WEB-02**: Analysis page shows category breakdown with weights, bullet-point reasoning, and listing citations
+- [ ] **WEB-03**: Analysis results stored in Supabase for retrieval by website
 
 ## v2 Requirements
 
 Deferred to future milestone. Tracked but not in current roadmap.
 
-### Filter Integration
-
-- **FILT-01**: Extension pre-fills Homegate filter fields from user profile preferences
-- **FILT-02**: Filter pre-fill works after Homegate SPA navigation (not just page load)
-
 ### Caching & Performance
 
-- **PERF-01**: Scores are cached by listing ID + profile hash with configurable TTL
+- **PERF-01**: Scores cached by listing ID + profile hash with configurable TTL
 - **PERF-02**: Cache invalidates automatically when user profile changes
 
 ### Multi-Profile
@@ -74,65 +72,71 @@ Deferred to future milestone. Tracked but not in current roadmap.
 
 ### Cross-Portal
 
-- **PORT-01**: Extension supports ImmoScout24.ch with site-specific adapter
-- **PORT-02**: Extension supports Comparis.ch with site-specific adapter
+- **PORT-01**: Extension supports Homegate.ch with site-specific adapter
+- **PORT-02**: Extension supports ImmoScout24.ch with site-specific adapter
+
+### Advanced Features
+
+- **ADV-01**: Automatic scoring on page load (toggle in settings)
+- **ADV-02**: Score history and trends over time
+- **ADV-03**: Comparison view for multiple listings side-by-side
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
 | Image/photo analysis | Token cost and latency prohibitive for v1; text-only evaluation |
-| User accounts / authentication | Profile lives in extension storage; no server-side user management |
 | Historical price tracking | Requires database infrastructure; not core to match scoring |
-| Push notifications for new listings | MV3 service workers can't run without open tab; needs separate service |
-| Save/bookmark listings | Homegate has its own saved listings; no need to duplicate |
-| Auto-scroll/auto-load all pages | Appears as bot traffic; risks IP blocking |
-| Streaming typewriter effect | <3s responses don't benefit from streaming; adds complexity |
-| Mobile app | Chrome extension only for v1 |
+| Push notifications for new listings | Needs separate service, not core to MVP |
+| Automatic scoring | Claude API calls are expensive; user triggers via FAB |
+| Advanced database/logging | Future milestone; for now Supabase + EC2 volume logs |
+| Mobile app | Chrome extension + web app only for v1 |
+| Social login (Google, GitHub) | Email/password sufficient for hackathon |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ONBD-01 | Phase 1 | Complete |
-| ONBD-02 | Phase 1 | Complete |
-| ONBD-03 | Phase 1 | Complete |
-| ONBD-04 | Phase 1 | Complete |
-| ONBD-05 | Phase 1 | Complete |
-| ONBD-06 | Phase 1 | Complete |
-| ONBD-07 | Phase 1 | Complete |
-| ONBD-08 | Phase 1 | Complete |
-| ONBD-09 | Phase 1 | Complete |
-| ONBD-10 | Phase 1 | Complete |
-| ONBD-11 | Phase 1 | Complete |
-| ONBD-12 | Phase 1 | Complete |
-| ONBD-13 | Phase 1 | Complete |
-| ONBD-14 | Phase 1 | Complete |
-| EXTR-01 | Phase 2 | Pending |
-| EXTR-02 | Phase 2 | Pending |
-| EXTR-03 | Phase 2 | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Pending |
+| INFRA-03 | Phase 1 | Pending |
+| PREF-01 | Phase 2 | Pending |
+| PREF-02 | Phase 2 | Pending |
+| PREF-03 | Phase 2 | Pending |
+| PREF-04 | Phase 2 | Pending |
+| PREF-05 | Phase 2 | Pending |
+| PREF-06 | Phase 2 | Pending |
+| PREF-07 | Phase 2 | Pending |
+| PREF-08 | Phase 2 | Pending |
+| PREF-09 | Phase 2 | Pending |
+| PREF-10 | Phase 2 | Pending |
+| DATA-01 | Phase 2 | Pending |
+| DATA-02 | Phase 2 | Pending |
 | EVAL-01 | Phase 3 | Pending |
 | EVAL-02 | Phase 3 | Pending |
 | EVAL-03 | Phase 3 | Pending |
 | EVAL-04 | Phase 3 | Pending |
 | EVAL-05 | Phase 3 | Pending |
-| UI-01 | Phase 4 | Pending |
-| UI-02 | Phase 4 | Pending |
-| UI-03 | Phase 4 | Pending |
-| UI-04 | Phase 4 | Pending |
-| UI-05 | Phase 4 | Pending |
-| UI-06 | Phase 4 | Pending |
-| BACK-01 | Phase 2 | Pending |
-| BACK-02 | Phase 2 | Pending |
-| BACK-03 | Phase 2 | Pending |
+| EXT-01 | Phase 4 | Pending |
+| EXT-02 | Phase 4 | Pending |
+| EXT-03 | Phase 4 | Pending |
+| EXT-04 | Phase 4 | Pending |
+| EXT-05 | Phase 4 | Pending |
+| EXT-06 | Phase 4 | Pending |
+| EXT-07 | Phase 4 | Pending |
+| EXT-08 | Phase 4 | Pending |
+| WEB-01 | Phase 4 | Pending |
+| WEB-02 | Phase 4 | Pending |
+| WEB-03 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 31 total
-- Mapped to phases: 31
+- v1 requirements: 32 total
+- Mapped to phases: 32
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 -- traceability updated with phase mappings*
+*Requirements defined: 2026-03-10*
+*Last updated: 2026-03-10 -- complete rewrite for Flatfox pivot*
