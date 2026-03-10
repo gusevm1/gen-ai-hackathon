@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Fresh start after Flatfox pivot
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-03-10T14:16:51.381Z"
-last_activity: 2026-03-10 -- Roadmap rewrite
+status: completed
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-10T14:22:13.723Z"
+last_activity: 2026-03-10 -- Phase 2 preferences form + Flatfox API integration
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 5
-  percent: 0
+  completed_plans: 6
+  percent: 50
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website.
-**Current focus:** Phase 1 - Infrastructure & Auth
+**Current focus:** Phase 2 - Preferences & Data Pipeline
 
 ## Current Position
 
-Phase: 1 of 4 (Infrastructure & Auth) -- NOT STARTED
-Plan: 0 of ? complete
-Status: Fresh start after Flatfox pivot
-Last activity: 2026-03-10 -- Roadmap rewrite
+Phase: 2 of 4 (Preferences & Data Pipeline) -- IN PROGRESS
+Plan: 2 of 2 complete
+Status: Phase 2 complete (both plans executed)
+Last activity: 2026-03-10 -- Phase 2 preferences form + Flatfox API integration
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [=====-----] 50%
 
 ## Architecture Pivot (2026-03-10)
 
@@ -75,6 +75,12 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 02]: Used /api/v1/public-listing/{pk}/ endpoint (NOT /api/v1/flat/ which returns 404)
 - [Phase 02]: Singleton FlatfoxClient with lazy httpx.AsyncClient init and 30s timeout
 - [Phase 02]: number_of_rooms stored as Optional[str] matching Flatfox convention (Swiss 3.5 rooms)
+- [Phase 02-01]: Scaffolded Next.js app from scratch (Phase 1 not re-executed after Flatfox pivot)
+- [Phase 02-01]: shadcn/ui v4 uses Base UI primitives (not Radix) -- different Accordion/Slider API
+- [Phase 02-01]: Zod v4 nested defaults need explicit values (not auto-applied from inner schemas)
+- [Phase 02-01]: zodResolver needs cast as Resolver<T> for Zod v4 type compatibility with RHF v7
+- [Phase 02-01]: watch/setValue pattern for string array form fields (not useFieldArray)
+- [Phase 02]: Scaffolded Next.js app from scratch (Phase 1 not re-executed after Flatfox pivot)
 
 ### Pending Todos
 
@@ -88,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-10T14:16:51.380Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-03-10T14:22:05.977Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None

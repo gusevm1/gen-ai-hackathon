@@ -18,16 +18,16 @@ Requirements for hackathon MVP. Each maps to roadmap phases.
 
 ### Preferences
 
-- [ ] **PREF-01**: User can set location/city preference
-- [ ] **PREF-02**: User can select buy or rent
-- [ ] **PREF-03**: User can select property type (apartment, house, etc.)
-- [ ] **PREF-04**: User can set budget range (min/max CHF)
-- [ ] **PREF-05**: User can set rooms range (min/max)
-- [ ] **PREF-06**: User can set living space range (min/max sqm)
-- [ ] **PREF-07**: User can add soft criteria text fields (e.g., "near Bahnhof", "quiet neighborhood")
-- [ ] **PREF-08**: Reusable soft criteria suggestions for common features (balcony, parking, elevator, etc.)
-- [ ] **PREF-09**: User can configure importance weights per category via sliders
-- [ ] **PREF-10**: Preferences saved to Supabase PostgreSQL and persist across sessions
+- [x] **PREF-01**: User can set location/city preference
+- [x] **PREF-02**: User can select buy or rent
+- [x] **PREF-03**: User can select property type (apartment, house, etc.)
+- [x] **PREF-04**: User can set budget range (min/max CHF)
+- [x] **PREF-05**: User can set rooms range (min/max)
+- [x] **PREF-06**: User can set living space range (min/max sqm)
+- [x] **PREF-07**: User can add soft criteria text fields (e.g., "near Bahnhof", "quiet neighborhood")
+- [x] **PREF-08**: Reusable soft criteria suggestions for common features (balcony, parking, elevator, etc.)
+- [x] **PREF-09**: User can configure importance weights per category via sliders
+- [x] **PREF-10**: Preferences saved to Supabase PostgreSQL and persist across sessions
 
 ### Data & Scoring
 
@@ -103,16 +103,16 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | INFRA-01 | Phase 1 | Pending |
 | INFRA-02 | Phase 1 | Pending |
 | INFRA-03 | Phase 1 | Pending |
-| PREF-01 | Phase 2 | Pending |
-| PREF-02 | Phase 2 | Pending |
-| PREF-03 | Phase 2 | Pending |
-| PREF-04 | Phase 2 | Pending |
-| PREF-05 | Phase 2 | Pending |
-| PREF-06 | Phase 2 | Pending |
-| PREF-07 | Phase 2 | Pending |
-| PREF-08 | Phase 2 | Pending |
-| PREF-09 | Phase 2 | Pending |
-| PREF-10 | Phase 2 | Pending |
+| PREF-01 | Phase 2 | Complete |
+| PREF-02 | Phase 2 | Complete |
+| PREF-03 | Phase 2 | Complete |
+| PREF-04 | Phase 2 | Complete |
+| PREF-05 | Phase 2 | Complete |
+| PREF-06 | Phase 2 | Complete |
+| PREF-07 | Phase 2 | Complete |
+| PREF-08 | Phase 2 | Complete |
+| PREF-09 | Phase 2 | Complete |
+| PREF-10 | Phase 2 | Complete |
 | DATA-01 | Phase 2 | Complete |
 | DATA-02 | Phase 2 | Complete |
 | EVAL-01 | Phase 3 | Pending |
