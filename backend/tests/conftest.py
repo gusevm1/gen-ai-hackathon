@@ -105,6 +105,125 @@ def minimal_listing_json():
     return MINIMAL_LISTING_JSON.copy()
 
 
+# camelCase preferences matching what Supabase JSONB stores (from frontend Zod schema)
+SAMPLE_PREFERENCES_JSON = {
+    "location": "Zurich",
+    "offerType": "RENT",
+    "objectCategory": "APARTMENT",
+    "budgetMin": 1500,
+    "budgetMax": 2500,
+    "roomsMin": 2.0,
+    "roomsMax": 4.0,
+    "livingSpaceMin": 50,
+    "livingSpaceMax": 100,
+    "softCriteria": ["near Bahnhof", "quiet neighborhood"],
+    "selectedFeatures": ["balcony", "parking"],
+    "weights": {
+        "location": 80,
+        "price": 70,
+        "size": 60,
+        "features": 50,
+        "condition": 40,
+    },
+    "language": "de",
+}
+
+# Sample ScoreResponse dict matching the Pydantic model structure
+SAMPLE_SCORE_RESPONSE = {
+    "overall_score": 72,
+    "match_tier": "good",
+    "summary_bullets": [
+        "CHF 1,790/month is well within your CHF 2,500 budget -- good value",
+        "Only 29 sqm living space, significantly below your 50 sqm minimum -- major compromise",
+        "Located in Roggwil BE, not in your preferred Zurich area -- location mismatch",
+    ],
+    "categories": [
+        {
+            "name": "location",
+            "score": 30,
+            "weight": 80,
+            "reasoning": [
+                "Roggwil BE is not in your preferred Zurich area",
+                "Canton BE, not ZH as requested",
+            ],
+        },
+        {
+            "name": "price",
+            "score": 90,
+            "weight": 70,
+            "reasoning": [
+                "CHF 1,790/month gross is well within CHF 1,500-2,500 budget",
+            ],
+        },
+        {
+            "name": "size",
+            "score": 40,
+            "weight": 60,
+            "reasoning": [
+                "29 sqm is below your 50 sqm minimum",
+                "1.0 rooms is below your 2.0 minimum",
+            ],
+        },
+        {
+            "name": "features",
+            "score": 65,
+            "weight": 50,
+            "reasoning": [
+                "Has garage and parking space",
+                "Balcony/garden available",
+                "Pets allowed",
+            ],
+        },
+        {
+            "name": "condition",
+            "score": 75,
+            "weight": 40,
+            "reasoning": [
+                "Built in 1963, renovated in 2019",
+                "Recent renovation is positive",
+            ],
+        },
+    ],
+    "checklist": [
+        {
+            "criterion": "near Bahnhof",
+            "met": None,
+            "note": "Not specified in listing -- cannot determine proximity to station",
+        },
+        {
+            "criterion": "quiet neighborhood",
+            "met": None,
+            "note": "Not specified in listing",
+        },
+        {
+            "criterion": "balcony",
+            "met": True,
+            "note": "balconygarden attribute present",
+        },
+        {
+            "criterion": "parking",
+            "met": True,
+            "note": "parkingspace attribute present",
+        },
+    ],
+    "language": "de",
+}
+
+
+@pytest.fixture
+def sample_preferences_json():
+    """Return camelCase preferences dict as stored in Supabase JSONB."""
+    return SAMPLE_PREFERENCES_JSON.copy()
+
+
+@pytest.fixture
+def sample_score_response():
+    """Return a sample ScoreResponse dict."""
+    import copy
+
+    return copy.deepcopy(SAMPLE_SCORE_RESPONSE)
+
+
 @pytest.fixture(autouse=True)
 async def reset_flatfox_client():
     """Reset the singleton flatfox_client between tests to avoid stale event loop."""
