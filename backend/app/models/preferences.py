@@ -5,7 +5,8 @@ preferences from Supabase. Field names use snake_case (Python convention)
 while the frontend uses camelCase (TypeScript convention).
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
 from typing import Optional
 from enum import Enum
 
@@ -40,7 +41,15 @@ class UserPreferences(BaseModel):
 
     Mirrors the frontend Zod preferencesSchema.
     Stored as JSONB in Supabase user_preferences table.
+
+    Accepts both camelCase (from Supabase JSONB) and snake_case keys
+    via alias_generator + populate_by_name.
     """
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
 
     # Standard filters (PREF-01 through PREF-06)
     location: str = ""
@@ -59,3 +68,6 @@ class UserPreferences(BaseModel):
 
     # Weights (PREF-09)
     weights: Weights = Field(default_factory=Weights)
+
+    # Language preference (EVAL-05) -- defaults to German
+    language: str = "de"
