@@ -1,0 +1,41 @@
+"""HomeMatch API - FastAPI backend for Flatfox listing analysis.
+
+Provides endpoints for fetching and parsing Flatfox listing data.
+Uses httpx.AsyncClient for async HTTP calls to Flatfox public API.
+"""
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.routers import listings
+from app.services.flatfox import flatfox_client
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle - clean up httpx client on shutdown."""
+    # Startup: nothing needed (lazy init)
+    yield
+    # Shutdown: close httpx client
+    await flatfox_client.close()
+
+
+app = FastAPI(title="HomeMatch API", version="0.2.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(listings.router)
+
+
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return {"status": "healthy", "service": "homematch-api"}

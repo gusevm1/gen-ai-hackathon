@@ -103,3 +103,15 @@ def sample_listing_json():
 def minimal_listing_json():
     """Return a minimal Flatfox listing JSON with only required fields."""
     return MINIMAL_LISTING_JSON.copy()
+
+
+@pytest.fixture(autouse=True)
+async def reset_flatfox_client():
+    """Reset the singleton flatfox_client between tests to avoid stale event loop."""
+    yield
+    from app.services.flatfox import flatfox_client
+
+    # Force close and reset so next test gets a fresh client
+    if flatfox_client._client and not flatfox_client._client.is_closed:
+        await flatfox_client._client.aclose()
+    flatfox_client._client = None
