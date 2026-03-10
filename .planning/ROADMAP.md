@@ -72,13 +72,14 @@ Plans:
   1. POST /score endpoint accepts listing IDs + user ID, fetches listing from Flatfox API and preferences from Supabase, sends to Claude for evaluation
   2. Response includes a 0-100 overall score, per-category scores with weights applied, and 3-5 bullet-point reasoning per category
   3. Evaluation explicitly states "I don't know" for data points the listing does not provide
-  4. Analysis is returned in the listing's language (DE/FR/IT)
+  4. Analysis is returned in the user's preferred language (DE/FR/IT/EN)
   5. Supabase edge function proxies POST /score requests from extension to EC2 backend with auth validation
   6. Analysis results are stored in Supabase for retrieval by the website's full analysis page
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md — Scoring models, Claude service, Supabase service, prompt templates, and test suite
+- [ ] 03-02-PLAN.md — POST /score endpoint, edge function proxy, main.py wiring, end-to-end verification
 
 ### Phase 4: Extension UI & Analysis Page
 **Goal**: Users see score badges on Flatfox listings triggered by a floating action button, can read 3-5 bullet summaries, and can click through to full analysis on the website
@@ -112,7 +113,8 @@ Phase 1: ┌─ Next.js scaffold ──┐
 Phase 2: ┌─ Preferences form (frontend) ─┐──▶ Integration test
           └─ Flatfox API integration (backend) ─┘
 
-Phase 3: Sequential (scoring pipeline builds on both Phase 2 outputs)
+Phase 3: Wave 1: Scoring engine internals (models, services, prompts, tests)
+          Wave 2: HTTP endpoint + edge function + wiring
 
 Phase 4: ┌─ Extension UI (badges, FAB, summary) ─┐──▶ E2E test
           └─ Analysis page (website) ─────────────┘
@@ -128,5 +130,5 @@ Within phases, parallel tracks execute simultaneously where marked.
 |-------|----------------|--------|-----------|
 | 1. Infrastructure & Auth | 0/3 | Planned | - |
 | 2. Preferences & Data Pipeline | 0/2 | Planned | - |
-| 3. LLM Scoring Pipeline | 0/? | Not started | - |
+| 3. LLM Scoring Pipeline | 0/2 | Planned | - |
 | 4. Extension UI & Analysis Page | 0/? | Not started | - |
