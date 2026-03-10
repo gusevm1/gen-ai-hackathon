@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import listings
+from app.routers import listings, scoring
 from app.services.flatfox import flatfox_client
 
 
@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     await flatfox_client.close()
 
 
-app = FastAPI(title="HomeMatch API", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="HomeMatch API", version="0.3.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,6 +33,7 @@ app.add_middleware(
 )
 
 app.include_router(listings.router)
+app.include_router(scoring.router)
 
 
 @app.get("/health")
