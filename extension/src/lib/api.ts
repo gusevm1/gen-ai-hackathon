@@ -6,6 +6,7 @@ import type { ScoreResponse } from '@/types/scoring';
 
 const EDGE_FUNCTION_URL =
   'https://mlhtozdtiorkemamzjjc.supabase.co/functions/v1/score-proxy';
+const SUPABASE_ANON_KEY = 'sb_publishable_SP7baaxxxHimQk_4ESpB3g_Q8--KBPY';
 
 /**
  * Score a single listing via the edge function.
@@ -23,6 +24,7 @@ export async function scoreListing(
     method: 'POST',
     headers: {
       Authorization: `Bearer ${jwt}`,
+      apikey: SUPABASE_ANON_KEY,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ listing_id: listingId }),
