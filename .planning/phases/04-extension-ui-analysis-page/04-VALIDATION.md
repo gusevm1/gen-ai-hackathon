@@ -2,7 +2,7 @@
 phase: 4
 slug: extension-ui-analysis-page
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-03-11
 ---
@@ -17,8 +17,8 @@ created: 2026-03-11
 
 | Property | Value |
 |----------|-------|
-| **Framework** | Vitest 4.0.18 (extension) / Vitest (web — needs config) |
-| **Config file** | `extension/vitest.config.ts` (exists) / `web/vitest.config.ts` (Wave 0) |
+| **Framework** | Vitest 4.0.18 (extension) / Vitest 4.0.18 (web) |
+| **Config file** | `extension/vitest.config.ts` (exists) / `web/vitest.config.ts` (Wave 0 — Plan 00) |
 | **Quick run command** | `cd extension && pnpm test` |
 | **Full suite command** | `cd extension && pnpm test && cd ../web && pnpm test` |
 | **Estimated runtime** | ~15 seconds |
@@ -38,20 +38,21 @@ created: 2026-03-11
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 04-01-01 | 01 | 1 | EXT-01 | unit | `cd extension && pnpm vitest run src/__tests__/content-matches.test.ts -x` | ❌ W0 | ⬜ pending |
-| 04-01-02 | 01 | 1 | EXT-03 | unit | `cd extension && pnpm vitest run src/__tests__/flatfox-parser.test.ts -x` | ❌ W0 | ⬜ pending |
-| 04-01-03 | 01 | 1 | EXT-04 | unit | `cd extension && pnpm vitest run src/__tests__/scoring-types.test.ts -x` | ❌ W0 | ⬜ pending |
-| 04-01-04 | 01 | 1 | EXT-07 | unit | `cd extension && pnpm vitest run src/__tests__/auth-flow.test.ts -x` | ❌ W0 | ⬜ pending |
-| 04-01-05 | 01 | 1 | EXT-08 | unit | `cd extension && pnpm vitest run src/__tests__/loading-state.test.ts -x` | ❌ W0 | ⬜ pending |
-| 04-02-01 | 02 | 1 | WEB-01 | unit | `cd web && npx vitest run src/__tests__/analysis-page.test.ts -x` | ❌ W0 | ⬜ pending |
-| 04-02-02 | 02 | 1 | WEB-02 | unit | `cd web && npx vitest run src/__tests__/category-breakdown.test.ts -x` | ❌ W0 | ⬜ pending |
+| 04-00-01 | 00 | 0 | EXT-01,EXT-03,EXT-04,EXT-07,EXT-08 | scaffold | `cd extension && pnpm vitest run src/__tests__/content-matches.test.ts src/__tests__/flatfox-parser.test.ts src/__tests__/scoring-types.test.ts src/__tests__/auth-flow.test.ts src/__tests__/loading-state.test.ts` | Creates stubs | ⬜ pending |
+| 04-00-02 | 00 | 0 | WEB-01,WEB-02 | scaffold | `cd web && npx vitest run src/__tests__/` | Creates stubs + config | ⬜ pending |
+| 04-01-01 | 01 | 1 | EXT-04 | unit | `cd extension && pnpm vitest run src/__tests__/scoring-types.test.ts -x` | ⬜ W0 stub | ⬜ pending |
+| 04-01-02 | 01 | 1 | EXT-07 | unit | `cd extension && pnpm vitest run src/__tests__/auth-flow.test.ts -x` | ⬜ W0 stub | ⬜ pending |
+| 04-02-01 | 02 | 1 | WEB-01 | unit | `cd web && npx vitest run src/__tests__/analysis-page.test.ts -x` | ⬜ W0 stub | ⬜ pending |
+| 04-02-02 | 02 | 1 | WEB-02 | unit | `cd web && npx vitest run src/__tests__/category-breakdown.test.ts -x` | ⬜ W0 stub | ⬜ pending |
 | 04-02-03 | 02 | 1 | WEB-03 | integration | Already verified in Phase 3 e2e testing | ✅ | ⬜ pending |
+| 04-03-01 | 03 | 2 | EXT-01,EXT-03,EXT-08 | unit | `cd extension && pnpm vitest run src/__tests__/content-matches.test.ts src/__tests__/flatfox-parser.test.ts src/__tests__/loading-state.test.ts -x` | ⬜ W0 stub | ⬜ pending |
+| 04-04-01 | 04 | 1 | EXT-04,EXT-05 | unit | `cd backend && python -m pytest tests/test_image_scoring.py -x -v` | Creates own | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
 ---
 
-## Wave 0 Requirements
+## Wave 0 Requirements (Plan 04-00)
 
 - [ ] `extension/src/__tests__/content-matches.test.ts` — stubs for EXT-01 (content script match pattern)
 - [ ] `extension/src/__tests__/flatfox-parser.test.ts` — stubs for EXT-03 (listing PK extraction)
@@ -61,6 +62,9 @@ created: 2026-03-11
 - [ ] `web/vitest.config.ts` — web project needs vitest config
 - [ ] `web/src/__tests__/analysis-page.test.ts` — stubs for WEB-01 (analysis page rendering)
 - [ ] `web/src/__tests__/category-breakdown.test.ts` — stubs for WEB-02 (category breakdown component)
+
+**Created by:** Plan 04-00 (Wave 0)
+**Filled by:** Plans 04-01, 04-02, 04-03 (during implementation)
 
 ---
 
@@ -77,11 +81,11 @@ created: 2026-03-11
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (Plan 04-00 creates all stubs)
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
