@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-03-10T16:01:11.458Z"
-last_activity: 2026-03-10 -- Phase 3 Plan 2 checkpoint approved, scoring pipeline verified end-to-end
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-03-11T12:28:14.347Z"
+last_activity: 2026-03-11 -- Phase 4 Plan 04 complete, multi-modal Claude scoring with listing images
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 8
-  percent: 85
+  total_plans: 12
+  completed_plans: 11
+  percent: 75
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 
 ## Current Position
 
-Phase: 3 of 4 (LLM Scoring Pipeline) -- COMPLETE
-Plan: 2 of 2 complete
-Status: Phase 3 complete. Ready to begin Phase 4 (Extension UI & Analysis Page).
-Last activity: 2026-03-10 -- Phase 3 Plan 2 checkpoint approved, scoring pipeline verified end-to-end
+Phase: 4 of 4 (Extension UI & Analysis Page) -- IN PROGRESS
+Plan: 04-04 complete (image scoring pipeline)
+Status: Phase 4 Plan 04 complete. Image-enhanced scoring pipeline ready.
+Last activity: 2026-03-11 -- Phase 4 Plan 04 complete, multi-modal Claude scoring with listing images
 
-Progress: [=========-] 85%
+Progress: [████████░░] 75%
 
 ## Architecture Pivot (2026-03-10)
 
@@ -92,6 +92,12 @@ Progress: [=========-] 85%
 - [Phase 03-02]: save_analysis is fire-and-forget (log error, don't fail response)
 - [Phase 03-02]: Edge function injects authenticated user_id from JWT into backend request body
 - [Phase 03-02]: Edge function uses npm:@supabase/supabase-js@2 import for Deno compatibility
+- [Phase 04-04]: Used regex for HTML parsing (no beautifulsoup4 dependency needed)
+- [Phase 04-04]: Max 5 images per listing (~6700 tokens) for Claude token cost control
+- [Phase 04-04]: URL-based image content blocks (not base64) to leverage Claude URL fetching
+- [Phase 04-04]: Separate httpx.AsyncClient for HTML page fetch (API client has JSON base_url)
+- [Phase 04-00]: Used .mts extension for web vitest config (ESM compat in CJS Next.js project)
+- [Phase 04-00]: jsdom@25 for web tests (jsdom 28 has ESM incompatibilities with @exodus/bytes)
 
 ### Pending Todos
 
@@ -105,6 +111,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-10T15:57:06.123Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-03-11T12:28:02.754Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
