@@ -42,11 +42,11 @@ Requirements for hackathon MVP. Each maps to roadmap phases.
 ### Extension UI
 
 - [x] **EXT-01**: Chrome extension activates on Flatfox.ch search results pages
-- [ ] **EXT-02**: Floating action button appears on Flatfox search results for on-demand scoring
+- [x] **EXT-02**: Floating action button appears on Flatfox search results for on-demand scoring
 - [x] **EXT-03**: Extension extracts listing IDs from Flatfox search results DOM
 - [x] **EXT-04**: Score badges (0-100 + match label) injected next to each listing after scoring
 - [x] **EXT-05**: Clicking a badge expands a 3-5 bullet summary panel with key match/mismatch points
-- [ ] **EXT-06**: Summary panel includes "See full analysis" button linking to the website
+- [x] **EXT-06**: Summary panel includes "See full analysis" button linking to the website
 - [x] **EXT-07**: Extension popup shows login form, profile summary, and link to preferences website
 - [x] **EXT-08**: Loading state shown while scores are being computed
 
@@ -121,11 +121,11 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | EVAL-04 | Phase 3 | Complete |
 | EVAL-05 | Phase 3 | Complete |
 | EXT-01 | Phase 4 | Complete |
-| EXT-02 | Phase 4 | Pending |
+| EXT-02 | Phase 4 | Complete |
 | EXT-03 | Phase 4 | Complete |
 | EXT-04 | Phase 4 | Complete |
 | EXT-05 | Phase 4 | Complete |
-| EXT-06 | Phase 4 | Pending |
+| EXT-06 | Phase 4 | Complete |
 | EXT-07 | Phase 4 | Complete |
 | EXT-08 | Phase 4 | Complete |
 | WEB-01 | Phase 4 | Complete |
