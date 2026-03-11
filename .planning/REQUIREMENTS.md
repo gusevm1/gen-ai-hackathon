@@ -54,7 +54,7 @@ Requirements for hackathon MVP. Each maps to roadmap phases.
 
 - [x] **WEB-01**: Full analysis page on Next.js site for each scored listing
 - [x] **WEB-02**: Analysis page shows category breakdown with weights, bullet-point reasoning, and listing citations
-- [ ] **WEB-03**: Analysis results stored in Supabase for retrieval by website
+- [x] **WEB-03**: Analysis results stored in Supabase for retrieval by website
 
 ## v2 Requirements
 
@@ -130,7 +130,7 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | EXT-08 | Phase 4 | Complete |
 | WEB-01 | Phase 4 | Complete |
 | WEB-02 | Phase 4 | Complete |
-| WEB-03 | Phase 4 | Pending |
+| WEB-03 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 32 total
