@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-03-11T12:29:03.527Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-03-11T12:38:23.766Z"
 last_activity: 2026-03-11 -- Phase 4 Plan 02 complete, analysis page with tier-colored score and category breakdown
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
   percent: 92
 ---
 
@@ -103,6 +103,9 @@ Progress: [█████████░] 92%
 - [Phase 04-02]: Tier color palette: excellent=emerald, good=blue, fair=amber, poor=gray (shared with extension)
 - [Phase 04-02]: Breakdown JSONB fallbacks via nullish coalescing for incomplete data
 - [Phase 04]: Exported utility functions (getTierColor, getScoreColor, getStatusIndicator) for node-only test environment
+- [Phase 04-01]: browser.storage.local (WXT API) over chrome.storage.local for MV3 service worker Supabase adapter
+- [Phase 04-01]: Sequential scoring (not parallel) to avoid overwhelming backend
+- [Phase 04-01]: Edit Preferences opens Next.js website /dashboard (not onboarding wizard)
 
 ### Pending Todos
 
@@ -116,6 +119,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-11T12:28:51.042Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-03-11T12:38:23.764Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None
