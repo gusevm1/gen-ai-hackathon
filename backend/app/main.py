@@ -6,7 +6,10 @@ Uses httpx.AsyncClient for async HTTP calls to Flatfox public API.
 
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
+
+load_dotenv()
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import listings, scoring

@@ -15,7 +15,7 @@ from app.models.preferences import UserPreferences
 from app.models.scoring import ScoreResponse
 from app.prompts.scoring import build_system_prompt, build_user_prompt
 
-CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5-20250514")
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 
 
 class ClaudeScorer:
