@@ -41,19 +41,19 @@ Requirements for hackathon MVP. Each maps to roadmap phases.
 
 ### Extension UI
 
-- [ ] **EXT-01**: Chrome extension activates on Flatfox.ch search results pages
+- [x] **EXT-01**: Chrome extension activates on Flatfox.ch search results pages
 - [ ] **EXT-02**: Floating action button appears on Flatfox search results for on-demand scoring
-- [ ] **EXT-03**: Extension extracts listing IDs from Flatfox search results DOM
+- [x] **EXT-03**: Extension extracts listing IDs from Flatfox search results DOM
 - [x] **EXT-04**: Score badges (0-100 + match label) injected next to each listing after scoring
 - [x] **EXT-05**: Clicking a badge expands a 3-5 bullet summary panel with key match/mismatch points
 - [ ] **EXT-06**: Summary panel includes "See full analysis" button linking to the website
-- [ ] **EXT-07**: Extension popup shows login form, profile summary, and link to preferences website
-- [ ] **EXT-08**: Loading state shown while scores are being computed
+- [x] **EXT-07**: Extension popup shows login form, profile summary, and link to preferences website
+- [x] **EXT-08**: Loading state shown while scores are being computed
 
 ### Website Analysis Page
 
-- [ ] **WEB-01**: Full analysis page on Next.js site for each scored listing
-- [ ] **WEB-02**: Analysis page shows category breakdown with weights, bullet-point reasoning, and listing citations
+- [x] **WEB-01**: Full analysis page on Next.js site for each scored listing
+- [x] **WEB-02**: Analysis page shows category breakdown with weights, bullet-point reasoning, and listing citations
 - [ ] **WEB-03**: Analysis results stored in Supabase for retrieval by website
 
 ## v2 Requirements
@@ -120,16 +120,16 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | EVAL-03 | Phase 3 | Complete |
 | EVAL-04 | Phase 3 | Complete |
 | EVAL-05 | Phase 3 | Complete |
-| EXT-01 | Phase 4 | Pending |
+| EXT-01 | Phase 4 | Complete |
 | EXT-02 | Phase 4 | Pending |
-| EXT-03 | Phase 4 | Pending |
+| EXT-03 | Phase 4 | Complete |
 | EXT-04 | Phase 4 | Complete |
 | EXT-05 | Phase 4 | Complete |
 | EXT-06 | Phase 4 | Pending |
-| EXT-07 | Phase 4 | Pending |
-| EXT-08 | Phase 4 | Pending |
-| WEB-01 | Phase 4 | Pending |
-| WEB-02 | Phase 4 | Pending |
+| EXT-07 | Phase 4 | Complete |
+| EXT-08 | Phase 4 | Complete |
+| WEB-01 | Phase 4 | Complete |
+| WEB-02 | Phase 4 | Complete |
 | WEB-03 | Phase 4 | Pending |
 
 **Coverage:**
