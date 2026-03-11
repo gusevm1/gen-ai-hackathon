@@ -85,7 +85,7 @@ Plans:
 **Goal**: Users see score badges on Flatfox listings triggered by a floating action button, can read 3-5 bullet summaries, and can click through to full analysis on the website
 **Depends on**: Phase 3
 **Requirements**: EXT-01, EXT-02, EXT-03, EXT-04, EXT-05, EXT-06, EXT-07, EXT-08, WEB-01, WEB-02, WEB-03
-**Parallelization**: Extension UI work and website analysis page can proceed in parallel — they share the scoring API as their contract.
+**Parallelization**: Extension UI work, website analysis page, and backend image enhancement can proceed in parallel. Extension content script depends on extension infrastructure (Plan 01).
 **Success Criteria** (what must be TRUE):
   1. Extension content script activates on Flatfox.ch search results pages
   2. Floating action button appears and triggers scoring for all visible listings when clicked
@@ -96,11 +96,14 @@ Plans:
   7. Full analysis page on Next.js shows complete category breakdown with weights, reasoning, and listing citations
   8. Extension popup shows login state, profile summary, and link to preferences website
   9. Loading skeleton/spinner shown while scores are being computed
-**Plans**: TBD
+  10. Claude scoring prompt includes listing images (fetched from Flatfox API image URLs) for visual evaluation of condition, view, and interior quality
+**Plans**: 4 plans
 
 Plans:
-- [ ] 04-01: TBD (extension content script + badges)
-- [ ] 04-02: TBD (website analysis page)
+- [ ] 04-01-PLAN.md — Extension infrastructure: types, libs, background auth, WXT config, popup rewrite with Supabase login
+- [ ] 04-02-PLAN.md — Next.js full analysis page with category breakdown, checklist, and score visualization
+- [ ] 04-03-PLAN.md — Content script UI: FAB, score badges, summary panels, loading states on Flatfox.ch
+- [ ] 04-04-PLAN.md — Backend image analysis: extract listing image URLs, add to Claude scoring prompt
 
 ## Parallelization Strategy
 
@@ -116,8 +119,9 @@ Phase 2: ┌─ Preferences form (frontend) ─┐──▶ Integration test
 Phase 3: Wave 1: Scoring engine internals (models, services, prompts, tests)
           Wave 2: HTTP endpoint + edge function + wiring
 
-Phase 4: ┌─ Extension UI (badges, FAB, summary) ─┐──▶ E2E test
-          └─ Analysis page (website) ─────────────┘
+Phase 4: Wave 1: ┌─ Extension infra + popup auth (04-01) ─┐
+                  ├─ Analysis page (04-02)                  ├──▶ Wave 2: Content script UI (04-03)
+                  └─ Backend image analysis (04-04) ────────┘
 ```
 
 ## Progress
@@ -131,4 +135,4 @@ Within phases, parallel tracks execute simultaneously where marked.
 | 1. Infrastructure & Auth | 0/3 | Planned | - |
 | 2. Preferences & Data Pipeline | 0/2 | Planned | - |
 | 3. LLM Scoring Pipeline | 2/2 | Complete   | 2026-03-10 |
-| 4. Extension UI & Analysis Page | 0/? | Not started | - |
+| 4. Extension UI & Analysis Page | 0/4 | Planned | - |
