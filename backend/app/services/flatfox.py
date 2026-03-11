@@ -108,9 +108,13 @@ class FlatfoxClient:
         seen: set[str] = set()
 
         def _add_url(url: str) -> None:
-            """Add a URL if not already seen."""
+            """Add a URL if not already seen. Ensures HTTPS."""
             url = url.strip()
-            if url and url not in seen:
+            if url.startswith("//"):
+                url = "https:" + url
+            elif url.startswith("http://"):
+                url = url.replace("http://", "https://", 1)
+            if url and url.startswith("https://") and url not in seen:
                 seen.add(url)
                 urls.append(url)
 
