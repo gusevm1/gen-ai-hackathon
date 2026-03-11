@@ -109,8 +109,10 @@ class TestClaudeScorer:
 
         assert isinstance(result, ScoreResponse)
         # Verify the user prompt was built without error (None fields handled)
-        user_msg = mock_client.messages.parse.call_args.kwargs["messages"][0]["content"]
-        assert "Not specified" in user_msg
+        # Content is now a list of content blocks (images + text)
+        content_blocks = mock_client.messages.parse.call_args.kwargs["messages"][0]["content"]
+        text_block = next(b for b in content_blocks if b["type"] == "text")
+        assert "Not specified" in text_block["text"]
 
     @pytest.mark.asyncio
     async def test_score_listing_french_language(

@@ -3,9 +3,10 @@
 Provides POST /score endpoint that orchestrates the full scoring flow:
 1. Fetch listing from Flatfox API
 2. Load user preferences from Supabase
-3. Score listing against preferences via Claude
-4. Save analysis results to Supabase
-5. Return ScoreResponse to caller
+3. Fetch listing images for visual analysis
+4. Score listing against preferences via Claude (with images when available)
+5. Save analysis results to Supabase
+6. Return ScoreResponse to caller
 
 Error handling returns appropriate HTTP status codes for each failure mode.
 """
@@ -58,16 +59,24 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
             detail=f"Preferences not found: {e}",
         )
 
-    # 3. Score with Claude
+    # 3. Fetch listing images for visual analysis (graceful -- empty list on failure)
+    image_urls = await flatfox_client.get_listing_image_urls(listing.slug, listing.pk)
+    logger.info(
+        "Found %d images for listing %d", len(image_urls), listing.pk
+    )
+
+    # 4. Score with Claude (includes images when available)
     try:
-        result = await claude_scorer.score_listing(listing, preferences)
+        result = await claude_scorer.score_listing(
+            listing, preferences, image_urls=image_urls
+        )
     except Exception as e:
         raise HTTPException(
             status_code=502,
             detail=f"Scoring failed: {e}",
         )
 
-    # 4. Save analysis to Supabase (fire and forget -- log error but don't fail)
+    # 5. Save analysis to Supabase (fire and forget -- log error but don't fail)
     try:
         await asyncio.to_thread(
             supabase_service.save_analysis,
@@ -78,5 +87,5 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
     except Exception:
         logger.exception("Failed to save analysis for user=%s listing=%s", request.user_id, request.listing_id)
 
-    # 5. Return the ScoreResponse
+    # 6. Return the ScoreResponse
     return result

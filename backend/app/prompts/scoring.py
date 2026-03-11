@@ -41,7 +41,14 @@ RULES:
 considering category weights.
 - Evaluate all 5 categories: location, price, size, features, condition.
 - For the checklist, evaluate each soft criterion and desired feature individually.
-- Assign a match_tier based on the overall score: excellent (80+), good (60-79), fair (40-59), poor (<40)."""
+- Assign a match_tier based on the overall score: excellent (80+), good (60-79), fair (40-59), poor (<40).
+
+IMAGE ANALYSIS:
+- When listing photos are provided, evaluate: interior condition and finish quality, natural light \
+and window views, kitchen and bathroom condition, general maintenance and upkeep.
+- Use observations from photos to enhance your condition and features category scores.
+- If no photos are provided, evaluate based on text data only and note that visual assessment \
+was not possible."""
 
 
 def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
@@ -140,3 +147,21 @@ Evaluate this listing against the user's preferences. Score each of the 5 catego
 (location, price, size, features, condition), evaluate the soft criteria and desired features \
 as a checklist, and provide an overall score with summary bullets highlighting key matches \
 and compromises."""
+
+
+def build_image_content_blocks(image_urls: list[str]) -> list[dict]:
+    """Build Claude Vision API image content blocks from a list of URLs.
+
+    Creates URL-based image content blocks for the Claude messages API.
+    Returns an empty list if no URLs are provided (backward compatible).
+
+    Args:
+        image_urls: List of image URLs to include in the prompt.
+
+    Returns:
+        List of image content block dicts for Claude messages API.
+    """
+    return [
+        {"type": "image", "source": {"type": "url", "url": url}}
+        for url in image_urls
+    ]

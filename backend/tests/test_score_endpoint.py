@@ -24,10 +24,11 @@ from tests.conftest import SAMPLE_LISTING_JSON, SAMPLE_PREFERENCES_JSON, SAMPLE_
 
 @pytest.fixture
 def mock_flatfox():
-    """Mock flatfox_client.get_listing to return a valid FlatfoxListing."""
+    """Mock flatfox_client.get_listing and get_listing_image_urls."""
     listing = FlatfoxListing.model_validate(SAMPLE_LISTING_JSON)
     with patch("app.routers.scoring.flatfox_client") as mock:
         mock.get_listing = AsyncMock(return_value=listing)
+        mock.get_listing_image_urls = AsyncMock(return_value=[])
         yield mock
 
 
