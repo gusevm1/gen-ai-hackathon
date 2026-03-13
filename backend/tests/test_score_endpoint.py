@@ -1,7 +1,7 @@
 """Tests for POST /score endpoint.
 
 Validates the scoring pipeline endpoint: accepts ScoreRequest,
-orchestrates Flatfox fetch -> Supabase preferences -> Claude scoring -> save analysis,
+orchestrates Flatfox fetch -> Claude scoring -> save analysis with profile_id,
 and returns ScoreResponse. All external services are mocked.
 """
 
@@ -34,9 +34,8 @@ def mock_flatfox():
 
 @pytest.fixture
 def mock_supabase():
-    """Mock supabase_service.get_preferences and save_analysis."""
+    """Mock supabase_service.save_analysis (get_preferences removed -- no longer called)."""
     with patch("app.routers.scoring.supabase_service") as mock:
-        mock.get_preferences = MagicMock(return_value=copy.deepcopy(SAMPLE_PREFERENCES_JSON))
         mock.save_analysis = MagicMock(return_value=None)
         yield mock
 
@@ -55,13 +54,18 @@ def mock_claude():
 
 @pytest.mark.asyncio
 async def test_score_success(mock_flatfox, mock_supabase, mock_claude):
-    """POST /score with valid listing_id + user_id returns 200 with ScoreResponse JSON."""
+    """POST /score with valid listing_id + user_id + profile_id + preferences returns 200."""
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         response = await ac.post(
             "/score",
-            json={"listing_id": 1788170, "user_id": "test-user-uuid"},
+            json={
+                "listing_id": 1788170,
+                "user_id": "test-user-uuid",
+                "profile_id": "test-profile-uuid",
+                "preferences": copy.deepcopy(SAMPLE_PREFERENCES_JSON),
+            },
         )
     assert response.status_code == 200
     data = response.json()
@@ -71,6 +75,65 @@ async def test_score_success(mock_flatfox, mock_supabase, mock_claude):
     assert len(data["categories"]) == 5
     assert len(data["checklist"]) == 4
     assert data["language"] == "de"
+
+
+@pytest.mark.asyncio
+async def test_score_saves_analysis(mock_flatfox, mock_supabase, mock_claude):
+    """POST /score saves analysis to Supabase with profile_id after successful scoring."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.post(
+            "/score",
+            json={
+                "listing_id": 1788170,
+                "user_id": "test-user-uuid",
+                "profile_id": "test-profile-uuid",
+                "preferences": copy.deepcopy(SAMPLE_PREFERENCES_JSON),
+            },
+        )
+    assert response.status_code == 200
+    # Verify save_analysis was called with 4 args including profile_id
+    mock_supabase.save_analysis.assert_called_once_with(
+        "test-user-uuid",
+        "test-profile-uuid",
+        "1788170",
+        mock_claude.score_listing.return_value.model_dump(),
+    )
+
+
+@pytest.mark.asyncio
+async def test_score_missing_profile(mock_flatfox, mock_supabase, mock_claude):
+    """POST /score without profile_id returns 422 validation error."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.post(
+            "/score",
+            json={
+                "listing_id": 1788170,
+                "user_id": "test-user-uuid",
+                "preferences": copy.deepcopy(SAMPLE_PREFERENCES_JSON),
+            },
+        )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_score_missing_preferences(mock_flatfox, mock_supabase, mock_claude):
+    """POST /score without preferences returns 422 validation error."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.post(
+            "/score",
+            json={
+                "listing_id": 1788170,
+                "user_id": "test-user-uuid",
+                "profile_id": "test-profile-uuid",
+            },
+        )
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio
@@ -89,28 +152,15 @@ async def test_score_listing_not_found(mock_supabase, mock_claude):
         ) as ac:
             response = await ac.post(
                 "/score",
-                json={"listing_id": 999999, "user_id": "test-user-uuid"},
+                json={
+                    "listing_id": 999999,
+                    "user_id": "test-user-uuid",
+                    "profile_id": "test-profile-uuid",
+                    "preferences": copy.deepcopy(SAMPLE_PREFERENCES_JSON),
+                },
             )
     assert response.status_code == 502
     assert "Could not fetch listing" in response.json()["detail"]
-
-
-@pytest.mark.asyncio
-async def test_score_preferences_not_found(mock_flatfox, mock_claude):
-    """POST /score when preferences not found returns 404 with error detail."""
-    with patch("app.routers.scoring.supabase_service") as mock_sb:
-        mock_sb.get_preferences = MagicMock(
-            side_effect=Exception("No rows returned")
-        )
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as ac:
-            response = await ac.post(
-                "/score",
-                json={"listing_id": 1788170, "user_id": "no-prefs-user"},
-            )
-    assert response.status_code == 404
-    assert "Preferences not found" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
@@ -125,29 +175,15 @@ async def test_score_claude_failure(mock_flatfox, mock_supabase):
         ) as ac:
             response = await ac.post(
                 "/score",
-                json={"listing_id": 1788170, "user_id": "test-user-uuid"},
+                json={
+                    "listing_id": 1788170,
+                    "user_id": "test-user-uuid",
+                    "profile_id": "test-profile-uuid",
+                    "preferences": copy.deepcopy(SAMPLE_PREFERENCES_JSON),
+                },
             )
     assert response.status_code == 502
     assert "Scoring failed" in response.json()["detail"]
-
-
-@pytest.mark.asyncio
-async def test_score_saves_analysis(mock_flatfox, mock_supabase, mock_claude):
-    """POST /score saves analysis to Supabase after successful scoring."""
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
-        response = await ac.post(
-            "/score",
-            json={"listing_id": 1788170, "user_id": "test-user-uuid"},
-        )
-    assert response.status_code == 200
-    # Verify save_analysis was called with correct args
-    mock_supabase.save_analysis.assert_called_once_with(
-        "test-user-uuid",
-        "1788170",
-        mock_claude.score_listing.return_value.model_dump(),
-    )
 
 
 @pytest.mark.asyncio
