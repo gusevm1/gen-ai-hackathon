@@ -1,11 +1,12 @@
 """System and user prompt templates for Claude property scoring.
 
 Covers: EVAL-04 (explicit "Not specified" for missing data),
-        EVAL-05 (response in user's preferred language).
+        EVAL-05 (response in user's preferred language),
+        PREF-14 (importance levels, dealbreaker semantics).
 """
 
 from app.models.listing import FlatfoxListing
-from app.models.preferences import IMPORTANCE_WEIGHT_MAP, UserPreferences
+from app.models.preferences import UserPreferences
 
 LANGUAGE_MAP = {
     "de": "German (Deutsch)",
@@ -38,7 +39,7 @@ RULES:
 (e.g., "CHF 2,100/mo vs your CHF 2,500 max -- within budget").
 - Summary bullets should be concise, actionable, and highlight the most important match/mismatch points.
 - The overall score should reflect how well this property matches the user's complete profile, \
-considering category weights.
+considering category importance levels.
 - Evaluate all 5 categories: location, price, size, features, condition.
 - For the checklist, evaluate each soft criterion and desired feature individually.
 - Assign a match_tier based on the overall score: excellent (80+), good (60-79), fair (40-59), poor (<40).
@@ -48,7 +49,88 @@ IMAGE ANALYSIS:
 and window views, kitchen and bathroom condition, general maintenance and upkeep.
 - Use observations from photos to enhance your condition and features category scores.
 - If no photos are provided, evaluate based on text data only and note that visual assessment \
-was not possible."""
+was not possible.
+
+DEALBREAKER RULES:
+- When the user marks a constraint as a DEALBREAKER (HARD LIMIT), and the listing violates that constraint, you MUST:
+  1. Score that category at 0.
+  2. Set the overall match_tier to "poor" regardless of other category scores.
+  3. Explicitly state the dealbreaker violation in summary_bullets.
+- A budget dealbreaker means the listing price EXCEEDS the user's maximum -- score price at 0.
+- A rooms dealbreaker means the listing has FEWER rooms than the user's minimum -- score size at 0.
+- A living space dealbreaker means the listing has LESS space than the user's minimum -- score size at 0.
+
+IMPORTANCE LEVELS:
+- Category importance is expressed as: CRITICAL, HIGH, MEDIUM, LOW.
+- Use these to weight your overall score calculation. CRITICAL categories matter most.
+- For the weight field in each category response, use: critical=90, high=70, medium=50, low=30."""
+
+
+def _fmt_range(min_val, max_val, prefix="", suffix="") -> str:
+    """Format a numeric range, handling None values.
+
+    Args:
+        min_val: Minimum value (or None).
+        max_val: Maximum value (or None).
+        prefix: Prefix before each number (e.g. "CHF ").
+        suffix: Suffix after each number (e.g. " sqm").
+
+    Returns:
+        Formatted range string like "CHF 1,500 - CHF 2,500".
+    """
+    min_str = f"{prefix}{min_val:,}{suffix}" if min_val is not None else "No min"
+    max_str = f"{prefix}{max_val:,}{suffix}" if max_val is not None else "No max"
+    return f"{min_str} - {max_str}"
+
+
+def _format_importance_section(prefs: UserPreferences) -> str:
+    """Format the category importance section for the user prompt.
+
+    Emits human-readable importance levels (CRITICAL/HIGH/MEDIUM/LOW)
+    instead of numeric weights.
+
+    Args:
+        prefs: User preferences with importance levels.
+
+    Returns:
+        Formatted importance section string.
+    """
+    imp = prefs.importance
+    return f"""**Category Importance:**
+- Location: {imp.location.value.upper()}
+- Price: {imp.price.value.upper()}
+- Size: {imp.size.value.upper()}
+- Features: {imp.features.value.upper()}
+- Condition: {imp.condition.value.upper()}"""
+
+
+def _format_dealbreakers_section(prefs: UserPreferences) -> str:
+    """Format the dealbreakers section for the user prompt.
+
+    Only includes dealbreaker lines where: (a) the toggle is True, and
+    (b) the corresponding threshold value exists.
+
+    Args:
+        prefs: User preferences with dealbreaker toggles.
+
+    Returns:
+        Formatted dealbreakers section, or empty string if none active.
+    """
+    lines = []
+
+    if prefs.budget_dealbreaker and prefs.budget_max is not None:
+        lines.append(f"- Budget max: CHF {prefs.budget_max:,} (HARD LIMIT)")
+
+    if prefs.rooms_dealbreaker and prefs.rooms_min is not None:
+        lines.append(f"- Rooms min: {prefs.rooms_min} (HARD LIMIT)")
+
+    if prefs.living_space_dealbreaker and prefs.living_space_min is not None:
+        lines.append(f"- Living space min: {prefs.living_space_min} sqm (HARD LIMIT)")
+
+    if not lines:
+        return ""
+
+    return "\n\n**Dealbreakers (score 0 if violated):**\n" + "\n".join(lines)
 
 
 def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
@@ -100,24 +182,38 @@ def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
         or "Untitled"
     )
 
+    # Format budget with inline dealbreaker label
+    budget_str = _fmt_range(prefs.budget_min, prefs.budget_max, prefix="CHF ")
+    if prefs.budget_dealbreaker:
+        budget_str += " (DEALBREAKER)"
+
+    # Format rooms with inline dealbreaker label
+    rooms_str = _fmt_range(prefs.rooms_min, prefs.rooms_max)
+    if prefs.rooms_dealbreaker:
+        rooms_str += " (DEALBREAKER)"
+
+    # Format living space with inline dealbreaker label
+    ls_str = _fmt_range(prefs.living_space_min, prefs.living_space_max, suffix=" sqm")
+    if prefs.living_space_dealbreaker:
+        ls_str += " (DEALBREAKER)"
+
+    # Build importance and dealbreakers sections
+    importance_section = _format_importance_section(prefs)
+    dealbreakers_section = _format_dealbreakers_section(prefs)
+
     return f"""## User Preferences
 
 **Location:** {prefs.location or "No preference"}
 **Type:** {prefs.offer_type.value} | {prefs.object_category.value}
-**Budget:** {f"CHF {prefs.budget_min:,}" if prefs.budget_min else "No min"} - \
-{f"CHF {prefs.budget_max:,}" if prefs.budget_max else "No max"}
-**Rooms:** {prefs.rooms_min or "No min"} - {prefs.rooms_max or "No max"}
-**Living space:** {f"{prefs.living_space_min} sqm" if prefs.living_space_min else "No min"} - \
-{f"{prefs.living_space_max} sqm" if prefs.living_space_max else "No max"}
-**Soft criteria:** {", ".join(prefs.soft_criteria) if prefs.soft_criteria else "None"}
+**Budget:** {budget_str}
+**Rooms:** {rooms_str}
+**Living space:** {ls_str}
+**Floor preference:** {prefs.floor_preference}
+**Availability:** {prefs.availability}
 **Desired features:** {", ".join(prefs.features) if prefs.features else "None"}
+**Soft criteria:** {", ".join(prefs.soft_criteria) if prefs.soft_criteria else "None"}
 
-**Category weights (0-100 importance):**
-- Location: {IMPORTANCE_WEIGHT_MAP[prefs.importance.location]}
-- Price: {IMPORTANCE_WEIGHT_MAP[prefs.importance.price]}
-- Size: {IMPORTANCE_WEIGHT_MAP[prefs.importance.size]}
-- Features: {IMPORTANCE_WEIGHT_MAP[prefs.importance.features]}
-- Condition: {IMPORTANCE_WEIGHT_MAP[prefs.importance.condition]}
+{importance_section}{dealbreakers_section}
 
 ---
 
