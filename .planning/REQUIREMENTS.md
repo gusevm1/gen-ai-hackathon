@@ -29,8 +29,8 @@ Requirements for Demo-Ready + Multi-Profile milestone. Each maps to roadmap phas
 
 ### UI Overhaul
 
-- [ ] **UI-01**: App has a collapsible sidebar layout with navigation
-- [ ] **UI-02**: Navbar shows user identity, active profile name, and profile switcher dropdown
+- [x] **UI-01**: App has a navigation layout (horizontal top navbar with navigation links)
+- [x] **UI-02**: Navbar shows user identity, active profile name, and profile switcher dropdown
 - [x] **UI-03**: Dark/light mode toggle with system preference detection
 - [ ] **UI-04**: Analysis page redesigned with professional layout for demo presentations
 - [x] **UI-05**: 21st.dev components integrated via research-first workflow (agent checks GitHub usage before integration)
@@ -118,8 +118,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROF-04 | Phase 9 | Pending |
 | PROF-05 | Phase 9 | Pending |
 | PROF-06 | Phase 9 | Pending |
-| UI-01 | Phase 8 | Pending |
-| UI-02 | Phase 8 | Pending |
+| UI-01 | Phase 8 | Complete |
+| UI-02 | Phase 8 | Complete |
 | UI-03 | Phase 8 | Complete |
 | UI-04 | Phase 9 | Pending |
 | UI-05 | Phase 8 | Complete |

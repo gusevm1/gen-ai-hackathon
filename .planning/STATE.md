@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-03-13T15:28:36Z"
-last_activity: 2026-03-13 -- Phase 8 Plan 01 complete (deps, ThemeProvider, route groups)
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-03-13T15:38:00Z"
+last_activity: 2026-03-13 -- Phase 8 complete (layout shell, navbar, theme toggle, user menu, 21st.dev)
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 4
-  completed_plans: 5
-  percent: 50
+  completed_plans: 6
+  percent: 67
 ---
 
 # Project State
@@ -25,17 +25,17 @@ See: .planning/PROJECT.md (updated 2026-03-13)
 
 ## Current Position
 
-Phase: 8 of 10 (UI Foundation) -- IN PROGRESS
-Plan: 1/2 complete
-Status: Plan 01 complete -- deps installed, ThemeProvider, route groups. Plan 02 remaining (sidebar, navbar).
-Last activity: 2026-03-13 -- Phase 8 Plan 01 complete (deps, ThemeProvider, route groups)
+Phase: 8 of 10 (UI Foundation) -- COMPLETE
+Plan: 2/2 complete
+Status: Phase 8 complete -- layout shell with top navbar, theme toggle, user menu, 21st.dev integration. Ready for Phase 9.
+Last activity: 2026-03-13 -- Phase 8 Plan 02 complete (navbar, theme toggle, user menu, placeholder pages, 21st.dev)
 
-Progress: [#####.....] 50% (3/6 v1.1 phases in progress)
+Progress: [######....] 67% (4/6 v1.1 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16 (12 v1.0 + 4 v1.1)
+- Total plans completed: 17 (12 v1.0 + 5 v1.1)
 - Average duration: --
 - Total execution time: --
 
@@ -47,14 +47,15 @@ Progress: [#####.....] 50% (3/6 v1.1 phases in progress)
 | 5 (DB Schema Migration) | 1 | ~25min | ~25min |
 | 6 (Backend + Edge Function) | 1 | ~60min | ~60min |
 | 7 (Preferences Schema) | 2/2 | ~7min | ~3.5min |
-| 8 (UI Foundation) | 1/2 | ~4min | ~4min |
+| 8 (UI Foundation) | 2/2 | ~9min | ~4.5min |
 
 **Recent Trend:**
-- Last plan: 08-01 (~4min, 2 tasks, 11 files)
+- Last plan: 08-02 (~5min, 4 tasks, 17 files)
 - Trend: accelerating
 
 *Updated after each plan completion*
 | Phase 08 P01 | 4min | 2 tasks | 11 files |
+| Phase 08 P02 | 5min | 4 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,10 @@ Recent decisions affecting current work:
 - [07-02]: Importance levels emitted as uppercase labels (CRITICAL/HIGH/MEDIUM/LOW) in Claude prompt
 - [08-01]: SidebarProvider defaultOpen={true} as static value (avoids Next.js 16 cookie blocking route error)
 - [08-01]: Importance level button group replaces numeric weight sliders (Phase 7 schema alignment)
+- [08-02]: Horizontal top navbar replaces sidebar layout (user preference after visual review)
+- [08-02]: Dashboard renamed to Preferences in navigation (reflects actual page content)
+- [08-02]: DropdownMenuLabel must be wrapped in DropdownMenuGroup (Base UI crash fix)
+- [08-02]: ShimmerButton from magicui (21st.dev) chosen after research-first evaluation (12k+ GitHub stars)
 
 ### Pending Todos
 
@@ -94,6 +99,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-13T15:28:36Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-03-13T15:38:00Z
+Stopped at: Completed 08-02-PLAN.md (Phase 8 complete)
 Resume file: None
