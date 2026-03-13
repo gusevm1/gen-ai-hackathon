@@ -7,6 +7,7 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -35,7 +36,9 @@ export function NavUser({ user }: { user: { email: string; name?: string } }) {
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="bottom" align="end" sideOffset={8}>
-        <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 size-4" />

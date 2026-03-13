@@ -2,10 +2,11 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, User, BarChart3, Settings } from "lucide-react"
+import { Home, User, BarChart3, Settings, ChevronsLeft, ChevronsRight } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -24,7 +25,7 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { state } = useSidebar()
+  const { state, toggleSidebar } = useSidebar()
   const isCollapsed = state === "collapsed"
 
   return (
@@ -66,6 +67,19 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={() => toggleSidebar()}
+            >
+              {isCollapsed ? <ChevronsRight /> : <ChevronsLeft />}
+              <span>Collapse</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   )
 }
