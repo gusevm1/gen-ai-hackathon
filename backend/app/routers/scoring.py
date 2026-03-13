@@ -2,10 +2,10 @@
 
 Provides POST /score endpoint that orchestrates the full scoring flow:
 1. Fetch listing from Flatfox API
-2. Load user preferences from Supabase
+2. Parse preferences from request (provided by edge function)
 3. Fetch listing images for visual analysis
 4. Score listing against preferences via Claude (with images when available)
-5. Save analysis results to Supabase
+5. Save analysis results to Supabase with profile_id
 6. Return ScoreResponse to caller
 
 Error handling returns appropriate HTTP status codes for each failure mode.
@@ -32,10 +32,9 @@ router = APIRouter(prefix="/score", tags=["scoring"])
 async def score_listing(request: ScoreRequest) -> ScoreResponse:
     """Score a Flatfox listing against user preferences.
 
-    Orchestrates the full pipeline: fetch listing, load preferences,
-    call Claude for scoring, save results, return response.
+    Orchestrates the full pipeline: fetch listing, parse preferences,
+    call Claude for scoring, save results with profile attribution, return response.
 
-    - 404: User preferences not found
     - 502: Listing fetch failed or Claude scoring failed
     """
     # 1. Fetch listing from Flatfox
@@ -47,17 +46,8 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
             detail=f"Could not fetch listing: {e}",
         )
 
-    # 2. Load user preferences from Supabase
-    try:
-        prefs_data = await asyncio.to_thread(
-            supabase_service.get_preferences, request.user_id
-        )
-        preferences = UserPreferences.model_validate(prefs_data)
-    except Exception as e:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Preferences not found: {e}",
-        )
+    # 2. Parse preferences from request (provided by edge function, no DB query)
+    preferences = UserPreferences.model_validate(request.preferences)
 
     # 3. Fetch listing images for visual analysis (graceful -- empty list on failure)
     image_urls = await flatfox_client.get_listing_image_urls(listing.slug, listing.pk)
@@ -76,11 +66,12 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
             detail=f"Scoring failed: {e}",
         )
 
-    # 5. Save analysis to Supabase (fire and forget -- log error but don't fail)
+    # 5. Save analysis to Supabase with profile_id (fire and forget -- log error but don't fail)
     try:
         await asyncio.to_thread(
             supabase_service.save_analysis,
             request.user_id,
+            request.profile_id,
             str(request.listing_id),
             result.model_dump(),
         )

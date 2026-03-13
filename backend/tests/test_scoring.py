@@ -150,41 +150,6 @@ class TestSupabaseService:
         yield
         supabase_service._client = None
 
-    def test_get_preferences_returns_dict(self):
-        """get_preferences returns dict that UserPreferences can validate."""
-        from app.services.supabase import supabase_service
-
-        # Build the mock chain: table().select().eq().single().execute()
-        mock_execute = MagicMock()
-        mock_execute.data = {"preferences": copy.deepcopy(SAMPLE_PREFERENCES_JSON)}
-
-        mock_single = MagicMock()
-        mock_single.execute.return_value = mock_execute
-
-        mock_eq = MagicMock()
-        mock_eq.single.return_value = mock_single
-
-        mock_select = MagicMock()
-        mock_select.eq.return_value = mock_eq
-
-        mock_table = MagicMock()
-        mock_table.select.return_value = mock_select
-
-        mock_client = MagicMock()
-        mock_client.table.return_value = mock_table
-
-        with patch.object(supabase_service, "get_client", return_value=mock_client):
-            result = supabase_service.get_preferences("test-user-uuid")
-
-        assert isinstance(result, dict)
-        assert result["offerType"] == "RENT"
-        assert result["budgetMin"] == 1500
-
-        # Verify the result can be validated by UserPreferences
-        prefs = UserPreferences.model_validate(result)
-        assert prefs.offer_type.value == "RENT"
-        assert prefs.budget_min == 1500
-
     def test_save_analysis_calls_upsert(self):
         """save_analysis calls upsert with correct structure."""
         from app.services.supabase import supabase_service
@@ -205,18 +170,22 @@ class TestSupabaseService:
         with patch.object(supabase_service, "get_client", return_value=mock_client):
             supabase_service.save_analysis(
                 user_id="test-user-uuid",
+                profile_id="test-profile-uuid",
                 listing_id="1788170",
                 score_data=score_data,
             )
 
-        # Verify upsert was called
+        # Verify upsert was called with on_conflict for 3-column constraint
         mock_client.table.assert_called_with("analyses")
         upsert_call = mock_table.upsert.call_args
         upsert_data = upsert_call[0][0]
+        upsert_kwargs = upsert_call[1]
 
         assert upsert_data["user_id"] == "test-user-uuid"
+        assert upsert_data["profile_id"] == "test-profile-uuid"
         assert upsert_data["listing_id"] == "1788170"
         assert upsert_data["score"] == 72
         assert upsert_data["breakdown"] == score_data
         assert isinstance(upsert_data["summary"], str)
         assert "CHF 1,790" in upsert_data["summary"]
+        assert upsert_kwargs["on_conflict"] == "user_id,listing_id,profile_id"

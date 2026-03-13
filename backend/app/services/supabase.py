@@ -1,7 +1,8 @@
-"""Supabase Python client for reading preferences and writing analysis results.
+"""Supabase Python client for writing analysis results.
 
 Uses service_role key to bypass RLS -- user identity is verified by the
-edge function layer upstream.
+edge function layer upstream. Preferences are passed from the edge function
+(no longer queried from DB).
 
 Follows the singleton pattern established by FlatfoxClient.
 """
@@ -33,37 +34,16 @@ class SupabaseService:
             )
         return self._client
 
-    def get_preferences(self, user_id: str) -> dict:
-        """Read user preferences from Supabase.
-
-        Args:
-            user_id: The Supabase user UUID.
-
-        Returns:
-            Preferences dict (camelCase keys as stored in JSONB).
-
-        Raises:
-            Exception: If no preferences found for user.
-        """
-        client = self.get_client()
-        result = (
-            client.table("user_preferences")
-            .select("preferences")
-            .eq("user_id", user_id)
-            .single()
-            .execute()
-        )
-        return result.data["preferences"]
-
     def save_analysis(
-        self, user_id: str, listing_id: str, score_data: dict
+        self, user_id: str, profile_id: str, listing_id: str, score_data: dict
     ) -> None:
         """Save or update an analysis result in Supabase.
 
-        Uses upsert with unique(user_id, listing_id) constraint.
+        Uses upsert with unique(user_id, listing_id, profile_id) constraint.
 
         Args:
             user_id: The Supabase user UUID.
+            profile_id: The active profile UUID.
             listing_id: The Flatfox listing PK as string.
             score_data: The full ScoreResponse dict (stored in breakdown JSONB).
         """
@@ -71,11 +51,13 @@ class SupabaseService:
         client.table("analyses").upsert(
             {
                 "user_id": user_id,
+                "profile_id": profile_id,
                 "listing_id": listing_id,
                 "score": score_data["overall_score"],
                 "breakdown": score_data,
                 "summary": "\n".join(score_data.get("summary_bullets", [])),
-            }
+            },
+            on_conflict="user_id,listing_id,profile_id",
         ).execute()
 
 

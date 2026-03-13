@@ -56,3 +56,5 @@ class ScoreRequest(BaseModel):
 
     listing_id: int = Field(description="Flatfox listing primary key")
     user_id: str = Field(description="Supabase user UUID")
+    profile_id: str = Field(description="Active profile UUID")
+    preferences: dict = Field(description="Profile preferences JSONB")
