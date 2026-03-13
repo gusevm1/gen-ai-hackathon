@@ -44,7 +44,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 1 plan
 
 Plans:
-- [ ] 05-01-PLAN.md -- Write and deploy profiles schema migration (profiles table, analyses FK, RLS, set_active_profile RPC)
+- [x] 05-01-PLAN.md -- Write and deploy profiles schema migration (profiles table, analyses FK, RLS, set_active_profile RPC)
 
 ### Phase 6: Backend + Edge Function Update
 **Goal**: The scoring pipeline reads preferences from the profiles table, resolves the active profile server-side, and stores profile attribution on every analysis
@@ -117,7 +117,7 @@ Note: Phase 8 depends on Phase 5 (not 7), so it could theoretically parallel 6-7
 | 2. Preferences & Data Pipeline | v1.0 | 2/2 | Complete | 2026-03-13 |
 | 3. LLM Scoring Pipeline | v1.0 | 2/2 | Complete | 2026-03-10 |
 | 4. Extension UI & Analysis Page | v1.0 | 5/5 | Complete | 2026-03-13 |
-| 5. DB Schema Migration | v1.1 | 0/1 | Planning complete | - |
+| 5. DB Schema Migration | v1.1 | 1/1 | Complete | 2026-03-13 |
 | 6. Backend + Edge Function Update | v1.1 | 0/? | Not started | - |
 | 7. Preferences Schema Unification | v1.1 | 0/? | Not started | - |
 | 8. UI Foundation | v1.1 | 0/? | Not started | - |

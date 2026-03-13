@@ -25,7 +25,7 @@ Requirements for Demo-Ready + Multi-Profile milestone. Each maps to roadmap phas
 - [ ] **PROF-04**: User can duplicate an existing profile
 - [ ] **PROF-05**: User can set a profile as active (drives extension scoring)
 - [ ] **PROF-06**: User can see all profiles as cards with name, key criteria summary, and active badge
-- [ ] **PROF-07**: DB schema supports multiple profiles per user with atomic active-profile switching via Postgres RPC
+- [x] **PROF-07**: DB schema supports multiple profiles per user with atomic active-profile switching via Postgres RPC
 
 ### UI Overhaul
 
@@ -111,7 +111,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROF-07 | Phase 5 | Pending |
+| PROF-07 | Phase 5 | Complete |
 | PROF-01 | Phase 9 | Pending |
 | PROF-02 | Phase 9 | Pending |
 | PROF-03 | Phase 9 | Pending |
