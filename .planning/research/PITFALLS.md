@@ -1,245 +1,245 @@
 # Pitfalls Research
 
-**Domain:** Chrome extension injecting UI into third-party real estate site with LLM API integration
-**Researched:** 2026-03-07
-**Confidence:** HIGH (MV3 pitfalls verified against official Chrome docs; Homegate structure verified against scraping sources; Claude rate limits verified against official Anthropic docs)
+**Domain:** UI overhaul + multi-profile migration on existing Next.js + Chrome extension app
+**Researched:** 2026-03-13
+**Confidence:** HIGH (schema and code verified directly from codebase; shadcn Base UI migration verified against official shadcn changelog and community discussion #9562; Tailwind v4 CSS variable conflicts verified against official shadcn docs and GitHub issue #4845)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Service Worker Global State Lost on Termination
+### Pitfall 1: analyses Table unique(user_id, listing_id) Constraint Breaks Under Multi-Profile
 
 **What goes wrong:**
-Storing in-flight scoring state, pending request queues, or intermediate results in global JavaScript variables in the background service worker. When Chrome terminates the worker after 30 seconds of inactivity (or 5 minutes for a single long task), all global state vanishes. Next time the worker wakes up, it has no memory of which listings were being scored, breaking the UX mid-flow.
+The `analyses` table has `unique(user_id, listing_id)`. In v1 this worked because one user had one profile and thus one set of preferences. With multi-profile, the same user scores the same listing under Profile A and Profile B — but the constraint prevents inserting a second row. The upsert in `supabase_service.save_analysis()` silently overwrites the first profile's analysis with the second. Users lose analysis history per profile. The B2B demo scenario — a property manager demoing Profile 1 vs Profile 2 scoring the same listing — fails silently.
 
 **Why it happens:**
-Developers migrating from MV2 background pages expect persistent background processes. MV3 service workers are not persistent — Chrome terminates them when idle and restarts them on demand. The termination is silent and unpredictable.
+The constraint was designed for a 1-user-1-profile world. The multi-profile add-on introduces a fundamentally different cardinality: the natural key becomes `(user_id, profile_id, listing_id)` not `(user_id, listing_id)`.
 
 **How to avoid:**
-- Never store scoring state in global variables. Use `chrome.storage.session` (10 MB, survives worker restarts within the same browser session) for in-flight state.
-- Use `chrome.storage.local` (10 MB, persists across sessions) for scored results and the user preference profile.
-- Implement a "pending queue" as a persisted list in `chrome.storage.session`, not an in-memory array.
-- Each fetch-score cycle should be stateless and resumable: check storage at start, write to storage on completion.
-- Register all event listeners at the **top level** of the service worker script, not inside async callbacks or conditionals.
+- Add a `profile_id` column to `analyses` before shipping multi-profile scoring.
+- Change the unique constraint from `unique(user_id, listing_id)` to `unique(user_id, profile_id, listing_id)`.
+- Migration: `ALTER TABLE analyses ADD COLUMN profile_id uuid REFERENCES search_profiles(id) ON DELETE CASCADE; DROP CONSTRAINT analyses_user_id_listing_id_key; ALTER TABLE analyses ADD CONSTRAINT analyses_user_profile_listing_key UNIQUE (user_id, profile_id, listing_id);`
+- Update `supabase_service.save_analysis()` to accept and write `profile_id`.
+- Update the edge function `score-proxy` to pass the active `profile_id` from the extension alongside `user_id`.
 
 **Warning signs:**
-- Scores appear for some listings then stop, with no error shown.
-- After the browser is idle for 30+ seconds, returning to Homegate shows badges stopped mid-way.
-- `console.log` in the service worker stops appearing in DevTools after idle.
+- Two profiles score the same listing; only one analysis appears in the analyses list.
+- `analyses` table row count stays low even after scoring many listings across profiles.
+- `upsert` response shows `count: 1` but the previous record belonged to a different profile.
 
-**Phase to address:** Phase 1 — Foundation & Content Script (architecture decision must be made before any state is stored).
+**Phase to address:** Multi-profile DB migration phase. Must be resolved before wiring up multi-profile scoring in the extension.
 
 ---
 
-### Pitfall 2: DOMParser Not Available in Service Worker — Homegate HTML Cannot Be Parsed Inline
+### Pitfall 2: shadcn Accordion `type="multiple"` / `defaultValue` API Mismatch After Base UI Migration
 
 **What goes wrong:**
-The background service worker fetches Homegate listing detail pages as HTML text, then tries to use `new DOMParser().parseFromString(html, 'text/html')` to extract listing data. This throws `ReferenceError: DOMParser is not defined` because service workers have no DOM access.
+The existing `preferences-form.tsx` uses `<Accordion multiple defaultValue={[0, 1, 2]}>` with numeric indices and `<AccordionItem>` without `value` props. This already diverges from the Radix API. When migrating components to Base UI via `npx shadcn add`, the Accordion component receives a new implementation. Base UI's Accordion changes: `defaultValue` must be an array of strings (not numbers), each `AccordionItem` must have an explicit `value` prop matching a string. Passing numeric indices will silently produce a collapsed accordion — no type error, no console error, just all sections collapsed by default on the preferences page.
 
 **Why it happens:**
-Developers assume the JS environment in a service worker is the same as a regular browser context. It is not — service workers run in a stripped-down worker context without DOM APIs.
+The Base UI Accordion wraps `@base-ui-components/react/accordion`. In Base UI, `defaultValue` is matched against `AccordionItem value` props as strings. The existing code uses `defaultValue={[0, 1, 2]}` with no `value` on `<AccordionItem>`, which worked accidentally or partially in the Radix implementation. After migration the match fails silently.
 
 **How to avoid:**
-Two options:
-
-Option A (preferred for this project): Skip HTML parsing entirely. Homegate embeds full listing data in `window.__INITIAL_STATE__` as a JSON blob in a `<script>` tag. Parse this with a regex or string extraction on the raw HTML text (no DOM required). Extract the JSON string, `JSON.parse()` it, then navigate the path `data["listing"]["listing"]` for detail pages.
-
-Option B (fallback): Use the Chrome Offscreen API with reason `DOM_PARSER`. Create an offscreen document, pass the HTML via `chrome.runtime.sendMessage`, parse it there, return the structured data. Limitation: only one offscreen document allowed at a time — cannot parallelize parsing.
+- When adding Accordion via Base UI, immediately audit all `<AccordionItem>` components and add explicit `value` string props.
+- Change `defaultValue={[0, 1, 2]}` to `defaultValue={["filters", "soft-criteria", "weights"]}`.
+- Confirm each `<AccordionItem value="filters">` matches the corresponding `defaultValue` entry.
+- Run a manual test: save the preferences page, verify all three sections are open by default.
 
 **Warning signs:**
-- `ReferenceError: DOMParser is not defined` in the service worker DevTools console.
-- All fetch-detail requests succeed (status 200) but scoring never starts.
+- Preferences page renders but all accordion sections are collapsed with no items expanded.
+- No console error — the mismatch is type-silent because both accept `string[]`.
+- Only reproducible after migrating the Accordion component, not before.
 
-**Phase to address:** Phase 2 — Background Fetch & Data Extraction. Validate approach by logging `window.__INITIAL_STATE__` content from a test fetch before building the parser.
+**Phase to address:** UI overhaul phase, immediately when the Accordion component is migrated.
 
 ---
 
-### Pitfall 3: Content Script Doesn't Re-Execute on SPA Navigation
+### Pitfall 3: Tailwind v4 + shadcn globals.css CSS Variable Double-Definition Corrupts Theme
 
 **What goes wrong:**
-Homegate is a JavaScript-rendered site with client-side routing. When a user navigates between search result pages, the URL changes but no full page reload occurs. The content script was injected once on initial page load and does not re-run. Badge injection logic only runs at script startup — so navigating to page 2 of results shows no badges at all.
+The existing `web/src/app/globals.css` was generated by `create-next-app` and may contain default CSS variables (`--background`, `--foreground`, `--font-geist-sans` etc.) in a `@layer base :root {}` block. When `npx shadcn init` runs on this project, it appends its own `:root {}` block with the same variable names but different format. In Tailwind v4, the shadcn init uses `@theme inline` with `hsl()` wrapping, while the existing globals.css uses bare HSL values. The result: two conflicting `:root` definitions. The last one wins in CSS cascade, causing shadcn color tokens to produce wrong colors. Buttons render as grey, backgrounds as white or black depending on cascade order.
 
 **Why it happens:**
-Chrome only runs content scripts on full page navigations. SPA route changes (`history.pushState`) are invisible to the content script injection mechanism.
+`create-next-app` scaffolds a specific globals.css format. `shadcn init` appends without checking for existing variables. Tailwind v4's `@theme inline` directive requires variables to already be wrapped in `hsl()`, but the old format stores bare space-separated HSL values like `0 0% 100%`.
 
 **How to avoid:**
-- Use `MutationObserver` watching `document.body` to detect when the listing grid is replaced (new listing cards appear, old ones removed).
-- Also listen for `chrome.webNavigation.onHistoryStateUpdated` in the service worker and send a message to the content script to re-scan the page.
-- Alternatively, use the WXT framework's built-in `matches` pattern with history state detection.
-- On each navigation detection, re-scan for listing card elements and inject badges only into cards that don't already have them (check for a data attribute like `data-homematch-scored`).
+- Before running `npx shadcn init`, back up and manually clear the existing CSS variables from `globals.css`.
+- After init, verify the final `globals.css` has exactly one `:root {}` block and one `@theme inline {}` block.
+- Check for shadcn GitHub issue #4845 pattern: search for any `--background`, `--foreground` defined outside the shadcn block.
+- Use browser DevTools computed styles to verify `--background` resolves to the correct color value post-setup.
+- The correct Tailwind v4 format is: `:root { --background: hsl(0 0% 100%); }` followed by `@theme inline { --color-background: var(--background); }`.
 
 **Warning signs:**
-- Badges show on page 1 of search results but not page 2 (without full reload).
-- Clicking on filter changes shows a spinner but no badges appear.
-- The `MutationObserver` callback fires many times per keystroke (over-broad observation scope).
+- All shadcn components render in wrong colors after init (grey buttons, white text on white background).
+- DevTools shows `--background` defined twice in the Styles panel.
+- `bg-background` utility applies the wrong color even though the variable exists.
 
-**Phase to address:** Phase 1 — Content Script Foundation. Must be handled before badge injection is built.
+**Phase to address:** First task in the UI overhaul phase before any component is added.
 
 ---
 
-### Pitfall 4: CSS Leakage — Extension Styles Break Homegate UI
+### Pitfall 4: Extension Scores Against Wrong Profile (Stale Active Profile ID in Content Script)
 
 **What goes wrong:**
-Injected badge `<div>` elements pick up Homegate's global CSS rules. Conversely, extension CSS inadvertently restyled Homegate's listing cards — font sizes, colors, or flex layout shifted visually across the whole page.
+The extension will store an `activeProfileId` in `browser.storage.local`. The content script reads this ID once at startup (or via a message from background). The user switches to a different active profile in the popup while the Flatfox tab is already open. The FAB is clicked. The content script sends the scoring request with the old stale `activeProfileId` because it cached it locally or because the popup-to-content message pathway doesn't update it. The listing is scored against the wrong profile's preferences with no visible error.
 
 **Why it happens:**
-Content script stylesheets are injected into the host page's DOM. Any CSS rule with sufficient specificity bleeds into the host page. Conversely, the host page's CSS cascades into injected elements (especially inherited properties like `font-family`, `font-size`, `line-height`, `color`).
+Content scripts have no persistent connection to the popup or background service worker. If `activeProfileId` is read once and stored in a local variable or React state inside the content script App, it will not update when the user changes profiles in the popup. This is the same stale-closure problem already solved for `openPanelRef` in the existing `App.tsx`.
 
 **How to avoid:**
-- Wrap every injected UI element in a **Shadow DOM** with `element.attachShadow({mode: 'open'})`.
-- Inject extension CSS inside the shadow root — styles are fully scoped.
-- Use `all: initial` on the shadow host's root element to reset inherited styles from the host page.
-- Use Tailwind CSS with a shadow-scoped prefix, or use `@layer` reset strategies inside shadow roots.
-- Never rely on `!important` overrides — they indicate a specificity war, not a solution.
+- Never cache `activeProfileId` in content script React state or local variables.
+- Read `activeProfileId` fresh from `browser.storage.local` at the moment the FAB is clicked, immediately before constructing the scoring request — not at component mount time.
+- Alternatively, listen for `browser.storage.onChanged` in the content script to invalidate any local copy when `activeProfileId` changes.
+- Pass `profile_id` explicitly in the scoring request body to the edge function, and have the edge function validate it belongs to the authenticated user.
+- Add a visible "scoring as: [Profile Name]" indicator on the FAB so users can see which profile is active before clicking.
 
 **Warning signs:**
-- Badge text renders in an unexpected font or size that varies between Homegate pages.
-- Homegate's listing card layout shifts when the extension is enabled.
-- Extension popup CSS uses class names that match Homegate's class names.
+- Scores appear but the reasoning bullets mention different priorities than the currently selected profile.
+- Switching profiles and scoring the same listing returns identical results.
+- `browser.storage.local.get('activeProfileId')` in DevTools shows a different value than what the content script used.
 
-**Phase to address:** Phase 1 — Content Script Foundation. Establish Shadow DOM pattern before building any UI components.
+**Phase to address:** Extension multi-profile phase. Must be addressed before the profile switcher in the popup is wired up.
 
 ---
 
-### Pitfall 5: Homegate Blocks Background Fetch Requests (Anti-Bot Headers)
+### Pitfall 5: Web App Schema vs. Extension Schema Divergence Breaks Backend Scoring
 
 **What goes wrong:**
-Fetching Homegate listing detail pages from the service worker (via `fetch()`) results in 403, 429, or CAPTCHA redirect responses. The server detects non-browser request signatures: missing `Cookie` headers, wrong `User-Agent`, missing `Accept-Language`, missing `Referer`. The extension receives HTML with no listing data or a bot-detection page.
+The web app uses `preferences.ts` with a flat, camelCase schema (5 weight categories, simple string arrays for soft criteria). The extension uses `profile.ts` with a richer schema (`schemaVersion: 1`, `SoftCriterionSchema` objects with `id/category/text/isCustom`, `weightInputs` vs `weights`, `radiusKm`, `yearBuiltMin/Max`, `floorPreference`, etc.). The backend Python `preferences.py` only models the web app's simpler schema. When multi-profile is added and the extension's richer profile is saved to Supabase and consumed by the backend, the backend silently ignores `radiusKm`, `yearBuiltMin`, `floorPreference`, `availability`, and the structured soft criteria objects (only reading strings). Claude never receives these richer preferences. The richer extension profile degrades to the web app's poorer prompt quality.
 
 **Why it happens:**
-Homegate uses server-side bot detection that checks request headers. Requests from the extension service worker have a bare-bones header profile (`chrome-extension://...` origin, no cookies for the current user session, no `Referer`). Even though the user is logged in on the browser, the service worker does not automatically send their session cookies.
+Two separate teams (web + extension) built schemas independently during the hackathon. The web schema was designed first; the extension schema was built independently with more fields. The backend only consumes the web schema. Nobody has defined the canonical "preferences to send to Claude" schema.
 
 **How to avoid:**
-- Use `fetch()` with `credentials: 'include'` to send the user's existing Homegate session cookies.
-- Include realistic headers: `Accept`, `Accept-Language: de-CH,de`, `Referer: https://www.homegate.ch/`, `User-Agent` (inherit from browser context or use a realistic value).
-- Respect Homegate's robots.txt and Terms of Service. This extension is used by the logged-in user fetching their own results — not mass scraping.
-- Implement per-listing request throttling (e.g., max 2-3 concurrent fetches, 300–500ms delay between requests) to avoid rate-limit bans.
-- Parse `window.__INITIAL_STATE__` JSON from the fetched HTML rather than the rendered DOM — this is more robust to anti-scraping HTML obfuscation.
+- Define a single canonical preferences schema that is the superset. Use this for all: web app storage, extension storage, backend Python models, Claude prompt construction.
+- Before v1.1 ships, audit the delta: extension has `radiusKm`, `yearBuiltMin/Max`, `floorPreference`, `availability`, `onlyWithPrice`, `SoftCriterionSchema` objects vs the web's simple string array. Decide which are included in v1.1.
+- Update `backend/app/models/preferences.py` to include all fields that should affect scoring.
+- Update the Claude prompt in `backend/app/prompts/scoring.py` to actually use new fields.
+- Write an integration test that POSTs a rich extension-format profile to the backend and asserts the response mentions the extra criteria.
 
 **Warning signs:**
-- Fetch responses return status 200 but HTML contains "Access Denied" or "Captcha" text.
-- `window.__INITIAL_STATE__` JSON is absent in fetched HTML but visible in the browser tab.
-- Rapidly scoring 20+ listings triggers a temporary IP/session block.
+- Preferences saved in extension wizard (with `radiusKm`, `floorPreference`) are not mentioned in any scoring bullet.
+- Backend logs show `UserPreferences.model_validate()` with `extra='ignore'` eating fields silently.
+- Extension profile has many fields; Claude reasoning mentions only location/price/size/features/condition.
 
-**Phase to address:** Phase 2 — Background Fetch & Data Extraction. Validate with a single test fetch before building batch logic.
+**Phase to address:** Preferences schema unification phase. Must precede Claude prompt improvements in either system.
 
 ---
 
-### Pitfall 6: Service Worker Terminates Mid-Batch Scoring (5-Minute Task Limit)
+### Pitfall 6: `user_preferences` Table unique(user_id) Constraint Blocks Multi-Profile Row Insert
 
 **What goes wrong:**
-A Homegate search result page shows 20 listings. The extension fetches all 20 detail pages and sends LLM calls sequentially. Each LLM call takes 3–8 seconds. Total wall time for 20 listings easily exceeds 5 minutes. Chrome terminates the service worker mid-way. Listings 12–20 never get scored. No error is shown to the user.
+The current `user_preferences` table has `unique` on `user_id` (enforced via `upsert onConflict: 'user_id'`). Multi-profile requires one row per profile, not per user. Adding a second profile for the same user triggers the unique constraint if the table is reused without migration. The upsert overwrites the first profile's preferences with the second profile's data — silently. All saved profiles collapse into one row.
 
 **Why it happens:**
-Chrome enforces a hard 5-minute limit on a single task. Additionally, each fetch has a 30-second timeout. LLM calls through a proxy can be slow. Chaining 20 sequential operations violates these constraints.
+The v1 table was designed with the assumption of one preferences row per user. The `upsert({ user_id: user.id, ... }, { onConflict: 'user_id' })` pattern actively enforces this. Multi-profile requires a new `search_profiles` table where the primary key is `profile_id` (not `user_id`).
 
 **How to avoid:**
-- Process listings in parallel batches (e.g., 3 concurrent fetch+score operations at a time).
-- Use the concurrency pattern: push all listing URLs into `chrome.storage.session` as a queue, then process with a self-scheduling pattern (each completed task picks up the next from the queue).
-- Each individual fetch+score operation must complete within 5 minutes — which is fine for a single listing, but never chain them into one long sequential async chain.
-- Use `chrome.alarms` to re-trigger the worker if it terminates with items still in queue.
-- Call a trivial Chrome API (e.g., `chrome.storage.local.get`) every 20 seconds inside long loops to reset the 30-second idle timer.
+- Create a new `search_profiles` table: `id uuid primary key, user_id uuid references auth.users not null, name text not null, preferences jsonb not null, is_active boolean default false, created_at/updated_at`.
+- Do not add multi-profile rows to the existing `user_preferences` table.
+- Keep `user_preferences` for legacy / fallback data during migration, then deprecate it once all users are on the new table.
+- Migration script: for each existing row in `user_preferences`, create one row in `search_profiles` with `is_active = true` and `name = 'Default'`.
+- Add RLS to `search_profiles`: `auth.uid() = user_id` for all operations. Add index on `user_id`.
 
 **Warning signs:**
-- Badges appear for the first N listings but stop suddenly with no visible error.
-- DevTools service worker shows "Stopped" status mid-scoring.
-- Queue counter in storage shows items remaining but no activity.
+- Second profile creation appears to succeed on the frontend but only one profile appears on refresh.
+- The upsert returns `count: 1` but the `preferences` JSONB shows data from the latest save, not separate entries.
+- `select * from user_preferences where user_id = X` returns one row regardless of how many profiles were "saved".
 
-**Phase to address:** Phase 2 — Background Fetch & Data Extraction. Design the batch processing architecture before writing any fetch code.
+**Phase to address:** DB schema migration phase. Must be the first task — everything else depends on this table structure being correct.
 
 ---
 
-### Pitfall 7: Claude API Rate Limits Hit During Burst Scoring (Tier 1)
+### Pitfall 7: Navbar in Next.js Root Layout Causes Waterfall Auth Fetch on Every Page
 
 **What goes wrong:**
-On a fresh API account (Tier 1), the rate limit is 50 RPM and 30,000 ITPM for Claude Sonnet 4.x. A search result page with 20 listings and ~1,500-token prompts per listing consumes 30,000 input tokens per batch — hitting the ITPM ceiling in the first minute. The proxy returns 429 errors. Scoring stalls. The user sees badges loading forever.
+A navbar component placed in `web/src/app/layout.tsx` needs to show user state (logged in/out, profile name). The natural instinct is to call `supabase.auth.getUser()` inside the navbar server component. This creates a sequential waterfall: the layout fetches the user first, then the page content renders. Every navigation incurs an extra round-trip to Supabase. At Vercel's edge, this adds 50–200ms per page load. During the demo, each page transition is visibly slow.
 
 **Why it happens:**
-Each listing evaluation sends: system prompt (~500 tokens) + user profile (~300 tokens) + listing data (~500–700 tokens) = ~1,300–1,500 tokens per call. 20 listings = ~28,000–30,000 tokens — nearly the full Tier 1 ITPM budget in one burst.
+Next.js App Router allows `async` server components, but sequential awaits in the component tree create waterfalls. If `layout.tsx` awaits auth AND `page.tsx` awaits data, they run sequentially unless both are triggered at the same time at the top level.
 
 **How to avoid:**
-- Use prompt caching on the Anthropic API: mark the system prompt and user profile as cacheable (`cache_control: {"type": "ephemeral"}`). Cached tokens don't count toward ITPM on most Claude models. This drops effective token consumption per listing from ~1,500 to ~700.
-- Add exponential backoff with jitter on 429 errors — retry after `retry-after` header duration.
-- Process listings sequentially at a controlled rate (1 every 2 seconds) rather than bursting all 20 at once.
-- For the hackathon demo, pre-score a fixed page to avoid live rate limit issues during the demo itself.
-- Upgrade API account to Tier 2 ($40 deposit) before the demo — Tier 2 allows 1,000 RPM and 450,000 ITPM.
+- Use React's `cache()` to deduplicate the `getUser()` call — if both layout and page call the same `createClient()` + `getUser()`, Next.js caches the result within a single render pass.
+- Create a `lib/supabase/cached.ts` that exports `getCachedUser()` using `cache(async () => createClient().then(c => c.auth.getUser()))`.
+- Middleware-based auth (already set up in v1 via Supabase SSR) refreshes tokens without blocking render — rely on this rather than re-fetching in every server component.
+- For the navbar, pass user data via layout → page props rather than fetching independently in every component.
 
 **Warning signs:**
-- Proxy logs show `429` responses from Anthropic after the first few listings score correctly.
-- First 2–3 badges appear, then all remaining listings show a loading indicator permanently.
-- `retry-after` header value is 60 seconds or more.
+- Network waterfall in Chrome DevTools shows sequential Supabase requests: layout fetch → page fetch.
+- Page load time increases proportionally with number of components that independently fetch auth.
+- The Vercel dashboard shows unusually high function duration for simple page loads.
 
-**Phase to address:** Phase 3 — LLM Scoring. Implement caching and rate limit handling before end-to-end testing.
+**Phase to address:** UI overhaul phase when the navbar layout is first introduced.
 
 ---
 
-### Pitfall 8: Message Channel Closed Before Async Response (Content Script ↔ Service Worker)
+### Pitfall 8: `asChild` Removal in Base UI Breaks Existing shadcn Button + Link Patterns
 
 **What goes wrong:**
-The content script sends a message to the service worker requesting a score for a listing. The service worker handler does async work (fetch + LLM call) and tries to call `sendResponse()` when done. Chrome has already closed the message channel. The content script never receives the score. No error is thrown.
+The existing web app uses shadcn's `Button` component with `asChild` to render a Next.js `Link` inside a button: `<Button asChild><Link href="/dashboard">Go</Link></Button>`. In Base UI-backed shadcn, the `asChild` prop is removed in favor of a `render` prop. Any usage of `asChild` in migrated components renders the `<Button>` with its children but the `asChild` prop is silently ignored — no error, but the `<Link>` component is wrapped in an `<a>` inside a `<button>` (invalid HTML), breaking keyboard navigation and accessibility.
 
 **Why it happens:**
-In Chrome's messaging API, if the listener function does not return `true` synchronously (or return a Promise in Chrome 146+), the message channel is closed immediately after the listener returns. Any attempt to call `sendResponse` asynchronously is silently dropped.
+Base UI uses a different slot/render model than Radix. Radix's `Slot` component (which powered `asChild`) is removed. The Base UI equivalent is `render={<Link href="..." />}` on the Button. The migration guide explicitly lists `asChild` as a globally required removal but it's easy to miss in components not directly modified.
 
 **How to avoid:**
-- Return `true` from `chrome.runtime.onMessage.addListener` to keep the channel open for async responses (works in all Chrome versions).
-- Or return a `Promise` from the listener (Chrome 146+, acceptable since this is a 2026 project).
-- Better pattern for this architecture: use a persistent connection via `chrome.runtime.connect()` for streaming score updates from the service worker back to the content script.
-- Or: use `chrome.storage.session` as a shared state bus — service worker writes scores, content script reads via `chrome.storage.onChanged` listener.
+- Search the entire `web/src/` directory for `asChild` before and after any shadcn component migration: `grep -r "asChild" web/src/`.
+- Replace all `<Button asChild><Link href="...">text</Link></Button>` with `<Button render={<Link href="..." />}>text</Button>` or use a plain `<Link className="...">` with button-style Tailwind classes.
+- Check the existing analysis page, preferences form, and any CTA buttons.
+- Add a pre-commit lint rule or comment in the component to flag `asChild` usage.
 
 **Warning signs:**
-- Scores are computed (visible in service worker DevTools console) but badges never update in the page.
-- `chrome.runtime.lastError: "The message port closed before a response was received."` in content script console.
+- TypeScript does not error on `asChild` if the component still accepts `HTMLButtonElement` props passthrough.
+- `<button>` contains `<a>` in the rendered HTML (HTML validation error visible in browser console).
+- Keyboard navigation skips the button or the link does not navigate on Enter key press.
 
-**Phase to address:** Phase 2 — Background Fetch & Data Extraction (messaging architecture must be established).
+**Phase to address:** UI overhaul phase. Run the `asChild` grep immediately after any Base UI component migration.
 
 ---
 
-### Pitfall 9: Extension Update Breaks Content Script in Open Tabs
+### Pitfall 9: Extension Popup Profile Switcher Triggers Re-Score Without User Confirmation
 
 **What goes wrong:**
-User updates the extension (or Chrome auto-updates it). Existing Homegate tabs still run the old content script. The new service worker starts. Old content scripts try to send messages to the new service worker — the extension IDs match, but the runtime context is stale. `chrome.runtime.sendMessage` throws `Extension context invalidated`. All badge injection stops. The user sees a broken state with no feedback.
+When a user switches the active profile in the extension popup while badges are already showing on the Flatfox page, the UI is misleading: existing badges still reflect the previous profile's scores. If the UI doesn't clearly show "scores are from Profile A, you switched to Profile B", users (especially the demo audience at Bellevia) will compare scores across profiles without realizing the inconsistency. In a B2B demo, this looks like a bug.
 
 **Why it happens:**
-Chrome injects content scripts only at page load time. Open tabs from before the update still run the previous script version. The runtime context between the old content script and the new service worker is incompatible.
+The content script's badge render loop runs once per FAB click. Changing `activeProfileId` in storage does not automatically re-trigger the content script to invalidate shown badges. There is no feedback loop between popup state change and content script badge invalidation.
 
 **How to avoid:**
-- Catch `Extension context invalidated` errors around all `chrome.runtime` calls in content scripts.
-- On catching this error, display a non-intrusive "Please reload the page to update HomeMatch" notice.
-- In the service worker `chrome.runtime.onInstalled` handler, call `chrome.scripting.executeScript` to re-inject content scripts into all existing Homegate tabs.
-- Use a version handshake: the content script sends its version on connection; if the service worker detects a mismatch, it triggers re-injection.
+- When `activeProfileId` changes, dispatch a custom event or send a runtime message to all content scripts: `browser.tabs.sendMessage(tabId, { action: 'profileChanged', profileId: newId })`.
+- On receiving `profileChanged`, either: (a) clear all existing badges and show a "Profile switched — click to re-score" indicator, or (b) visually mark existing badges as stale with a muted overlay.
+- Display the active profile name on the FAB tooltip: "Score with [Profile Name]".
+- In the demo, switch profiles BEFORE navigating to Flatfox — avoid showing stale badge state.
 
 **Warning signs:**
-- After extension update, badges disappear from tabs that were already open.
-- `Uncaught Error: Extension context invalidated` in the browser console on existing tabs.
-- Reloading the Homegate tab fixes the issue — confirming stale context, not a code bug.
+- Badges show "87 — Great Match" but the user knows the active profile has strict budget constraints that should produce a low score.
+- Popup shows "Profile B" but badges still reflect "Profile A" criteria.
 
-**Phase to address:** Phase 4 — Polish & Reliability. Handle gracefully before release.
+**Phase to address:** Extension multi-profile phase, specifically the profile switcher component.
 
 ---
 
-### Pitfall 10: Homegate DOM Selector Fragility (No Stable IDs)
+### Pitfall 10: Demo Auth State — Expired Session Causes Blank Scoring on Live Demo Day
 
 **What goes wrong:**
-The content script uses CSS selectors like `.listing-card-wrapper` or `[data-test-id="listing"]` to find listing cards and inject badges. Homegate deploys a frontend update that renames CSS classes or removes `data-test-id` attributes. All badge injection silently stops working in production. Users see no badges, no error.
+Supabase JWTs expire after 1 hour by default. If the demo session was authenticated in the morning and the pilot meeting starts in the afternoon, the JWT in `browser.storage.local` is expired. The FAB click triggers scoring. The edge function returns 401. The content script shows the generic error banner. The demo grinds to a halt in front of Vera Caflisch. No offline fallback exists.
 
 **Why it happens:**
-Third-party sites don't provide stability guarantees for their CSS class names or DOM structure. Homegate.ch uses server-side rendered React/Next.js with hashed or generated class names on some components that change with each build.
+The extension's Supabase client has `autoRefreshToken: true` but this only works while the extension background service worker is alive. After Chrome terminates the service worker (30s idle), the refresh cycle stops. On the next wake-up, the token is checked and refreshed, but there is a race window between wake and refresh.
 
 **How to avoid:**
-- Prefer structural selectors over class name selectors: target `<article>` tags, aria-roles, or known semantic HTML elements rather than generated class names.
-- Use `data-*` attributes where available as they tend to be more stable (often used in QA test suites internally).
-- Build a selector abstraction layer with multiple fallback strategies: try selector A, fall back to selector B, fall back to selector C, log a warning if all fail.
-- Validate selectors on page load and emit a warning badge ("HomeMatch: page structure changed — contact support") if no listing cards are found on a Homegate search URL.
-- Monitor selector health: log when the fallback selector is used.
+- On demo day: re-authenticate in the popup within 30 minutes of the demo start.
+- Add a session health check on FAB click: before fetching listings, call `browser.runtime.sendMessage({ action: 'getSession' })` and if `session.expires_at < now + 120s`, trigger a proactive token refresh via `supabase.auth.refreshSession()`.
+- Display the user email and a green "Connected" indicator in the popup — this is a visible health signal before the demo starts.
+- Pre-score a set of demo listings before the meeting (cache the scores visually via screenshots if needed) to have a fallback.
+- Test the demo flow end-to-end one hour before the meeting on the same machine that will be used.
 
 **Warning signs:**
-- Extension works in development but no badges appear after a Homegate frontend deploy.
-- `document.querySelectorAll(LISTING_SELECTOR).length === 0` on a page that visibly shows listings.
-- Homegate's class names contain hashes like `listing-card__title--a3f9b2`.
+- Popup shows user is "signed in" but badge scoring returns a spinner that never resolves.
+- Browser DevTools network tab shows 401 from the edge function.
+- The popup "Edit Preferences" link opens the web app but the web app also shows as logged out.
 
-**Phase to address:** Phase 1 — Content Script Foundation. Establish the selector abstraction pattern from day one.
+**Phase to address:** Demo preparation phase. Specifically, the session health-check should be added in the extension polish phase. End-to-end demo rehearsal must be scheduled 24 hours before the pilot meeting.
 
 ---
 
@@ -247,12 +247,12 @@ Third-party sites don't provide stability guarantees for their CSS class names o
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Hardcoding Homegate CSS selectors | Faster development | Breaks silently on Homegate frontend deploys | Only with a monitoring/alerting strategy in place |
-| Sending full raw HTML to LLM instead of extracted JSON | Avoids writing a parser | Wastes 5-10x tokens, hits rate limits faster, increases cost and latency | Never — extract from `window.__INITIAL_STATE__` always |
-| Sequential scoring (one listing at a time) | Simpler code | User waits 3-8 minutes for 20 listings to score | Acceptable in MVP if clearly communicated; replace with parallelism post-demo |
-| No retry logic on LLM proxy calls | Faster to write | Transient errors cause permanent badge failures | Never in production; always add exponential backoff |
-| Global variables in service worker for in-flight state | Feels natural, works in dev | State lost on worker restart, hard to reproduce bugs | Never — use `chrome.storage.session` from day one |
-| Calling LLM with the listing's raw description text (multilingual, unsanitized) | No preprocessing | LLM may hallucinate on garbage HTML artifacts left in the extracted text | Acceptable in hackathon if you strip obvious HTML tags; clean up for production |
+| Keeping `user_preferences` table alongside new `search_profiles` table | Avoids backend migration complexity | Two tables with diverging data; backend must know which to query | Only during migration window — remove `user_preferences` reads from backend once `search_profiles` is live |
+| Hardcoding `profile_id = null` for "default" profile in scoring requests | Ships multi-profile UI without backend changes | Analyses are not profile-scoped; multi-profile scoring collides at DB constraint | Never — always pass `profile_id` in scoring requests |
+| Skipping `asChild` → `render` replacement in non-migrated components | Faster UI migration | Invalid HTML `<button><a>` patterns; accessibility failures; hidden breakage | Never in production — fix all occurrences at migration time |
+| Reading `activeProfileId` from storage at mount, not at FAB click | Simpler React code | Stale profile used for scoring when user switches profiles | Never — always read fresh at action trigger time |
+| Not unifying web/extension preference schemas before B2B demo | Faster feature delivery | Rich extension criteria silently ignored by backend; worse scoring quality | Only if the missing fields (radiusKm, yearBuiltMin, floorPreference) are not shown in the demo scenario |
+| `is_active` boolean column on `search_profiles` table | Simple "which profile is active" query | Does not enforce single-active invariant at DB level; possible to have zero or many active profiles | Only for MVP — add a `CHECK` constraint or handle in application code strictly |
 
 ---
 
@@ -260,13 +260,14 @@ Third-party sites don't provide stability guarantees for their CSS class names o
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Homegate fetch from service worker | Fetching without `credentials: 'include'` — cookies not sent, gets 403 or empty page | Use `fetch(url, {credentials: 'include', headers: {Referer: 'https://www.homegate.ch/'}})` |
-| Homegate data extraction | Parsing rendered HTML DOM selectors | Parse `window.__INITIAL_STATE__` JSON from the raw HTML string — more reliable, no DOM needed |
-| Anthropic API (via proxy) | Sending full user profile and system prompt uncached on every request | Use `cache_control: {type: "ephemeral"}` on system prompt and profile — cached tokens don't count toward ITPM |
-| Anthropic API rate limits | Ignoring the `retry-after` response header on 429 | Read `retry-after` header and wait exactly that duration before retry, with exponential backoff |
-| Chrome storage | Using `chrome.storage.sync` for the user profile | `sync` has 100KB total quota; use `chrome.storage.local` for the profile (10 MB quota) |
-| Content script ↔ service worker messaging | Not returning `true` from `onMessage` listener | Return `true` for async responses, or use `chrome.storage.onChanged` as a shared event bus |
-| Shadow DOM and Tailwind CSS | Importing Tailwind CDN inside shadow root — blocked by extension CSP | Bundle Tailwind as a static CSS file in the extension package; import via shadow root `adoptedStyleSheets` |
+| shadcn Accordion (Base UI) | `defaultValue={[0, 1, 2]}` with no `value` on AccordionItem | `defaultValue={["filters","soft-criteria","weights"]}` with matching `value` prop on each `AccordionItem` |
+| shadcn Button (Base UI) | `<Button asChild><Link href="...">` | `<Button render={<Link href="..." />}>` or standalone `<Link>` with button classes |
+| Tailwind v4 + shadcn init | Running init without clearing existing CSS variables | Backup globals.css, clear default Next.js `--background`/`--foreground` variables, then run init |
+| Supabase `user_preferences` upsert | Calling `upsert onConflict: 'user_id'` for profile rows | New `search_profiles` table with profile-level upsert `onConflict: 'id'`; never reuse `user_preferences` for multi-profile |
+| Edge function `score-proxy` | Forwarding only `user_id` in body to backend | Extend body to include `profile_id`; backend queries `search_profiles` by `profile_id` not `user_preferences` by `user_id` |
+| Extension `browser.storage.local` activeProfileId | Caching in React state inside content script | Read fresh from storage at FAB click time; never store in component state |
+| Backend `UserPreferences` Pydantic model | Model only reflects web app schema; ignores extension fields | Unify to superset schema before routing extension profiles through the same scoring pipeline |
+| RLS on `search_profiles` | Forgetting to add index on `user_id` | `CREATE INDEX ON search_profiles(user_id)` — Supabase RLS `auth.uid() = user_id` without index causes full table scan per request |
 
 ---
 
@@ -274,11 +275,10 @@ Third-party sites don't provide stability guarantees for their CSS class names o
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Unbounded MutationObserver | CPU spikes on pages with live price tickers or animated elements; fan noise | Observe only `{childList: true, subtree: false}` on the listings container, not `document.body`; disconnect when processing | Immediately on heavy SPA pages |
-| Scoring all listings simultaneously | First 2-3 badges appear, remaining never resolve (rate limit hit) | Cap concurrent scoring at 3; use a self-draining queue in `chrome.storage.session` | On Tier 1 with 8+ listings per page |
-| Re-scoring already-scored listings on every DOM mutation | Exponential duplicate LLM calls; cost blow-up | Tag each listing DOM element with `data-homematch-scored="true"` before scoring; check before enqueueing | Immediately if MutationObserver fires on inject |
-| Fetching detail page for each listing card, including duplicate listings (same ID in carousel vs grid) | Duplicate LLM calls; unnecessary cost | Deduplicate by listing ID before fetching; maintain a scored ID set in `chrome.storage.session` | With paginated or carousel-style result pages |
-| Large listing HTML sent to proxy | Slow proxy response; high token count; risk of context limit | Extract only needed fields from `window.__INITIAL_STATE__` — strip image URLs, metadata noise, keep description + specs only | For listings with long marketing descriptions |
+| Navbar fetches `getUser()` independently of page | Every page load has extra 50–200ms Supabase latency; visible delay on demo transitions | Use `cache()` to deduplicate; rely on middleware token refresh not component-level auth fetch | Immediately on every page load |
+| Profile list fetched on every popup open | Popup has 100–300ms delay before profiles appear; jarring in demo context | Cache profile list in `browser.storage.local`; invalidate on create/delete/update; show cached data immediately | At 10+ profiles; also visible at 2-3 profiles over slow connections |
+| Scoring re-runs when profile switches mid-page | All FAB scoring restarts on every profile switch; Claude API costs multiply | Never auto-re-score on profile switch; only score on explicit FAB click; show stale badge indicator instead | Immediately if profile switch triggers auto-score |
+| `SELECT *` from `search_profiles` without user_id filter | Returns all profiles in table (bypasses RLS only with service role key) | Always filter by `user_id` in application queries; trust but verify RLS with test user isolation | At any scale — also a security bug not just a performance issue |
 
 ---
 
@@ -286,11 +286,10 @@ Third-party sites don't provide stability guarantees for their CSS class names o
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Storing Anthropic API key in extension (content script or service worker) | Key exposed to any webpage that inspects the extension's network requests or source; extractable from `.crx` | Never put API key in extension. Always route through the EC2 proxy. Proxy validates requests and holds the key in an environment variable. |
-| EC2 proxy with no authentication | Any user with the proxy URL can make unlimited Claude API calls billed to your account | Add a shared secret header that the extension sends; validate on the proxy. For hackathon: generate a UUID secret at extension install time stored in `chrome.storage.local`, sent with every proxy request. |
-| EC2 proxy open to all origins (`Access-Control-Allow-Origin: *`) | Any website can hit your proxy endpoint and consume your API credits | Restrict CORS to `chrome-extension://[your-extension-id]` or validate the `Origin` header server-side |
-| Injecting raw Homegate HTML into the page's DOM | Stored XSS: if Homegate listing descriptions contain script injection, and you `innerHTML` them, they execute in the page context | Always use Shadow DOM + `textContent` for user-visible content. Never `innerHTML` with untrusted content. |
-| Using `chrome.storage.sync` for the user profile | Sync data is transmitted to Google's servers and synced across devices — includes user's home address, budget, location preferences (PII) | Use `chrome.storage.local` — stays on the user's device. Document this choice in the privacy policy. |
+| Passing `profile_id` from extension to backend without verifying it belongs to the authenticated user | Attacker crafts a request with a different user's profile_id to score listings against their private preferences | Edge function validates that the `profile_id` row in `search_profiles` has `user_id` matching the authenticated JWT's `sub` claim before passing to backend |
+| `is_active` flag set by extension without server-side validation | Extension could POST any `profile_id` as "active" without owning it | Always verify profile ownership in edge function; `profile_id` is a foreign key on the authenticated user |
+| `search_profiles` table without RLS enabled | Any authenticated user can read other users' profiles | Enable RLS on `search_profiles` immediately; policy: `auth.uid() = user_id` for all operations |
+| 21st.dev third-party registry components copied without review | Registry components may include analytics trackers, phone-home endpoints, or rely on CDN-loaded scripts | Inspect every `npx shadcn add` component source before committing; 21st.dev ships source code directly into the project |
 
 ---
 
@@ -298,26 +297,26 @@ Third-party sites don't provide stability guarantees for their CSS class names o
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Showing a spinner on all badges simultaneously, then revealing all at once | Users think the extension is frozen for 30-60+ seconds; likely to disable it | Show each badge as soon as its score is ready (progressive disclosure); each listing badge is independent |
-| Showing a numeric percentage (e.g., "73%") with no context | Users question the number — "73% of what?" — and distrust it | Show label + number: "Good Match — 73%" with color coding; percentage alone is opaque |
-| Silent failure when scoring fails (LLM error, timeout) | User assumes the extension is broken for that listing permanently | Show a neutral "?" badge with "Unable to score" tooltip; never leave a listing in a permanent loading state |
-| Full-page onboarding that reloads Homegate after completion | User loses their search context; jarring | After onboarding completes, trigger badge injection on the current page state; don't force a reload |
-| Score breakdown panel covers the listing card permanently | Users can't read the listing title or price while the panel is open | Make breakdown expandable/collapsible; default to collapsed; anchor to the right side or render as a tooltip |
+| No profile name shown on FAB or badge | During demo, Vera cannot tell which profile scored a listing | Show active profile name on FAB tooltip or small label above it: "Scoring as: Vera – Budget Search" |
+| Profile creation asks for all preferences from scratch | Users abandon multi-profile because creating a second profile is as much work as the first | Offer "Clone from existing profile" as the default creation path; only ask for a name, clone preferences |
+| Web app preferences form has no profile selector | Users don't know which profile they are editing | Add a profile selector dropdown at the top of the preferences page before any other UI work |
+| Accordion sections all collapsed by default after Base UI migration | Users don't see their saved preferences without expanding each section manually | Verify `defaultValue` arrays open all sections; use "All expanded" as the default state for the preferences form |
+| Switching active profile in popup shows no confirmation | Score badges on Flatfox page silently become stale | Show a brief toast: "Profile switched. Existing scores are from [previous profile]." |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Badge injection:** Badges appear on page 1 — verify they also appear after SPA navigation to page 2 without full reload.
-- [ ] **Background fetch:** Fetch works in dev (where no bot detection triggers) — verify with `credentials: 'include'` and real session cookies on actual Homegate.ch.
-- [ ] **Service worker state:** Scoring works in one session — verify state survives if user leaves the tab idle for 60 seconds then returns (worker was terminated and restarted).
-- [ ] **Shadow DOM isolation:** Extension badges look correct in dev — verify Homegate's own CSS doesn't alter badge appearance (check `font-size`, `color`, `line-height` inheritance).
-- [ ] **Message passing:** Scores received in dev environment — verify `sendResponse` + `return true` pattern is used and scores still arrive under load.
-- [ ] **Rate limits:** 3 listings score correctly — verify 20 simultaneous listings complete without 429 errors; test with prompt caching enabled.
-- [ ] **Selector stability:** Selectors work on current Homegate — test on search results page, map view toggle, and after applying a filter (each can trigger DOM restructure).
-- [ ] **Extension update:** Works when extension is active — verify what happens when the extension is reloaded (DevTools "reload" button) with Homegate tab already open.
-- [ ] **Multilingual listings:** DE listing scores correctly — verify FR and IT listings also score and that the LLM response language matches the listing language.
-- [ ] **Proxy security:** Proxy accepts extension requests — verify the proxy rejects requests without the shared secret header.
+- [ ] **Multi-profile DB migration:** `search_profiles` table created — verify it also has index on `user_id`, RLS enabled with correct policy, and the old `user_preferences` data is migrated with `name = 'Default'`.
+- [ ] **Accordion defaults:** Preferences form renders with all three sections open — verify this on a fresh incognito page (no cached state) after any shadcn component migration.
+- [ ] **Tailwind v4 CSS variables:** shadcn init ran on the project — verify `--background` and `--foreground` are defined exactly once in globals.css, in `hsl()` format, and DevTools computed styles show the correct color.
+- [ ] **`asChild` removal:** Migrated to Base UI components — run `grep -r "asChild" web/src/` and verify zero results in migrated component files.
+- [ ] **analyses table constraint:** Multi-profile scoring is wired up — verify two profiles scoring the same listing produces two separate rows in `analyses` and not a silent overwrite.
+- [ ] **activeProfileId freshness:** FAB click handler reads `activeProfileId` from storage at click time — verify by switching profiles mid-page and confirming the next score uses the new profile.
+- [ ] **Edge function profile_id validation:** `score-proxy` receives `profile_id` — verify the function checks that `profile_id` belongs to `user_id` and returns 403 on mismatch.
+- [ ] **Demo session health:** Demo credentials active on demo day — test FAB scoring at T-30 minutes before the demo; re-authenticate if needed.
+- [ ] **Navbar auth deduplication:** Navbar added to layout — verify Chrome DevTools Network shows only one Supabase auth call per page load, not separate calls from layout and page.
+- [ ] **Backend preferences schema:** Extension profiles are sent to backend — verify backend response reasoning mentions at least one field unique to the extension schema (e.g., `radiusKm` or `floorPreference`).
 
 ---
 
@@ -325,14 +324,13 @@ Third-party sites don't provide stability guarantees for their CSS class names o
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Service worker state loss discovered late | MEDIUM | Refactor all global state to `chrome.storage.session`; test by forcibly stopping the worker in DevTools |
-| DOMParser failure discovered in production | LOW | Switch to regex-based `window.__INITIAL_STATE__` extraction; no architecture change needed |
-| Homegate DOM selectors break | LOW | Update selectors; ship new extension version; add fallback selector strategy |
-| Anti-bot blocking on background fetch | MEDIUM | Add `credentials: 'include'` + headers; implement request throttling; test with real session |
-| Rate limits saturated during demo | LOW | Switch from Sonnet to Haiku for demo; add prompt caching; upgrade to Tier 2 ($40) |
-| CSS bleed-through discovered in testing | LOW | Wrap in Shadow DOM; typically a 2–4 hour fix if not designed in from the start |
-| CSS bleed-through discovered post-ship | HIGH | Shadow DOM refactor requires rewriting all injected UI component mounting logic |
-| Proxy has no auth, gets abused | MEDIUM | Add secret-header validation on proxy; rotate the key and republish extension with new key |
+| analyses constraint collision discovered post-ship | HIGH | Drop and recreate constraint; backfill `profile_id` with a default profile ID; update all backend writes; user data partially scrambled |
+| Wrong profile scored, user data corrupted | MEDIUM | Add `profile_id` to analyses; delete analyses without `profile_id`; ask users to re-score |
+| Tailwind v4 CSS variable corruption discovered during demo | HIGH | Rollback globals.css to pre-migration version; hotfix deploy to Vercel (2–5 min for hobby plan) |
+| `asChild` breakage in production | LOW | Add `render` prop; 15-minute fix; deploy; no data impact |
+| Stale `activeProfileId` found during demo | LOW | Reload the Flatfox tab after switching profiles; add the "always read fresh" fix post-demo |
+| Expired session during demo | LOW | Re-authenticate in popup; scoring resumes; pre-test session health 30 min before demo |
+| Schema divergence (extension fields ignored by backend) | MEDIUM | Add missing Pydantic fields; redeploy EC2; re-score listings; existing analyses remain but are less accurate |
 
 ---
 
@@ -340,32 +338,31 @@ Third-party sites don't provide stability guarantees for their CSS class names o
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Service worker global state loss | Phase 1 — Foundation | Force-stop worker in DevTools; confirm queued items persist in `chrome.storage.session` |
-| DOMParser not available in service worker | Phase 2 — Background Fetch | Log raw HTML from a test fetch; confirm `window.__INITIAL_STATE__` JSON is extractable via string parsing |
-| Content script doesn't re-execute on SPA navigation | Phase 1 — Foundation | Navigate between search pages without reload; confirm badge injection fires |
-| CSS leakage (extension vs. host page) | Phase 1 — Foundation | Inspect Homegate card styles with extension active; toggle extension on/off and diff computed styles |
-| Homegate blocks background fetch (anti-bot) | Phase 2 — Background Fetch | Run fetch from service worker with DevTools network log; confirm 200 response and `__INITIAL_STATE__` present |
-| Service worker terminates mid-batch | Phase 2 — Background Fetch | Score 20+ listings; observe service worker lifecycle in DevTools; confirm all listings eventually score |
-| Claude API rate limits on burst scoring | Phase 3 — LLM Scoring | Run end-to-end score for 20 listings; check proxy logs for 429 errors; verify caching is applied |
-| Message channel closed before async response | Phase 2 — Background Fetch | Send a score request; add 10-second artificial delay in handler; confirm badge still updates |
-| Extension update breaks open tabs | Phase 4 — Polish & Reliability | Reload extension in DevTools with Homegate tab open; confirm graceful degradation or re-injection |
-| Homegate DOM selector fragility | Phase 1 — Foundation | Test selectors after toggling search filters (DOM re-renders); implement fallback strategy |
+| `analyses` unique constraint breaks multi-profile | DB schema migration phase | Score same listing with two profiles; verify two distinct rows in `analyses` table |
+| Accordion `defaultValue` type mismatch (Base UI) | UI overhaul phase — Accordion migration task | Open preferences page in incognito; verify all three sections expanded by default |
+| Tailwind v4 CSS variable double-definition | UI overhaul phase — first task before any component add | DevTools computed: `--background` resolves to correct color; single `:root` in globals.css |
+| Stale `activeProfileId` in content script | Extension multi-profile phase — profile switcher task | Switch profile in popup; click FAB; verify scoring request in DevTools contains updated profile_id |
+| Web/extension schema divergence | Preferences unification phase | Integration test: POST extension-format profile to `/score`; assert Claude response mentions radiusKm or floorPreference |
+| `user_preferences` unique(user_id) blocks multi-profile | DB schema migration phase — first task | Insert two profiles for same user; verify both rows exist; verify `user_preferences` is no longer used for scoring |
+| Navbar auth waterfall | UI overhaul phase — layout task | Chrome DevTools Network: count Supabase auth requests per page navigation; must be ≤1 |
+| `asChild` removal broken by Base UI | UI overhaul phase — immediately post migration | `grep -r "asChild" web/src/`; verify zero results; HTML validator shows no `<button><a>` nesting |
+| Profile switch shows stale badges | Extension multi-profile phase — profile switcher task | Switch profile while badges shown; verify stale indicator appears within 1s |
+| Demo session expiry | Demo preparation phase | Authenticate at T-60 min; verify scoring works at T-5 min; document reconnect procedure |
 
 ---
 
 ## Sources
 
-- [Chrome Extension Service Worker Lifecycle — Chrome for Developers](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle) — HIGH confidence
-- [Longer Extension Service Worker Lifetimes — Chrome Blog](https://developer.chrome.com/blog/longer-esw-lifetimes) — HIGH confidence
-- [Chrome Offscreen API — Chrome for Developers](https://developer.chrome.com/docs/extensions/reference/api/offscreen) — HIGH confidence
-- [Cross-origin Network Requests — Chrome Extensions Docs](https://developer.chrome.com/docs/extensions/develop/concepts/network-requests) — HIGH confidence
-- [Claude API Rate Limits — Anthropic Official Docs](https://platform.claude.com/docs/en/api/rate-limits) — HIGH confidence (Tier 1: 50 RPM, 30K ITPM for Sonnet 4.x; Tier 2: 1,000 RPM, 450K ITPM)
-- [How to Scrape Homegate.ch Real Estate Property Data — Scrapfly](https://scrapfly.io/blog/posts/how-to-scrape-homegate-ch-real-estate-property-data) — MEDIUM confidence (confirms `window.__INITIAL_STATE__` JSON structure)
-- [Solving CSS and JavaScript Interference in Chrome Extensions — DEV Community](https://dev.to/developertom01/solving-css-and-javascript-interference-in-chrome-extensions-a-guide-to-react-shadow-dom-and-best-practices-9l) — MEDIUM confidence
-- [Making Chrome Extension Smart By Supporting SPA Websites — Medium](https://medium.com/@softvar/making-chrome-extension-smart-by-supporting-spa-websites-1f76593637e8) — MEDIUM confidence
-- [Managing Concurrency in Chrome Extensions — Taboola Engineering](https://www.taboola.com/engineering/managing-concurrency-in-chrome-extensions/) — MEDIUM confidence
-- [Hackers Target Misconfigured LLM Proxies — BleepingComputer](https://www.bleepingcomputer.com/news/security/hackers-target-misconfigured-proxies-to-access-paid-llm-services/) — MEDIUM confidence (real-world attack pattern on unsecured LLM proxies)
+- [shadcn/ui January 2026 — Base UI Documentation](https://ui.shadcn.com/docs/changelog/2026-01-base-ui) — HIGH confidence (official announcement)
+- [shadcn/ui Migration Guide: Radix to Base UI — GitHub Discussion #9562](https://github.com/shadcn-ui/ui/discussions/9562) — HIGH confidence (community migration guide with specific API diffs)
+- [Base UI Accordion Issue: `asChild` removed — GitHub Issue #9049](https://github.com/shadcn-ui/ui/issues/9049) — HIGH confidence (confirms `asChild` removal in Base UI components)
+- [shadcn/ui Tailwind v4 Guide](https://ui.shadcn.com/docs/tailwind-v4) — HIGH confidence (official CSS variable migration format)
+- [shadcn/ui globals.css CSS variable conflict — GitHub Issue #4845](https://github.com/shadcn-ui/ui/issues/4845) — HIGH confidence (confirms `--background`/`--foreground` double-definition bug)
+- [Supabase RLS Performance and Best Practices](https://supabase.com/docs/guides/troubleshooting/rls-performance-and-best-practices-Z5Jjwv) — HIGH confidence (index on user_id for RLS performance)
+- [Managing Supabase Auth State Across Server and Client Components — DEV Community](https://dev.to/jais_mukesh/managing-supabase-auth-state-across-server-client-components-in-nextjs-2h2b) — MEDIUM confidence (cache() deduplication pattern)
+- [Designing Your Postgres Database for Multi-tenancy — Crunchy Data](https://www.crunchydata.com/blog/designing-your-postgres-database-for-multi-tenancy) — MEDIUM confidence (profile_id as natural key extension pattern)
+- Direct codebase analysis: `supabase/migrations/001_initial_schema.sql`, `web/src/lib/schemas/preferences.ts`, `extension/src/schema/profile.ts`, `backend/app/models/preferences.py`, `backend/app/services/supabase.py`, `supabase/functions/score-proxy/index.ts` — HIGH confidence (direct evidence of schema gaps and constraint structure)
 
 ---
-*Pitfalls research for: Chrome extension + LLM integration on third-party real estate site (Homegate.ch)*
-*Researched: 2026-03-07*
+*Pitfalls research for: HomeMatch v1.1 — UI overhaul, multi-profile support, preferences UX, demo preparation*
+*Researched: 2026-03-13*

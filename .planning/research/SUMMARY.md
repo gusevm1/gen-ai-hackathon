@@ -1,189 +1,198 @@
 # Project Research Summary
 
-**Project:** HomeMatch — AI-Powered Property Listing Scorer
-**Domain:** Chrome Extension (MV3) + LLM Proxy Backend + Third-Party Site Integration
-**Researched:** 2026-03-07
-**Confidence:** HIGH (stack verified via official docs and npm; architecture patterns verified against Chrome official docs)
+**Project:** HomeMatch v1.1 — UI Overhaul + Multi-Profile Support
+**Domain:** AI-powered property scoring SaaS with Chrome extension + multi-profile management
+**Researched:** 2026-03-13
+**Confidence:** HIGH
 
 ## Executive Summary
 
-HomeMatch is a Chrome Extension (Manifest V3) that injects AI-generated match score badges onto Homegate.ch property listing cards, evaluated against the user's stored preference profile. The stack is clear and well-defined: WXT 0.20 as the extension build framework, React 19 for UI components, Tailwind CSS v4 for Shadow DOM-compatible styling, a thin Hono 4.12 proxy on EC2 that holds the Anthropic API key and forwards requests to Claude, and `@wxt-dev/storage` for typed `chrome.storage.local` access. No database, no user accounts. The entire value chain is: user sets preferences once in an onboarding wizard, content script detects listing cards on Homegate, background service worker fetches each listing detail page and calls the LLM proxy, and scored badges appear progressively as results arrive.
+HomeMatch v1.1 is a focused enhancement milestone on top of a working v1.0 product: it adds a professional SaaS-grade UI (sidebar layout, navbar, dark mode), multi-profile management (users can maintain multiple named search profiles for different property searches), and a structural improvement to the preferences UX that directly improves Claude scoring quality. The stack is already in place — Next.js 16.1.6 + React 19 + shadcn v4 (Base UI primitives, not Radix) + Supabase + FastAPI + WXT Chrome extension. The only new library required is `next-themes` for dark mode. All other additions are shadcn component installs via CLI. The architecture is well-understood from direct codebase analysis.
 
-The recommended build order follows strict architectural dependencies: shared utilities first, then the onboarding/storage layer (no score can be generated without a profile), then the background service worker + data extraction from Homegate's `window.__INITIAL_STATE__` JSON, then LLM integration, then the badge injection UI. The backend can be developed in parallel with the extension and must be running before any end-to-end testing. The core loop — detect listing card, fetch detail, score against profile, render badge — must be solid before adding UX polish.
+The recommended implementation sequence is schema-first: the `profiles` table and `analyses.profile_id` FK must land before any UI or backend changes. The multi-profile feature touches 6 separate layers (DB, edge function, FastAPI backend, web app, Chrome extension popup), and each layer has a clear dependency on the one before. The scoring path's critical change is in the Supabase edge function `score-proxy`: it must resolve the active profile server-side (by `is_default = true`) rather than relying on any profile ID passed from the extension. This server-authoritative pattern eliminates an entire class of stale-state bugs.
 
-The primary risks are MV3 service worker lifecycle constraints (30s idle termination, 5-minute task limit), Homegate's anti-bot detection on background fetches, Claude API Tier 1 rate limits on burst scoring of 20+ listings, and content script CSS bleed-through on a third-party site. Every one of these has a well-understood mitigation: `chrome.storage.session` for in-flight state, `credentials: 'include'` with realistic headers for Homegate fetches, Anthropic prompt caching to reduce ITPM consumption, and Shadow DOM isolation with Tailwind CSS injected inside the shadow root. These mitigations must be designed in from Phase 1 — retroactive Shadow DOM refactors are expensive, and global state in service workers is a silent failure mode.
+The top risk is a known schema divergence between the web app and Chrome extension preference schemas: the extension has richer fields (`radiusKm`, `floorPreference`, `yearBuiltMin/Max`) that the backend silently ignores today. This must be resolved during the preferences form restructure phase before the B2B demo. Additional critical risks are the `analyses` unique constraint (must be changed before multi-profile scoring is wired up) and Base UI migration gotchas (`asChild` removal, Accordion `defaultValue` string type requirement). All have clear prevention steps documented in PITFALLS.md.
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
 
-The extension is built on WXT 0.20 (Vite-based, MV3-first, HMR for content scripts and popups), which ships ~43% smaller bundles than the alternative Plasmo and provides first-class abstractions for all extension contexts: popup, content scripts, background service worker, and unlisted full-page tabs (used for onboarding). Plasmo should be avoided — it appears to be in maintenance mode as of 2025 and uses the slower Parcel bundler. The backend is a single Hono route (`POST /score`) deployed on EC2 with Node.js 18+, using `@hono/node-server` and the official `@anthropic-ai/sdk`. The extension never holds the Anthropic API key; it lives in the EC2 environment only.
+The existing stack requires no structural changes for v1.1. The project already runs on Next.js 16.1.6 + React 19 + TypeScript 5 on Vercel, with shadcn v4 using the `base-nova` style (Base UI primitives via `@base-ui/react`), TailwindCSS v4, Supabase auth + PostgreSQL + edge functions, and a WXT MV3 Chrome extension. The only new dependency is `next-themes@0.4.6` for dark mode. All new UI components are added via `npx shadcn@latest add` which reads `components.json` and installs Base UI variants automatically.
 
-**Core technologies:**
-- **WXT 0.20**: Extension build framework — file-based entrypoints, auto-generated MV3 manifest, HMR, `createShadowRootUi()` for injected UI isolation
-- **React 19.2**: UI rendering for popup, onboarding wizard, and injected badge components — first-class WXT integration via `@wxt-dev/module-react`
-- **TypeScript 5.x**: Type safety across all extension contexts and backend — prevents content-script/service-worker messaging mismatches
-- **Tailwind CSS v4**: Utility-first styling with native `:host` selector support — inject generated CSS into shadow root, not the host page
-- **@wxt-dev/storage 1.2**: Typed, promise-based wrapper for `chrome.storage.local` — works across popup, content scripts, and service worker contexts
-- **Hono 4.12 + @hono/node-server**: Thin EC2 proxy — ultralight (14 KB), streaming helper for SSE passthrough, built-in CORS middleware
-- **@anthropic-ai/sdk 0.78**: Official Claude client on the backend only — streaming, prompt caching, SSE support
-- **Zod 4 / @zod/mini**: Schema validation — `@zod/mini` in extension bundle (1.9 KB gzipped), full `zod` on backend
+**Core new additions:**
+- `shadcn Sidebar component` — collapsible app layout with SidebarFooter profile switcher slot built in; `globals.css` already has all sidebar CSS variables pre-defined
+- `next-themes@0.4.6` — dark/light mode; canonical solution for Next.js; 2-line integration; handles SSR flash and `localStorage` persistence automatically
+- `search_profiles` Supabase table (pure SQL migration, no new packages) — replaces single-row `user_preferences` with a one-to-many profile table per user; partial unique index enforces single active profile at DB level
+- `shadcn DropdownMenu`, `Avatar`, `Tooltip`, `Dialog` — supporting components for profile switcher, user avatar, collapsed sidebar tooltips, and profile CRUD modals
+
+**What not to use:** Radix UI primitives for any new components (project is on Base UI), `framer-motion` (use `tw-animate-css` already installed), `react-query`/`swr` for profile fetching (server components + server actions are sufficient), CSS-in-JS, or storing `active_profile_id` on `auth.users` (locked auth schema).
 
 ### Expected Features
 
-The core value proposition rests on an unbroken dependency chain: Preference Profile → LLM Scoring → Score Badge Injection. Every other feature is either an enhancement to this chain or independent of it. The hackathon MVP must ship the full chain end-to-end; everything else is additive.
+**Must have for v1.1 demo (P1):**
+- Navbar with user identity anchor + profile switcher dropdown — professional baseline; without it the app looks like a hackathon prototype
+- Profiles list page with profile cards (name, key criteria summary, active badge) — landing page after login
+- Create / rename / delete profile with confirmation dialog — core CRUD; guarded delete required; disable delete on last remaining profile
+- Set active profile — drives extension scoring; must update `is_default` atomically in DB via Postgres RPC
+- Preferences form restructured with dealbreaker vs. weighted preference distinction — direct improvement to Claude prompt quality, not just UX polish
+- Profile summary preview (live natural-language summary on form) — builds user trust, catches errors before scoring
+- Extension popup shows active profile name — prevents scoring-against-wrong-profile during demo
 
-**Must have (table stakes) — all P1 for hackathon demo:**
-- **Score badge injection on listing cards** — core visible value; Shadow DOM required to survive Homegate CSS
-- **Onboarding wizard (full-page tab)** — no profile = no scores; must open on extension install
-- **Preference profile in chrome.storage.local** — foundation for everything; JSON blob, no server, no auth
-- **Background fetch of listing detail pages** — listing cards show minimal data; full description needed for LLM soft-criteria evaluation
-- **LLM evaluation via EC2 proxy** — Claude call with listing data + profile + weights + language instruction + "I don't know" instruction
-- **Loading skeleton badges** — appear immediately; prevents "is it broken?" confusion during 2-5s scoring latency
-- **Expandable score breakdown** — category scores + bullet reasoning + listing text citations; collapses on click
-- **Extension popup dashboard** — on/off toggle + profile summary + edit link
+**Should have (P2 — add post-demo when validated):**
+- Duplicate profile — high B2B value (property manager workflow), low implementation cost
+- Analysis history filtered by profile — needs `profile_id` FK on analyses, already planned in migration
+- Profile name as Claude prompt context — one-line prompt change; validate impact on scoring quality first
 
-**Should have (competitive differentiators):**
-- **Configurable importance weights per category** — sliders/chips in onboarding; feed directly into LLM prompt weighting
-- **Progressive badge reveal** — badges appear one-by-one as each LLM call resolves (not all-or-nothing)
-- **Multi-language analysis** — prompt-level instruction only, no extra engineering; Claude handles DE/FR/IT natively
-- **Score cache with TTL** — cache scores by listing ID + profile hash in `chrome.storage.local`; reduces LLM cost on repeat visits
-- **Transparent citation of listing text** — LLM prompt instructs quoting relevant phrases from description; builds trust
+**Defer to v2+:**
+- Team / organization model with RBAC — only if B2B pilot proves out with Bellevia Immobilien
+- Profile templates for common searches — broker onboarding feature
+- Score caching per profile and new listing notifications — requires server-side monitoring infrastructure
 
-**Defer (v2+):**
-- Image analysis of listing photos — token cost and latency are prohibitive in v1
-- Multiple user profiles (broker use case) — breaks "no accounts" constraint
-- Cross-portal support (ImmoScout24, Comparis) — architecture extensible but do not build for v1
-- Push notifications for new listings — requires server-side monitoring, not feasible in MV3
+**Key UX finding on preferences form:** Structured inputs materially outperform freeform text for LLM consumption. Replace weight sliders with a two-tier system (dealbreakers as hard constraints + importance chips Low/Medium/High/Critical for soft preferences). Keep sliders only for numeric ranges (budget, sqm). Pass importance to Claude as labeled levels (`"critical"`, `"must_not_exceed"`) not floating-point decimals.
 
 ### Architecture Approach
 
-The architecture is a message-passing hub pattern: content scripts never make external requests, all network activity flows through the background service worker, and `chrome.storage.local` is the sole persistence layer that survives service worker termination. The content script's responsibility is DOM observation and badge rendering only. The service worker handles Homegate detail page fetching (parsing `window.__INITIAL_STATE__` JSON via regex — not DOMParser, which is unavailable in service workers), batched LLM proxy calls, and score caching. The EC2 backend is a pure stateless proxy: validate request, call Claude, return JSON.
+The architecture is an incremental migration from single-profile to multi-profile across 6 layers with clear dependency ordering. The foundational insight is that active profile resolution belongs server-side: the edge function queries `profiles WHERE is_default = true` using the authenticated JWT, and never trusts a `profile_id` passed from the extension. The extension is a thin scoring client — it does not own profile state. A PostgreSQL partial unique index enforces the "at most one default profile per user" invariant at the DB level, eliminating application-layer enforcement bugs.
 
-**Major components:**
-1. **Content Script** — MutationObserver for listing card detection, Shadow DOM badge injection, SPA navigation re-scan via `webNavigation.onHistoryStateUpdated`
-2. **Background Service Worker** — all external fetches (Homegate + EC2 proxy), message broker for content script requests, `chrome.storage.local` read/write for profile + score cache
-3. **Popup** — on/off toggle, profile summary, links to onboarding; reads `chrome.storage.local` directly
-4. **Onboarding Page (unlisted full-page tab)** — multi-step preference wizard, writes profile JSON to `chrome.storage.local` on completion
-5. **EC2 Backend (Hono)** — single `POST /score` route, holds Anthropic API key, validates CORS to `chrome-extension://` origin only
-6. **chrome.storage.local** — persistent state layer: userProfile, weights, scoreCache, extensionEnabled flag
+**Major components and responsibilities:**
+1. `profiles` DB table — stores N profiles per user; `is_default` boolean + partial unique index enforces single active profile; preferences stored as JSONB (same shape as old `user_preferences`)
+2. `score-proxy` edge function (modified) — resolves active profile server-side; adds `profile_id` to backend proxy payload; returns 404 if no profile exists (guides new users)
+3. FastAPI `SupabaseService` (modified) — queries `profiles` table by `profile_id`; saves `profile_id` on each analysis row
+4. Web dashboard + `/profiles/[id]` routes (new) — full profile CRUD via Next.js server actions; reuses existing `PreferencesForm` wrapped in `ProfileForm` to avoid duplication
+5. Extension popup profile switcher (new) — fetches profiles from Supabase REST on every popup open (always-fresh, no stale cache); switches active profile via Supabase RPC for atomic default swap
+6. `analyses` table (modified) — adds `profile_id` FK; unique constraint changes from `(user_id, listing_id)` to `(user_id, listing_id, profile_id)` enabling per-profile analysis history
+
+**Build order is strictly:** DB migration → FastAPI backend → edge function → web dashboard → extension popup → analysis page polish. Each step is independently testable before the next.
 
 ### Critical Pitfalls
 
-1. **Service worker global state lost on termination** — Never store in-flight state in JS variables; use `chrome.storage.session` for ephemeral state, `chrome.storage.local` for persistent data. Register all event listeners at the top level of the service worker, not inside async callbacks.
+1. **`analyses` unique(user_id, listing_id) constraint silently overwrites analyses under multi-profile** — Add `profile_id` FK to `analyses`, change unique constraint to `(user_id, listing_id, profile_id)`, backfill existing rows with the default profile ID before dropping the old constraint. Must land in the DB migration phase, before multi-profile scoring is wired up.
 
-2. **DOMParser unavailable in service worker** — Do not attempt to parse fetched Homegate HTML with `new DOMParser()`. Instead, extract `window.__INITIAL_STATE__` JSON from the raw HTML string using a regex match — this pattern is confirmed to work on Homegate's HTML structure.
+2. **Web/extension preference schema divergence causes rich extension criteria to be silently ignored by backend** — The extension schema has `radiusKm`, `yearBuiltMin/Max`, `floorPreference`, `availability` that the backend `UserPreferences` Pydantic model drops silently. Define a canonical superset schema before v1.1 demo; update backend Python models and Claude prompt to use new fields.
 
-3. **CSS leakage between extension and host page** — Wrap every injected UI element in Shadow DOM (`attachShadow({mode: 'open'})`). Add `all: initial` on the shadow host root element. Inject Tailwind CSS inside the shadow root, never into the host page's `<head>`. This must be designed in from Phase 1; retroactive refactors cost 2-4x as much.
+3. **shadcn Base UI migration breaks existing patterns without errors** — Two specific silent failures: (a) `asChild` prop silently ignored — use `render` prop instead; grep `web/src/` for all `asChild` usage post-migration; (b) Accordion `defaultValue` must be a string array matching explicit `AccordionItem value` props — numeric indices silently collapse all sections.
 
-4. **Content script doesn't re-execute on SPA navigation** — Homegate is a SPA using `history.pushState`. Use `MutationObserver` scoped narrowly to the results list container (not `document.body`) plus `chrome.webNavigation.onHistoryStateUpdated` in the service worker to detect route changes and re-trigger badge injection.
+4. **Tailwind v4 + shadcn globals.css CSS variable double-definition corrupts theme colors** — `create-next-app` scaffolded CSS variables conflict with shadcn init's `@theme inline` block. Clear the default Next.js `--background`/`--foreground` variables from `globals.css` before running `npx shadcn init`. Verify exactly one `:root {}` block in the final file.
 
-5. **Claude API Tier 1 rate limits on burst scoring** — At Tier 1 (50 RPM, 30,000 ITPM), 20 listings at ~1,500 tokens each saturates the ITPM budget in one batch. Mitigation: use `cache_control: {"type": "ephemeral"}` on system prompt and user profile (cached tokens don't count toward ITPM); process listings in batches of 3 concurrent; add exponential backoff on 429 responses; upgrade to Tier 2 ($40 deposit) before demo.
+5. **Extension scores against stale active profile when `activeProfileId` is cached in component state** — Never store `activeProfileId` in React state or local variables in the content script. Read fresh from `browser.storage.local` at the moment the FAB is clicked. The edge function also resolves the active profile server-side, so scoring correctness is maintained even if popup display is stale.
+
+6. **Demo session expiry causes blank scoring at the pilot meeting** — Supabase JWT expires after 1 hour; background service worker refresh cycle stops after 30s idle. Add a session health check on FAB click; display a "Connected" indicator in popup; re-authenticate 30 minutes before the Bellevia Immobilien demo; pre-score demo listings as a fallback.
+
+---
 
 ## Implications for Roadmap
 
-Based on the dependency graph in FEATURES.md, the build order in ARCHITECTURE.md, and the phase-to-pitfall mapping in PITFALLS.md, the following phase structure is strongly recommended. The core loop must be shipped vertically before any horizontal feature additions.
+Based on research, the build has strict dependency ordering and naturally decomposes into 6 phases. The first three phases are infrastructure/schema with no visible UI changes and must complete before frontend work begins.
 
-### Phase 1: Foundation — Shared Utilities, Manifest, and Content Script Skeleton
+### Phase 1: DB Schema Migration
 
-**Rationale:** Everything else imports from shared utilities; the manifest defines all extension contexts; the content script's Shadow DOM and SPA navigation patterns must be established before badge UI is built. Getting these wrong requires expensive retroactive refactors (especially Shadow DOM). PITFALLS.md flags four critical pitfalls that must be mitigated at this phase: service worker state design, Shadow DOM isolation, SPA navigation handling, and DOM selector abstraction.
+**Rationale:** Nothing else works without the correct schema. The `user_preferences` unique(user_id) constraint and the `analyses` unique(user_id, listing_id) constraint are both actively hostile to multi-profile. Must land first, before any backend or frontend change. The `set_active_profile` Postgres RPC function should be written here too as a critical path item used by both the backend and extension.
+**Delivers:** `profiles` table with `is_default` partial unique index + RLS policies + `user_id` index; `analyses.profile_id` FK + updated unique constraint + backfill of existing analysis rows; data backfill from `user_preferences` to `profiles`; `set_active_profile()` Postgres RPC function for atomic default swap
+**Addresses:** Foundation for all P1 features
+**Avoids:** Pitfall 1 (analyses constraint overwrite), Pitfall 6 (user_preferences unique constraint blocks multi-profile row insert)
 
-**Delivers:** Working extension scaffold that detects Homegate listing cards, injects placeholder elements, and survives SPA navigation. No scoring yet — just the detection and injection skeleton.
+### Phase 2: Backend + Edge Function Update
 
-**Addresses features:** Score badge injection skeleton, on/off toggle foundation, extension popup shell.
+**Rationale:** Backend must accept `profile_id` before the edge function changes; edge function must resolve active profile from the new table before any UI drives scoring. These two layers deploy together as a tested unit.
+**Delivers:** FastAPI `SupabaseService` queries `profiles` table; edge function resolves active profile server-side (`is_default = true`); `profile_id` stored on analysis rows; scoring is end-to-end multi-profile-aware; `profile_id` ownership validated in edge function (security)
+**Addresses:** Set active profile (scoring side), analysis attribution to profile
+**Avoids:** Pitfall 4 (stale profile ID in scoring path), security mistake of unvalidated `profile_id` from extension
 
-**Must avoid:** CSS leakage (Shadow DOM from day one), global state in service worker (use `chrome.storage.session`/`local` from day one), unbounded MutationObserver (scope to results container), hardcoded fragile selectors (build selector abstraction with fallbacks).
+### Phase 3: Preferences Schema Unification
 
-### Phase 2: Data Layer — Onboarding Wizard, Profile Storage, and Background Fetch
+**Rationale:** The web/extension schema divergence means rich extension fields are silently dropped by the backend today. This must be resolved before the preferences form restructure because both form and Claude prompt must reference the same canonical schema. Failing to unify before the demo means all preferences UX improvements have no effect on actual scoring quality.
+**Delivers:** Canonical superset preferences schema; updated Pydantic models in FastAPI; Claude prompt updated to use `radiusKm`, `floorPreference`, `yearBuiltMin/Max`; structured importance levels (`critical`/`high`/`medium`/`low`) replace floating-point weight decimals in Claude prompt
+**Addresses:** Better Claude prompt quality (prerequisite for dealbreaker vs. preference distinction)
+**Avoids:** Pitfall 5 (web/extension schema divergence)
 
-**Rationale:** The LLM scorer needs a user profile and listing data. Onboarding must come before scoring because the content script requires a valid profile to send with score requests. Background fetch is the data acquisition layer — and it has the second-highest pitfall density (DOMParser unavailability, anti-bot headers, service worker mid-batch termination, message channel closure). These must be proven working before wiring up the LLM.
+### Phase 4: UI Foundation (Layout + Dark Mode)
 
-**Delivers:** Full onboarding wizard that writes a profile to `chrome.storage.local`. Working service worker that fetches Homegate detail pages and extracts listing data from `window.__INITIAL_STATE__`. End-to-end message passing from content script to service worker and back (with `return true` async pattern).
+**Rationale:** Before building profile-specific UI, the app needs its permanent layout shell. The shadcn Sidebar + next-themes integration happens once and affects all subsequent pages. Base UI migration gotchas (asChild, Accordion, CSS variables) must be resolved here before more components are added on top.
+**Delivers:** shadcn Sidebar layout with `SidebarProvider`; navbar with user identity + active profile display + dark/light toggle; `next-themes` ThemeProvider in root layout; all Base UI migration fixes (asChild grep-and-fix, Accordion defaultValue strings, globals.css cleanup); `cache()` deduplication for navbar auth fetch
+**Uses:** `shadcn sidebar`, `shadcn dropdown-menu`, `shadcn avatar`, `shadcn tooltip`, `next-themes@0.4.6`, chosen 21st.dev navbar component
+**Avoids:** Pitfall 3 (CSS variable double-definition), Pitfall 7 (navbar auth waterfall), Pitfall 8 (asChild removal)
 
-**Uses:** `@wxt-dev/storage`, WXT unlisted page entrypoint for onboarding, `chrome.storage.local` schema, `fetch()` with `credentials: 'include'` and realistic request headers.
+### Phase 5: Web Profile Management
 
-**Must avoid:** DOMParser in service worker (use regex JSON extraction), missing `return true` in `onMessage` listener, fetching Homegate without session cookies (gets 403), sequential batch processing that exceeds 5-minute worker limit.
+**Rationale:** Primary profile management surface for the demo. Replaces the single-form `/dashboard` with a profile list + per-profile edit routes. Depends on Phase 4 layout shell being in place and Phase 3 preferences schema being canonical.
+**Delivers:** `/dashboard` rewritten as profile list with profile cards; `/profiles/[id]` edit route reusing existing `PreferencesForm` wrapped in `ProfileForm`; create/rename/delete/set-active profile via server actions; preferences form restructured with dealbreakers + category labels + importance chips + profile summary preview; empty state for new users
+**Addresses:** All P1 must-have features for web app; P2 duplicate profile
+**Avoids:** Anti-pattern of duplicating `PreferencesForm`; Pitfall 2 (Accordion defaultValue after migration); freeform text as primary input (use structured form with optional notes supplement)
 
-### Phase 3: LLM Integration — EC2 Backend Proxy and Scoring Pipeline
+### Phase 6: Extension Profile Switcher + Demo Preparation
 
-**Rationale:** The backend can be developed in parallel with Phase 2, but end-to-end integration only makes sense once Phase 2's data extraction is working. This phase wires listing data into Claude and renders real scores in badges. Prompt design is the key risk — the quality of the system prompt and weight-to-prompt translation directly determines product quality.
-
-**Delivers:** Working EC2 Hono backend at `POST /score`. Full scoring pipeline: content script detects cards, service worker fetches detail page + calls proxy + receives score, content script renders real score badges. Prompt includes: listing data, user profile + weights, language instruction, "I don't know" instruction, listing text citation instruction.
-
-**Implements:** EC2 backend (Hono + `@anthropic-ai/sdk`), CORS restricted to `chrome-extension://` origin, shared secret header for proxy auth, Anthropic prompt caching on system prompt and user profile, exponential backoff on 429 errors.
-
-**Must avoid:** API key in extension bundle (never), open CORS policy on proxy (never), sending raw HTML to LLM instead of extracted JSON (wastes 5-10x tokens), scoring all listings simultaneously (triggers Tier 1 rate limits).
-
-### Phase 4: UX Polish and Reliability
-
-**Rationale:** After the core loop works end-to-end, invest in the UX features that determine whether users keep the extension after the first session — progressive badge reveal, expandable score breakdown, loading skeleton badges, and graceful failure states. Also address extension update context invalidation here.
-
-**Delivers:** Skeleton badges on page load, progressive badge reveal as scores arrive, expandable inline breakdown panel with category scores + bullet reasoning + listing text citations, neutral "unable to score" state on failures, score cache with TTL to reduce repeat-visit latency and cost, graceful handling of extension updates with open tabs.
-
-**Addresses features:** Progressive badge reveal, expandable score breakdown, score cache with TTL, transparent listing text citations, honest "I don't know" rendering.
-
-**Must avoid:** All-or-nothing badge reveal (users think extension is frozen), silent scoring failure (show "?" badge with tooltip), inline expansion covering the listing card permanently (make it collapsible).
+**Rationale:** Extension changes are the final integration layer. All server-side profile state must be stable before adding the popup UI. Demo preparation (session health check, pre-scoring, rehearsal) is bundled here as a hard dependency on demo day.
+**Delivers:** Extension popup shows active profile name on open; profile switcher dropdown in popup; `getProfiles` + `setActiveProfile` message handlers in background service worker (using Supabase RPC for atomic swap); stale badge indicator when profile switches mid-session; session health check on FAB click; "Connected" indicator in popup; active profile name on FAB tooltip
+**Addresses:** Extension popup active profile display (P1); stale badge UX guard
+**Avoids:** Pitfall 4 (stale `activeProfileId` in content script — read fresh at FAB click time), Pitfall 9 (profile switch shows stale badges without visual warning), Pitfall 10 (expired session on demo day)
 
 ### Phase Ordering Rationale
 
-- Shared utilities and manifest first — everything else imports from them; no entrypoint can be built without the manifest defined
-- Shadow DOM and SPA detection in Phase 1 — retroactive Shadow DOM refactors are the highest-recovery-cost pitfall identified; must be foundational
-- Onboarding and storage before scoring — the scoring pipeline is meaningless without a profile; no "score all listings" test is possible until profile data exists
-- Background fetch before LLM integration — data extraction from Homegate's `__INITIAL_STATE__` must be proven before wiring it to Claude prompts; a broken parser produces hallucinated scores with no obvious error
-- Backend parallel to extension phases 1-2 — EC2 proxy has no dependency on extension phases; teams can work in parallel; integration testing happens in Phase 3
-- UX polish last — the core loop must work before investing in progressive disclosure and cache; polish on a broken pipeline is wasted effort
+- DB migration is strictly first because the unique constraints actively corrupt multi-profile data if not changed before any profile rows are written
+- Backend before edge function: edge function starts forwarding `profile_id` downstream, which the backend must already accept
+- Schema unification before preferences form restructure: form and Claude prompt changes must reference the same field names or the UX improvements have no effect on scoring
+- Layout shell before profile pages: profile pages inherit the sidebar layout; building them without the shell creates throwaway work
+- Web before extension: web is the authoritative profile management surface; extension popup is a secondary display and quick-switch UI
+- Demo prep bundled with extension phase: session health check and stale-badge guard are both extension-layer concerns; rehearsal gates the entire milestone
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 2 (Background Fetch):** Homegate's `window.__INITIAL_STATE__` JSON path structure for listing detail pages needs validation against a live Homegate fetch before writing the parser. The confirmed path is `data["listing"]["listing"]` but should be verified on current Homegate HTML.
-- **Phase 3 (LLM Integration):** Prompt engineering for weighted multi-criteria evaluation with uncertainty signaling needs iteration. No prior research covers the specific prompt structure for Swiss property scoring — this requires empirical testing. Prompt caching implementation on `@anthropic-ai/sdk 0.78` should be verified against current SDK docs.
-- **Phase 4 (UX Polish):** Score cache invalidation on profile change (profile hash key strategy) is well-understood but should be specified explicitly before implementation.
+Phases needing deeper investigation during planning:
+- **Phase 3 (Preferences Schema Unification):** The exact delta between web and extension schemas requires a line-by-line audit of `web/src/lib/schemas/preferences.ts` vs `extension/src/schema/profile.ts` vs `backend/app/models/preferences.py`. The Claude prompt changes require empirical testing to verify measurable scoring improvement. May surface additional fields the current form does not expose at all.
+- **Phase 6 (Extension Profile Switcher):** The stale-badge notification pathway (background → content script) has edge cases around tab enumeration (which tabs to notify) and cross-tab consistency. The `setActiveProfile` RPC call error-handling path needs explicit specification.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (Foundation):** WXT Shadow DOM setup, MutationObserver scoping, and `chrome.webNavigation.onHistoryStateUpdated` patterns are all well-documented in official Chrome and WXT docs. No novel patterns required.
-- **Phase 2 (Onboarding/Storage):** WXT unlisted page entrypoints and `@wxt-dev/storage` usage are standard patterns with official documentation. Multi-step wizard state management is well-understood React local state.
+Phases with well-documented patterns (skip research-phase):
+- **Phase 1 (DB Migration):** SQL migration fully specified in ARCHITECTURE.md and STACK.md with exact DDL. Standard Supabase migration workflow with `supabase migration new`.
+- **Phase 2 (Backend + Edge Function):** FastAPI Pydantic model changes are minor additions. Edge function pattern is established in existing `score-proxy`. Fully specified in ARCHITECTURE.md.
+- **Phase 4 (UI Foundation):** shadcn sidebar + next-themes is a well-documented standard pattern. Installation commands and integration code are fully specified in STACK.md. asChild grep-and-fix is mechanical.
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | WXT, Hono, React 19, Tailwind v4, `@anthropic-ai/sdk` all verified against official docs and current npm versions. Version compatibility table in STACK.md is reliable. |
-| Features | MEDIUM | Core loop (badge injection, onboarding, LLM scoring) is well-validated. No direct competitor applies AI match scoring with weighted preferences to Swiss property portals — novel combination means some UX patterns are inferred from analogues (JobRight, Area360) rather than direct precedent. |
-| Architecture | HIGH | All MV3 patterns verified against official Chrome documentation. Message-passing hub, Shadow DOM isolation, SPA navigation handling, and `chrome.storage.local` as the state persistence layer are the canonical MV3 approaches. Homegate `__INITIAL_STATE__` JSON structure verified via third-party scraping source (MEDIUM confidence on the exact JSON path). |
-| Pitfalls | HIGH | All critical pitfalls verified against official Chrome docs (service worker lifecycle, messaging API, host_permissions). Anthropic rate limits verified against official Anthropic API docs. Homegate anti-bot behavior verified via scraping community sources (MEDIUM confidence — real-world headers may require adjustment). |
+| Stack | HIGH | All technologies verified against official changelogs and docs; `components.json` and `globals.css` verified from codebase directly; version compatibility confirmed for March 2026 |
+| Features | MEDIUM-HIGH | UI patterns well-documented; LLM structured-input research is solid (multiple concordant sources); B2B multi-profile specifics inferred from analogous SaaS tools (Google Analytics, Salesforce) rather than Swiss real estate-specific precedent |
+| Architecture | HIGH | Based on direct codebase analysis; schema, data flows, and component boundaries derived from actual running code; all integration points verified against existing code paths |
+| Pitfalls | HIGH | 7 of 10 pitfalls verified directly from codebase (schema files, migration SQL, Supabase functions); 3 pitfalls verified against official shadcn changelogs and GitHub issues with specific issue numbers and reproducible error conditions |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Homegate `__INITIAL_STATE__` JSON exact path:** Confirmed by third-party scraping guide (`data["listing"]["listing"]` for detail pages) but should be validated with a live test fetch in Phase 2 before writing the parser.
-- **Claude prompt structure for weighted scoring:** No template exists — prompt engineering for the multi-criteria weighted evaluation with uncertainty signaling and multilingual output needs empirical iteration in Phase 3. Allocate time for prompt iteration in the Phase 3 plan.
-- **Homegate DOM selectors for listing cards:** Research identifies `[data-test="result-list"]` and `[data-test="result-list-item"]` as the selector targets, but these should be validated live before building the content script observer. Build a selector abstraction with fallbacks from Phase 1.
-- **EC2 proxy authentication approach:** Research recommends a UUID shared secret generated at extension install time and sent as a header. The exact header name and validation logic needs to be specified during Phase 3 planning.
-- **Anthropic Tier 1 rate limits for demo:** If the demo account is on Tier 1, upgrade to Tier 2 ($40 deposit) before demo day. Verify API account tier before Phase 3 testing begins.
+- **Canonical preferences schema superset:** The exact list of extension fields to add to the web form and backend is not enumerated in research. Requires side-by-side comparison of `web/src/lib/schemas/preferences.ts` vs `extension/src/schema/profile.ts` vs `backend/app/models/preferences.py` as the first task in Phase 3.
+- **21st.dev navbar component selection:** Research identified 43 navbar components on 21st.dev but the specific one to use has not been chosen. Must browse `21st.dev/s/navbar` and select before Phase 4 implementation begins. Risk is LOW — all components install via the same shadcn CLI pattern and land as editable source files.
+- **B2B profile count soft cap:** Research recommends 5-10 profiles but the right number for the Bellevia Immobilien pilot is unknown. Validate with Vera Caflisch at the demo and enforce the limit post-pilot.
+- **`set_active_profile` Postgres RPC function testing:** The RPC function is specified in ARCHITECTURE.md but not yet written. Write and test it during Phase 1 alongside the migration; it is a critical path item for both Phase 2 (backend) and Phase 6 (extension).
+
+---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Chrome Extension Service Worker Lifecycle](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle) — 30s idle termination, 5-minute task limit, event listener registration rules
-- [Chrome Extension Message Passing](https://developer.chrome.com/docs/extensions/develop/concepts/messaging) — `return true` async pattern, message channel closure behavior
-- [Cross-Origin Network Requests in Extensions](https://developer.chrome.com/docs/extensions/develop/concepts/network-requests) — host_permissions, content script CORS restrictions
-- [chrome.webNavigation API](https://developer.chrome.com/docs/extensions/reference/api/webNavigation) — SPA navigation detection
-- [Claude API Rate Limits — Anthropic Official Docs](https://platform.claude.com/docs/en/api/rate-limits) — Tier 1: 50 RPM / 30K ITPM, Tier 2: 1,000 RPM / 450K ITPM
-- [WXT Official Docs — wxt.dev](https://wxt.dev/) — entrypoints, content script UI modes (Shadow DOM), storage API, version 0.20.18
-- [Hono Official Docs](https://hono.dev/docs/getting-started/nodejs) — Node.js adapter, CORS middleware, streaming
-- [anthropics/anthropic-sdk-typescript GitHub](https://github.com/anthropics/anthropic-sdk-typescript) — streaming, prompt caching, Node.js usage
+- [shadcn/ui Changelog — January 2026 Base UI](https://ui.shadcn.com/docs/changelog/2026-01-base-ui) — Base UI component availability confirmed
+- [shadcn/ui Migration Guide: Radix to Base UI — GitHub Discussion #9562](https://github.com/shadcn-ui/ui/discussions/9562) — `asChild` removal and `render` prop migration confirmed
+- [Base UI Accordion `asChild` removed — GitHub Issue #9049](https://github.com/shadcn-ui/ui/issues/9049) — confirms silent failure mode
+- [shadcn/ui Tailwind v4 Guide + GitHub Issue #4845](https://ui.shadcn.com/docs/tailwind-v4) — CSS variable double-definition bug pattern confirmed
+- [shadcn/ui Sidebar Docs + Blocks](https://ui.shadcn.com/docs/components/radix/sidebar) — SidebarFooter + DropdownMenu profile switcher pattern
+- [next-themes GitHub v0.4.6](https://github.com/pacocoursey/next-themes) — Next.js 16 + Tailwind v4 compatibility confirmed
+- [Supabase RLS and RPC docs](https://supabase.com/docs/guides/database/postgres/row-level-security) — `auth.uid()` policy pattern; RLS performance index requirement confirmed
+- Direct codebase analysis: `supabase/migrations/001_initial_schema.sql`, `web/src/lib/schemas/preferences.ts`, `extension/src/schema/profile.ts`, `backend/app/models/preferences.py`, `web/components.json`, `web/src/app/globals.css`, `supabase/functions/score-proxy/index.ts` — schema gaps, constraint structure, and integration points confirmed
 
 ### Secondary (MEDIUM confidence)
-- [How to Scrape Homegate.ch Real Estate — Scrapfly](https://scrapfly.io/blog/posts/how-to-scrape-homegate-ch-real-estate-property-data) — `window.__INITIAL_STATE__` JSON structure and path on Homegate listing pages
-- [2025 State of Browser Extension Frameworks](https://redreamality.com/blog/the-2025-state-of-browser-extension-frameworks-a-comparative-analysis-of-plasmo-wxt-and-crxjs/) — Plasmo maintenance status, WXT vs competitors
-- [Making Chrome Extension Smart for SPA — Medium](https://medium.com/@softvar/making-chrome-extension-smart-by-supporting-spa-websites-1f76593637e8) — SPA navigation handling patterns
-- [Solving CSS Interference in Chrome Extensions — DEV Community](https://dev.to/developertom01/solving-css-and-javascript-interference-in-chrome-extensions-a-guide-to-react-shadow-dom-and-best-practices-9l) — Shadow DOM isolation for injected UI
-- [Managing Concurrency in Chrome Extensions — Taboola](https://www.taboola.com/engineering/managing-concurrency-in-chrome-extensions/) — concurrent fetch patterns in service workers
-- [JobRight.ai Chrome Extension](https://chromewebstore.google.com/detail/jobright-autofill/odcnpipkhjegpefkfplmedhmkmmhmoko) — match score badge UX model
-- [Hackers Target Misconfigured LLM Proxies — BleepingComputer](https://www.bleepingcomputer.com/news/security/hackers-target-misconfigured-proxies-to-access-paid-llm-services/) — proxy authentication requirements
+- [From Prompts to Parameters — Medium/DevOps AI](https://medium.com/devops-ai/from-prompts-to-parameters-the-case-for-structured-inputs-0fda3b69609f) — structured inputs vs. freeform for LLM consumption
+- [Baymard Institute — Slider UX](https://baymard.com/blog/slider-interfaces) — chip selectors preferred over sliders for importance levels
+- [B2B SaaS UX Design 2026 — Onething Design](https://www.onething.design/post/b2b-saas-ux-design) — multi-persona profile switching patterns
+- [Mastering CRUD Operations UX — Medium/Design Bootcamp](https://medium.com/design-bootcamp/mastering-crud-operations-a-framework-for-seamless-product-design-2630affbc1e5) — confirmation dialog patterns for destructive actions
+- [Managing Supabase Auth State — DEV Community](https://dev.to/jais_mukesh/managing-supabase-auth-state-across-server-client-components-in-nextjs-2h2b) — `cache()` deduplication for navbar auth fetch
+
+### Tertiary (LOW confidence — inferred from analogous domains)
+- B2B profile count cap (5-10) — inferred from analogous SaaS tools; validate with actual pilot user
+- Profile template feature value for broker onboarding — inferred; needs pilot validation before building
 
 ---
-*Research completed: 2026-03-07*
+*Research completed: 2026-03-13*
 *Ready for roadmap: yes*
