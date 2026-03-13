@@ -5,6 +5,7 @@ describe('preferencesSchema', () => {
   it('returns all defaults when parsing empty object', () => {
     const result = preferencesSchema.parse({})
 
+    // Standard filters
     expect(result.location).toBe('')
     expect(result.offerType).toBe('RENT')
     expect(result.objectCategory).toBe('ANY')
@@ -14,13 +15,27 @@ describe('preferencesSchema', () => {
     expect(result.roomsMax).toBeNull()
     expect(result.livingSpaceMin).toBeNull()
     expect(result.livingSpaceMax).toBeNull()
+
+    // Soft criteria and features
     expect(result.softCriteria).toEqual([])
-    expect(result.selectedFeatures).toEqual([])
-    expect(result.weights.location).toBe(50)
-    expect(result.weights.price).toBe(50)
-    expect(result.weights.size).toBe(50)
-    expect(result.weights.features).toBe(50)
-    expect(result.weights.condition).toBe(50)
+    expect(result.features).toEqual([])
+
+    // Dealbreaker toggles
+    expect(result.budgetDealbreaker).toBe(false)
+    expect(result.roomsDealbreaker).toBe(false)
+    expect(result.livingSpaceDealbreaker).toBe(false)
+
+    // New fields
+    expect(result.floorPreference).toBe('any')
+    expect(result.availability).toBe('any')
+    expect(result.language).toBe('de')
+
+    // Importance levels default to medium
+    expect(result.importance.location).toBe('medium')
+    expect(result.importance.price).toBe('medium')
+    expect(result.importance.size).toBe('medium')
+    expect(result.importance.features).toBe('medium')
+    expect(result.importance.condition).toBe('medium')
   })
 
   it('round-trips valid data correctly', () => {
@@ -30,19 +45,25 @@ describe('preferencesSchema', () => {
       objectCategory: 'APARTMENT' as const,
       budgetMin: 500000,
       budgetMax: 1000000,
+      budgetDealbreaker: true,
       roomsMin: 3,
       roomsMax: 5,
+      roomsDealbreaker: false,
       livingSpaceMin: 80,
       livingSpaceMax: 150,
+      livingSpaceDealbreaker: true,
+      floorPreference: 'not_ground' as const,
+      availability: 'immediately',
       softCriteria: ['near Bahnhof', 'quiet neighborhood'],
-      selectedFeatures: ['balconygarden', 'lift'],
-      weights: {
-        location: 80,
-        price: 60,
-        size: 70,
-        features: 40,
-        condition: 30,
+      features: ['balconygarden', 'lift'],
+      importance: {
+        location: 'critical' as const,
+        price: 'high' as const,
+        size: 'medium' as const,
+        features: 'low' as const,
+        condition: 'high' as const,
       },
+      language: 'en' as const,
     }
 
     const result = preferencesSchema.parse(input)
@@ -52,17 +73,23 @@ describe('preferencesSchema', () => {
     expect(result.objectCategory).toBe('APARTMENT')
     expect(result.budgetMin).toBe(500000)
     expect(result.budgetMax).toBe(1000000)
+    expect(result.budgetDealbreaker).toBe(true)
     expect(result.roomsMin).toBe(3)
     expect(result.roomsMax).toBe(5)
+    expect(result.roomsDealbreaker).toBe(false)
     expect(result.livingSpaceMin).toBe(80)
     expect(result.livingSpaceMax).toBe(150)
+    expect(result.livingSpaceDealbreaker).toBe(true)
+    expect(result.floorPreference).toBe('not_ground')
+    expect(result.availability).toBe('immediately')
     expect(result.softCriteria).toEqual(['near Bahnhof', 'quiet neighborhood'])
-    expect(result.selectedFeatures).toEqual(['balconygarden', 'lift'])
-    expect(result.weights.location).toBe(80)
-    expect(result.weights.price).toBe(60)
-    expect(result.weights.size).toBe(70)
-    expect(result.weights.features).toBe(40)
-    expect(result.weights.condition).toBe(30)
+    expect(result.features).toEqual(['balconygarden', 'lift'])
+    expect(result.importance.location).toBe('critical')
+    expect(result.importance.price).toBe('high')
+    expect(result.importance.size).toBe('medium')
+    expect(result.importance.features).toBe('low')
+    expect(result.importance.condition).toBe('high')
+    expect(result.language).toBe('en')
   })
 
   it('rejects invalid offerType', () => {
@@ -71,16 +98,16 @@ describe('preferencesSchema', () => {
     ).toThrow()
   })
 
-  it('rejects weights outside 0-100 range', () => {
+  it('rejects invalid objectCategory', () => {
     expect(() =>
-      preferencesSchema.parse({
-        weights: { location: 150, price: 50, size: 50, features: 50, condition: 50 },
-      })
+      preferencesSchema.parse({ objectCategory: 'VILLA' })
     ).toThrow()
+  })
 
+  it('rejects invalid importance level', () => {
     expect(() =>
       preferencesSchema.parse({
-        weights: { location: -10, price: 50, size: 50, features: 50, condition: 50 },
+        importance: { location: 'urgent', price: 'medium', size: 'medium', features: 'medium', condition: 'medium' },
       })
     ).toThrow()
   })
@@ -91,10 +118,10 @@ describe('preferencesSchema', () => {
     expect(Array.isArray(result.softCriteria)).toBe(true)
   })
 
-  it('defaults selectedFeatures to empty array', () => {
+  it('defaults features to empty array', () => {
     const result = preferencesSchema.parse({})
-    expect(result.selectedFeatures).toEqual([])
-    expect(Array.isArray(result.selectedFeatures)).toBe(true)
+    expect(result.features).toEqual([])
+    expect(Array.isArray(result.features)).toBe(true)
   })
 
   it('accepts null for nullable number fields', () => {
@@ -115,9 +142,21 @@ describe('preferencesSchema', () => {
     expect(result.livingSpaceMax).toBeNull()
   })
 
-  it('rejects invalid objectCategory', () => {
+  it('partial importance object defaults missing fields to medium', () => {
+    const result = preferencesSchema.parse({
+      importance: { location: 'critical' },
+    })
+
+    expect(result.importance.location).toBe('critical')
+    expect(result.importance.price).toBe('medium')
+    expect(result.importance.size).toBe('medium')
+    expect(result.importance.features).toBe('medium')
+    expect(result.importance.condition).toBe('medium')
+  })
+
+  it('rejects invalid floorPreference', () => {
     expect(() =>
-      preferencesSchema.parse({ objectCategory: 'VILLA' })
+      preferencesSchema.parse({ floorPreference: 'top_floor' })
     ).toThrow()
   })
 })
