@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-13T12:17:20.441Z"
-last_activity: 2026-03-13 -- Phase 5 Plan 01 complete (profiles schema migration deployed)
+status: executing
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-13T14:00:00.000Z"
+last_activity: 2026-03-13 -- Phase 6 complete (profile-aware scoring pipeline deployed)
 progress:
   total_phases: 6
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 17
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
+  percent: 33
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-13)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website.
-**Current focus:** Phase 5 -- DB Schema Migration (v1.1)
+**Current focus:** Phase 7 -- Preferences Schema Unification (v1.1)
 
 ## Current Position
 
-Phase: 5 of 10 (DB Schema Migration) -- first phase of v1.1
+Phase: 6 of 10 (Backend + Edge Function Update) -- complete
 Plan: 1/1 complete
-Status: Phase 5 complete -- ready for Phase 6 planning
-Last activity: 2026-03-13 -- Phase 5 Plan 01 complete (profiles schema migration deployed)
+Status: Phase 6 complete -- ready for Phase 7 planning
+Last activity: 2026-03-13 -- Phase 6 complete (profile-aware scoring pipeline deployed)
 
-Progress: [##........] 17% (1/6 v1.1 phases)
+Progress: [###.......] 33% (2/6 v1.1 phases)
 
 ## Performance Metrics
 
@@ -45,9 +45,10 @@ Progress: [##........] 17% (1/6 v1.1 phases)
 |-------|-------|-------|----------|
 | 1-4 (v1.0) | 12 | -- | -- |
 | 5 (DB Schema Migration) | 1 | ~25min | ~25min |
+| 6 (Backend + Edge Function) | 1 | ~60min | ~60min |
 
 **Recent Trend:**
-- Last plan: 05-01 (~25min, 2 tasks, 1 file)
+- Last plan: 06-01 (~60min, 3 tasks, 7 files)
 - Trend: --
 
 *Updated after each plan completion*
@@ -82,6 +83,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-13T12:15:00.000Z
-Stopped at: Completed 05-01-PLAN.md
-Resume file: .planning/phases/05-db-schema-migration/05-01-SUMMARY.md
+Last session: 2026-03-13T14:00:00.000Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: .planning/phases/06-backend-edge-function-update/06-01-SUMMARY.md
