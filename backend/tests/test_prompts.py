@@ -1,6 +1,7 @@
 """Unit tests for prompt template generation.
 
-Covers: EVAL-05 (language in prompt), prompt formatting, data handling.
+Covers: EVAL-05 (language in prompt), prompt formatting, data handling,
+        PREF-14 (importance levels, dealbreaker semantics in prompts).
 """
 
 import pytest
@@ -32,6 +33,22 @@ class TestBuildSystemPrompt:
 
         prompt = build_system_prompt()
         assert "German" in prompt
+
+    def test_system_prompt_includes_dealbreaker_rules(self):
+        """System prompt contains DEALBREAKER RULES section with score-0 instructions."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        assert "DEALBREAKER" in prompt
+        assert "score" in prompt.lower() and "0" in prompt
+
+    def test_system_prompt_includes_importance_levels(self):
+        """System prompt contains IMPORTANCE LEVELS section with weight mapping."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        assert "IMPORTANCE LEVELS" in prompt
+        assert "critical=90" in prompt
 
 
 class TestBuildUserPrompt:
@@ -78,7 +95,8 @@ class TestBuildUserPrompt:
             living_space_max=100,
             soft_criteria=["near Bahnhof", "quiet neighborhood"],
             features=["balcony", "parking"],
-            importance={"location": "high", "price": "high", "size": "medium", "features": "medium", "condition": "low"},
+            importance={"location": "high", "price": "critical", "size": "medium", "features": "low", "condition": "medium"},
+            budget_dealbreaker=True,
         )
 
     @pytest.fixture
@@ -104,7 +122,7 @@ class TestBuildUserPrompt:
         assert "3.5" in prompt
 
     def test_formats_preferences(self, full_listing, full_preferences):
-        """build_user_prompt formats preferences (budget, weights, soft criteria)."""
+        """build_user_prompt formats preferences (budget, features, soft criteria)."""
         from app.prompts.scoring import build_user_prompt
 
         prompt = build_user_prompt(full_listing, full_preferences)
@@ -145,13 +163,84 @@ class TestBuildUserPrompt:
         # Should NOT crash with None fields
         assert prompt  # Non-empty
 
-    def test_includes_all_weight_categories(self, full_listing, full_preferences):
-        """build_user_prompt includes all 5 weight categories from preferences."""
+    def test_includes_all_importance_categories(self, full_listing, full_preferences):
+        """build_user_prompt includes all 5 importance categories with level labels."""
         from app.prompts.scoring import build_user_prompt
 
         prompt = build_user_prompt(full_listing, full_preferences)
-        assert "Location" in prompt or "location" in prompt
-        assert "Price" in prompt or "price" in prompt
-        assert "Size" in prompt or "size" in prompt
+        # Should contain importance levels as uppercase labels
+        assert "HIGH" in prompt
+        assert "CRITICAL" in prompt
+        assert "MEDIUM" in prompt
+        assert "LOW" in prompt
+        # All 5 categories present
+        assert "Location" in prompt
+        assert "Price" in prompt
+        assert "Size" in prompt
         assert "Features" in prompt or "features" in prompt
-        assert "Condition" in prompt or "condition" in prompt
+        assert "Condition" in prompt
+
+    def test_user_prompt_includes_dealbreaker_section(self, full_listing, full_preferences):
+        """With budget_dealbreaker=True and budget_max=2500, prompt shows HARD LIMIT."""
+        from app.prompts.scoring import build_user_prompt
+
+        prompt = build_user_prompt(full_listing, full_preferences)
+        assert "DEALBREAKER" in prompt or "HARD LIMIT" in prompt
+        assert "2,500" in prompt
+
+    def test_user_prompt_omits_dealbreakers_when_none_active(self, full_listing):
+        """With all dealbreakers=False, prompt does NOT contain HARD LIMIT."""
+        from app.prompts.scoring import build_user_prompt
+
+        prefs = UserPreferences(
+            location="Zurich",
+            offer_type="RENT",
+            object_category="APARTMENT",
+            budget_min=1500,
+            budget_max=2500,
+            budget_dealbreaker=False,
+            rooms_dealbreaker=False,
+            living_space_dealbreaker=False,
+            features=["balcony"],
+            importance={"location": "high", "price": "high", "size": "medium", "features": "medium", "condition": "low"},
+        )
+        prompt = build_user_prompt(full_listing, prefs)
+        assert "HARD LIMIT" not in prompt
+
+    def test_user_prompt_includes_floor_preference(self, full_listing, full_preferences):
+        """User prompt includes floor preference field."""
+        from app.prompts.scoring import build_user_prompt
+
+        prompt = build_user_prompt(full_listing, full_preferences)
+        assert "Floor preference" in prompt or "floor preference" in prompt
+
+    def test_user_prompt_includes_availability(self, full_listing, full_preferences):
+        """User prompt includes availability field."""
+        from app.prompts.scoring import build_user_prompt
+
+        prompt = build_user_prompt(full_listing, full_preferences)
+        assert "Availability" in prompt or "availability" in prompt
+
+    def test_user_prompt_no_numeric_weights(self, full_listing, full_preferences):
+        """User prompt does NOT contain old 'Category weights (0-100' format."""
+        from app.prompts.scoring import build_user_prompt
+
+        prompt = build_user_prompt(full_listing, full_preferences)
+        assert "Category weights (0-100" not in prompt
+
+    def test_user_prompt_budget_dealbreaker_no_max_omits_line(self, full_listing):
+        """When budget_dealbreaker=True but budget_max is None, skip that dealbreaker line."""
+        from app.prompts.scoring import build_user_prompt
+
+        prefs = UserPreferences(
+            location="Zurich",
+            offer_type="RENT",
+            object_category="APARTMENT",
+            budget_dealbreaker=True,
+            budget_max=None,
+            features=[],
+            importance={"location": "medium", "price": "medium", "size": "medium", "features": "medium", "condition": "medium"},
+        )
+        prompt = build_user_prompt(full_listing, prefs)
+        # Should not have a budget dealbreaker line since no threshold
+        assert "Budget max" not in prompt or "HARD LIMIT" not in prompt
