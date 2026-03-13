@@ -39,7 +39,7 @@ create index idx_profiles_user_id on profiles (user_id);
 create trigger handle_profiles_updated_at
   before update on profiles
   for each row
-  execute procedure moddatetime(updated_at);
+  execute procedure extensions.moddatetime(updated_at);
 
 -- ============================================================
 -- 4. Create analyses table (with profile_id FK)
