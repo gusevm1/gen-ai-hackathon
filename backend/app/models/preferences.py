@@ -1,14 +1,22 @@
-"""Pydantic models for user preferences, mirroring the frontend Zod schema.
+"""Pydantic models for user preferences — canonical schema (Phase 7).
 
-These models are consumed by the Phase 3 scoring pipeline when reading
-preferences from Supabase. Field names use snake_case (Python convention)
-while the frontend uses camelCase (TypeScript convention).
+Defines the unified preferences schema shared across all layers:
+- Frontend Zod schema (web/src/lib/schemas/preferences.ts)
+- Backend Pydantic model (this file)
+- Supabase JSONB storage
+
+Key changes from v1.0:
+- Numeric weights (0-100) replaced by ImportanceLevel enum (critical/high/medium/low)
+- selectedFeatures renamed to features
+- Added dealbreaker toggles, floorPreference, availability
+- Backward-compatible validator migrates old-format JSONB automatically
 """
 
-from pydantic import BaseModel, ConfigDict, Field
-from pydantic.alias_generators import to_camel
-from typing import Optional
 from enum import Enum
+from typing import Literal, Optional
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic.alias_generators import to_camel
 
 
 class OfferType(str, Enum):
@@ -26,32 +34,55 @@ class ObjectCategory(str, Enum):
     ANY = "ANY"
 
 
-class Weights(BaseModel):
-    """Category importance weights (0-100, default 50)."""
+class ImportanceLevel(str, Enum):
+    """Scoring category importance level (replaces 0-100 numeric weights)."""
 
-    location: int = Field(default=50, ge=0, le=100)
-    price: int = Field(default=50, ge=0, le=100)
-    size: int = Field(default=50, ge=0, le=100)
-    features: int = Field(default=50, ge=0, le=100)
-    condition: int = Field(default=50, ge=0, le=100)
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+# Mapping from importance levels to numeric weights for internal scoring.
+# Used by the scoring pipeline when a numeric weight is needed.
+IMPORTANCE_WEIGHT_MAP: dict[ImportanceLevel, int] = {
+    ImportanceLevel.CRITICAL: 90,
+    ImportanceLevel.HIGH: 70,
+    ImportanceLevel.MEDIUM: 50,
+    ImportanceLevel.LOW: 30,
+}
+
+
+class Importance(BaseModel):
+    """Category importance levels for the 5 scoring categories."""
+
+    location: ImportanceLevel = ImportanceLevel.MEDIUM
+    price: ImportanceLevel = ImportanceLevel.MEDIUM
+    size: ImportanceLevel = ImportanceLevel.MEDIUM
+    features: ImportanceLevel = ImportanceLevel.MEDIUM
+    condition: ImportanceLevel = ImportanceLevel.MEDIUM
 
 
 class UserPreferences(BaseModel):
-    """User property search preferences.
+    """User property search preferences — canonical schema.
 
     Mirrors the frontend Zod preferencesSchema.
-    Stored as JSONB in Supabase user_preferences table.
+    Stored as JSONB in Supabase profiles.preferences column.
 
     Accepts both camelCase (from Supabase JSONB) and snake_case keys
     via alias_generator + populate_by_name.
+
+    Backward compatible: old-format JSONB with numeric weights and
+    selectedFeatures is automatically migrated via model_validator.
     """
 
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
+        extra="ignore",
     )
 
-    # Standard filters (PREF-01 through PREF-06)
+    # Standard filters
     location: str = ""
     offer_type: OfferType = OfferType.RENT
     object_category: ObjectCategory = ObjectCategory.ANY
@@ -62,12 +93,57 @@ class UserPreferences(BaseModel):
     living_space_min: Optional[int] = None
     living_space_max: Optional[int] = None
 
-    # Soft criteria (PREF-07 and PREF-08)
+    # Dealbreaker toggles — when True, violating the range yields score 0
+    budget_dealbreaker: bool = False
+    rooms_dealbreaker: bool = False
+    living_space_dealbreaker: bool = False
+
+    # Additional filters
+    floor_preference: Literal["any", "ground", "not_ground"] = "any"
+    availability: str = "any"
+    features: list[str] = Field(default_factory=list)
+
+    # Soft criteria (free text tags)
     soft_criteria: list[str] = Field(default_factory=list)
-    selected_features: list[str] = Field(default_factory=list)
 
-    # Weights (PREF-09)
-    weights: Weights = Field(default_factory=Weights)
+    # Category importance (replaces weights)
+    importance: Importance = Field(default_factory=Importance)
 
-    # Language preference (EVAL-05) -- defaults to German
-    language: str = "de"
+    # Language preference — tightened to Swiss national languages + English
+    language: Literal["de", "en", "fr", "it"] = "de"
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_format(cls, data: dict) -> dict:
+        """Migrate old-format JSONB (weights + selectedFeatures) to canonical format.
+
+        Migration rules:
+        - If 'weights' present but 'importance' absent: set importance to all-medium
+          (do NOT numerically convert old weights — per user decision)
+        - If 'selectedFeatures' present but 'features' absent: rename to 'features'
+        - If 'selected_features' present but 'features' absent: rename to 'features'
+
+        The extra="ignore" config handles leftover keys like 'weights'.
+        """
+        if not isinstance(data, dict):
+            return data
+
+        # Migrate weights -> importance (default all medium)
+        if "weights" in data and "importance" not in data:
+            data["importance"] = {
+                "location": "medium",
+                "price": "medium",
+                "size": "medium",
+                "features": "medium",
+                "condition": "medium",
+            }
+
+        # Migrate selectedFeatures -> features
+        if "selectedFeatures" in data and "features" not in data:
+            data["features"] = data["selectedFeatures"]
+
+        # Migrate selected_features (snake_case) -> features
+        if "selected_features" in data and "features" not in data:
+            data["features"] = data["selected_features"]
+
+        return data

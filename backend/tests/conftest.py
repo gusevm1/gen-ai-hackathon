@@ -105,8 +105,37 @@ def minimal_listing_json():
     return MINIMAL_LISTING_JSON.copy()
 
 
-# camelCase preferences matching what Supabase JSONB stores (from frontend Zod schema)
+# camelCase preferences in the new canonical format (Phase 7 schema)
 SAMPLE_PREFERENCES_JSON = {
+    "location": "Zurich",
+    "offerType": "RENT",
+    "objectCategory": "APARTMENT",
+    "budgetMin": 1500,
+    "budgetMax": 2500,
+    "budgetDealbreaker": True,
+    "roomsMin": 2.0,
+    "roomsMax": 4.0,
+    "roomsDealbreaker": False,
+    "livingSpaceMin": 50,
+    "livingSpaceMax": 100,
+    "livingSpaceDealbreaker": False,
+    "floorPreference": "any",
+    "availability": "any",
+    "features": ["balcony", "parking"],
+    "softCriteria": ["near Bahnhof", "quiet neighborhood"],
+    "importance": {
+        "location": "high",
+        "price": "critical",
+        "size": "medium",
+        "features": "low",
+        "condition": "medium",
+    },
+    "language": "de",
+}
+
+# Legacy format (v1.0) — old schema with numeric weights and selectedFeatures.
+# Kept for backward-compatibility tests.
+LEGACY_PREFERENCES_JSON = {
     "location": "Zurich",
     "offerType": "RENT",
     "objectCategory": "APARTMENT",
@@ -212,8 +241,14 @@ SAMPLE_SCORE_RESPONSE = {
 
 @pytest.fixture
 def sample_preferences_json():
-    """Return camelCase preferences dict as stored in Supabase JSONB."""
+    """Return camelCase preferences dict in new canonical format."""
     return SAMPLE_PREFERENCES_JSON.copy()
+
+
+@pytest.fixture
+def legacy_preferences_json():
+    """Return camelCase preferences dict in legacy v1.0 format (weights + selectedFeatures)."""
+    return LEGACY_PREFERENCES_JSON.copy()
 
 
 @pytest.fixture

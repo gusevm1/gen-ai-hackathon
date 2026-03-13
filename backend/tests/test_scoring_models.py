@@ -223,8 +223,8 @@ class TestUserPreferencesCamelCase:
     """Tests for UserPreferences camelCase JSONB parsing and language field."""
 
     def test_parses_camelcase_jsonb(self):
-        """UserPreferences parses camelCase JSONB keys from Supabase."""
-        from app.models.preferences import UserPreferences
+        """UserPreferences parses camelCase JSONB keys from Supabase (new format)."""
+        from app.models.preferences import ImportanceLevel, UserPreferences
 
         data = {
             "location": "Zurich",
@@ -237,8 +237,8 @@ class TestUserPreferencesCamelCase:
             "livingSpaceMin": 50,
             "livingSpaceMax": 100,
             "softCriteria": ["near Bahnhof"],
-            "selectedFeatures": ["balcony"],
-            "weights": {"location": 80, "price": 70, "size": 60, "features": 50, "condition": 40},
+            "features": ["balcony"],
+            "importance": {"location": "high", "price": "critical", "size": "medium", "features": "low", "condition": "medium"},
         }
         prefs = UserPreferences.model_validate(data)
         assert prefs.location == "Zurich"
@@ -251,8 +251,8 @@ class TestUserPreferencesCamelCase:
         assert prefs.living_space_min == 50
         assert prefs.living_space_max == 100
         assert prefs.soft_criteria == ["near Bahnhof"]
-        assert prefs.selected_features == ["balcony"]
-        assert prefs.weights.location == 80
+        assert prefs.features == ["balcony"]
+        assert prefs.importance.location == ImportanceLevel.HIGH
 
     def test_language_field_defaults_to_de(self):
         """UserPreferences has language field defaulting to 'de'."""

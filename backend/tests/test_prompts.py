@@ -77,8 +77,8 @@ class TestBuildUserPrompt:
             living_space_min=50,
             living_space_max=100,
             soft_criteria=["near Bahnhof", "quiet neighborhood"],
-            selected_features=["balcony", "parking"],
-            weights={"location": 80, "price": 70, "size": 60, "features": 50, "condition": 40},
+            features=["balcony", "parking"],
+            importance={"location": "high", "price": "high", "size": "medium", "features": "medium", "condition": "low"},
         )
 
     @pytest.fixture

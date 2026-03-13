@@ -5,7 +5,7 @@ Covers: EVAL-04 (explicit "Not specified" for missing data),
 """
 
 from app.models.listing import FlatfoxListing
-from app.models.preferences import UserPreferences
+from app.models.preferences import IMPORTANCE_WEIGHT_MAP, UserPreferences
 
 LANGUAGE_MAP = {
     "de": "German (Deutsch)",
@@ -110,14 +110,14 @@ def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
 **Living space:** {f"{prefs.living_space_min} sqm" if prefs.living_space_min else "No min"} - \
 {f"{prefs.living_space_max} sqm" if prefs.living_space_max else "No max"}
 **Soft criteria:** {", ".join(prefs.soft_criteria) if prefs.soft_criteria else "None"}
-**Desired features:** {", ".join(prefs.selected_features) if prefs.selected_features else "None"}
+**Desired features:** {", ".join(prefs.features) if prefs.features else "None"}
 
 **Category weights (0-100 importance):**
-- Location: {prefs.weights.location}
-- Price: {prefs.weights.price}
-- Size: {prefs.weights.size}
-- Features: {prefs.weights.features}
-- Condition: {prefs.weights.condition}
+- Location: {IMPORTANCE_WEIGHT_MAP[prefs.importance.location]}
+- Price: {IMPORTANCE_WEIGHT_MAP[prefs.importance.price]}
+- Size: {IMPORTANCE_WEIGHT_MAP[prefs.importance.size]}
+- Features: {IMPORTANCE_WEIGHT_MAP[prefs.importance.features]}
+- Condition: {IMPORTANCE_WEIGHT_MAP[prefs.importance.condition]}
 
 ---
 

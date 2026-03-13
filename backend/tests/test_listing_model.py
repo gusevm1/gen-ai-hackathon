@@ -54,16 +54,16 @@ class TestUserPreferencesModel:
     """Test UserPreferences Pydantic model defaults."""
 
     def test_preferences_defaults(self):
-        """UserPreferences() has offer_type RENT, all weights 50."""
-        from app.models.preferences import UserPreferences, OfferType
+        """UserPreferences() has offer_type RENT, all importance levels medium."""
+        from app.models.preferences import UserPreferences, OfferType, ImportanceLevel
 
         prefs = UserPreferences()
         assert prefs.offer_type == OfferType.RENT
-        assert prefs.weights.location == 50
-        assert prefs.weights.price == 50
-        assert prefs.weights.size == 50
-        assert prefs.weights.features == 50
-        assert prefs.weights.condition == 50
+        assert prefs.importance.location == ImportanceLevel.MEDIUM
+        assert prefs.importance.price == ImportanceLevel.MEDIUM
+        assert prefs.importance.size == ImportanceLevel.MEDIUM
+        assert prefs.importance.features == ImportanceLevel.MEDIUM
+        assert prefs.importance.condition == ImportanceLevel.MEDIUM
 
     def test_preferences_custom_values(self):
         """UserPreferences can be created with custom values."""
