@@ -47,12 +47,15 @@ Help users instantly see how well each property listing matches their specific n
 
 ### Active
 
-(None — next milestone requirements TBD)
+- [ ] Professional web UI with navbar, proper layout, modern design (shadcn + 21st.dev components)
+- [ ] Multi-profile support: one user can create/switch/delete multiple search profiles
+- [ ] Preferences UX rethink for better Claude prompt quality
+- [ ] Extension popup and badge design polish
+- [ ] Improved analysis page layout for demo readiness
 
 ### Out of Scope
 
 - Other property sites beyond Flatfox — v1 is Flatfox only
-- Multiple client profiles (broker multi-profile) — future milestone
 - Mobile app
 - Historical price tracking or investment analysis
 - Automatic scoring (user must trigger via FAB — Claude API calls are expensive)
@@ -79,6 +82,19 @@ Help users instantly see how well each property listing matches their specific n
 - **Target site**: Flatfox.ch only
 - **Scoring**: On-demand via FAB (not automatic)
 
+## Current Milestone: v1.1 Demo-Ready + Multi-Profile
+
+**Goal:** Make HomeMatch professional enough to demo to Bellevia Immobilien pilot, add multi-profile support (core B2B enabler), and refine preferences UX for better AI scoring quality.
+
+**Target features:**
+- Professional web UI overhaul (navbar, layout, shadcn/21st.dev)
+- Multi-profile: one user creates/manages multiple search profiles
+- Preferences rethink: simplify inputs, improve Claude prompt quality
+- Extension design polish (popup, badges, profile switcher)
+- Analysis page redesign for demo presentations
+
+**Pilot context:** Vera Caflisch (Bewirtschaftung/Erstvermietung) at Bellevia Immobilien GmbH, Thalwil ZH. B2B angle: property managers managing multiple client searches.
+
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
@@ -95,4 +111,4 @@ Help users instantly see how well each property listing matches their specific n
 | `--no-verify-jwt` on edge function | Gateway rejects extension JWTs; function handles auth itself | ⚠️ Revisit |
 
 ---
-*Last updated: 2026-03-13 after v1.0 milestone*
+*Last updated: 2026-03-13 after v1.1 milestone start*
