@@ -102,7 +102,13 @@ Plans:
   4. The preferences form distinguishes dealbreakers (hard constraints) from weighted soft preferences using importance chips (Low/Medium/High/Critical) instead of sliders for non-numeric criteria
   5. A live profile summary preview on the preferences form shows the user a natural-language description of what the profile is looking for
   6. The analysis page has a professional layout suitable for demo presentations with clear category breakdown and visual hierarchy
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 09-01-PLAN.md -- Profile CRUD server actions, profile summary utility, wire ProfileSwitcher to real DB data
+- [ ] 09-02-PLAN.md -- Restructure preferences form into 6 accordion sections with dealbreaker checkboxes and importance chips
+- [ ] 09-03-PLAN.md -- Profile list page with cards/dialogs, edit profile page, live summary preview
+- [ ] 09-04-PLAN.md -- Redesign analysis page and build analyses list page
 
 ### Phase 10: Extension Profile Switcher
 **Goal**: The Chrome extension displays the active profile, allows quick switching, guards against stale scores, and maintains session health for reliable demo presentations
@@ -132,5 +138,5 @@ Note: Phase 8 depends on Phase 5 (not 7), so it could theoretically parallel 6-7
 | 6. Backend + Edge Function Update | v1.1 | 1/1 | Complete | 2026-03-13 |
 | 7. Preferences Schema Unification | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 8. UI Foundation | v1.1 | 2/2 | Complete | 2026-03-13 |
-| 9. Web Profile Management | v1.1 | 0/? | Not started | - |
+| 9. Web Profile Management | v1.1 | 0/4 | Not started | - |
 | 10. Extension Profile Switcher | v1.1 | 0/? | Not started | - |
