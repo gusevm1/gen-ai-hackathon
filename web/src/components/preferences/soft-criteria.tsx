@@ -13,19 +13,19 @@ interface SoftCriteriaProps {
 }
 
 export function SoftCriteria({ form }: SoftCriteriaProps) {
-  const selectedFeatures = form.watch('selectedFeatures')
+  const selectedFeatures = form.watch('features')
   const softCriteria = form.watch('softCriteria')
 
   function toggleFeature(featureValue: string) {
-    const current = form.getValues('selectedFeatures')
+    const current = form.getValues('features')
     if (current.includes(featureValue)) {
       form.setValue(
-        'selectedFeatures',
+        'features',
         current.filter((f) => f !== featureValue),
         { shouldDirty: true }
       )
     } else {
-      form.setValue('selectedFeatures', [...current, featureValue], {
+      form.setValue('features', [...current, featureValue], {
         shouldDirty: true,
       })
     }

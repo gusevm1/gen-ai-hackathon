@@ -69,7 +69,7 @@ export function PreferencesForm({ defaultValues, onSave }: PreferencesFormProps)
           </AccordionItem>
 
           <AccordionItem>
-            <AccordionTrigger>Category Weights</AccordionTrigger>
+            <AccordionTrigger>Category Importance</AccordionTrigger>
             <AccordionContent>
               <WeightSliders form={form} />
             </AccordionContent>
