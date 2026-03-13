@@ -55,7 +55,10 @@ Plans:
   2. The Supabase edge function resolves the active profile server-side by querying `profiles WHERE is_default = true` using the authenticated JWT -- never trusting a profile ID from the extension
   3. Every new analysis row is saved with the `profile_id` that was used for scoring
   4. Scoring a listing with one active profile, then switching active profile and re-scoring, produces two separate analysis records
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 06-01-PLAN.md -- Update backend + edge function for profile-aware scoring pipeline (ScoreRequest, save_analysis, edge function profile resolution)
 
 ### Phase 7: Preferences Schema Unification
 **Goal**: Web app, extension, and backend all share a single canonical preferences schema, and the Claude prompt uses structured importance levels for better scoring quality
@@ -118,7 +121,7 @@ Note: Phase 8 depends on Phase 5 (not 7), so it could theoretically parallel 6-7
 | 3. LLM Scoring Pipeline | v1.0 | 2/2 | Complete | 2026-03-10 |
 | 4. Extension UI & Analysis Page | v1.0 | 5/5 | Complete | 2026-03-13 |
 | 5. DB Schema Migration | v1.1 | 1/1 | Complete | 2026-03-13 |
-| 6. Backend + Edge Function Update | v1.1 | 0/? | Not started | - |
+| 6. Backend + Edge Function Update | v1.1 | 0/1 | Planned | - |
 | 7. Preferences Schema Unification | v1.1 | 0/? | Not started | - |
 | 8. UI Foundation | v1.1 | 0/? | Not started | - |
 | 9. Web Profile Management | v1.1 | 0/? | Not started | - |
