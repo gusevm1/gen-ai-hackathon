@@ -35,9 +35,9 @@ export function NavUser({ user }: { user: { email: string; name?: string } }) {
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="bottom" align="end" sideOffset={8}>
+      <DropdownMenuContent side="bottom" align="end" sideOffset={8} className="min-w-56">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+          <DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
