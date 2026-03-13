@@ -72,7 +72,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- [Phase 6] Verify `set_active_profile()` RPC behavioral test: create 2 profiles, call RPC to switch active, confirm partial unique index and atomic UPDATE sequence work correctly at runtime
 
 ### Blockers/Concerns
 
