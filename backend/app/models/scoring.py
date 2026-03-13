@@ -19,7 +19,7 @@ class CategoryScore(BaseModel):
     score: int = Field(ge=0, le=100, description="0-100 score for this category")
     weight: int = Field(ge=0, le=100, description="User's importance weight for this category")
     reasoning: list[str] = Field(
-        min_length=1, max_length=5, description="1-5 bullet points with listing data citations"
+        min_length=1, max_length=10, description="1-10 bullet points with listing data citations"
     )
 
 
