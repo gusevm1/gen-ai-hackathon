@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-03-13T14:50:10.000Z"
-last_activity: 2026-03-13 -- Phase 7 Plan 01 complete (canonical preferences schema)
+status: completed
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-03-13T14:57:54.713Z"
+last_activity: 2026-03-13 -- Phase 7 complete (preferences schema + prompt update)
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 3
+  total_plans: 4
+  completed_plans: 4
   percent: 33
 ---
 
@@ -25,17 +25,17 @@ See: .planning/PROJECT.md (updated 2026-03-13)
 
 ## Current Position
 
-Phase: 7 of 10 (Preferences Schema Unification) -- in progress
-Plan: 1/2 complete
-Status: Plan 01 complete (canonical schema) -- ready for Plan 02 (prompt update)
-Last activity: 2026-03-13 -- Phase 7 Plan 01 complete (canonical preferences schema)
+Phase: 7 of 10 (Preferences Schema Unification) -- COMPLETE
+Plan: 2/2 complete
+Status: Phase 7 complete -- canonical schema + Claude prompt update done
+Last activity: 2026-03-13 -- Phase 7 complete (preferences schema + prompt update)
 
 Progress: [###.......] 33% (2/6 v1.1 phases)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14 (12 v1.0 + 2 v1.1)
+- Total plans completed: 15 (12 v1.0 + 3 v1.1)
 - Average duration: --
 - Total execution time: --
 
@@ -46,13 +46,14 @@ Progress: [###.......] 33% (2/6 v1.1 phases)
 | 1-4 (v1.0) | 12 | -- | -- |
 | 5 (DB Schema Migration) | 1 | ~25min | ~25min |
 | 6 (Backend + Edge Function) | 1 | ~60min | ~60min |
-| 7 (Preferences Schema) | 1/2 | ~5min | ~5min |
+| 7 (Preferences Schema) | 2/2 | ~7min | ~3.5min |
 
 **Recent Trend:**
-- Last plan: 07-01 (~5min, 2 tasks, 9 files)
+- Last plan: 07-02 (~2min, 2 tasks, 2 files)
 - Trend: accelerating
 
 *Updated after each plan completion*
+| Phase 07 P02 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,9 @@ Recent decisions affecting current work:
 - [07-01]: Importance levels default to medium when migrating old-format JSONB (no numeric weight conversion)
 - [07-01]: extra="ignore" on Pydantic model to silently drop legacy keys (weights, selectedFeatures)
 - [07-01]: Bridge fix for scoring prompt uses IMPORTANCE_WEIGHT_MAP pending Plan 02 full rewrite
+- [07-02]: Inline DEALBREAKER label + separate HARD LIMIT section for threshold enforcement
+- [07-02]: Dealbreaker line omitted when toggle is True but threshold value is None
+- [07-02]: Importance levels emitted as uppercase labels (CRITICAL/HIGH/MEDIUM/LOW) in Claude prompt
 
 ### Pending Todos
 
@@ -81,12 +85,12 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-- Preferences divergence: PARTIALLY RESOLVED by 07-01 (canonical schema defined); Plan 02 updates Claude prompt
+- Preferences divergence: RESOLVED by Phase 7 (canonical schema in 07-01 + Claude prompt update in 07-02)
 - No score caching (re-scores every FAB click) -- deferred to v2
 - `--no-verify-jwt` on edge function -- revisit security
 
 ## Session Continuity
 
-Last session: 2026-03-13T14:50:10.000Z
-Stopped at: Completed 07-01-PLAN.md
-Resume file: .planning/phases/07-preferences-schema-unification/07-01-SUMMARY.md
+Last session: 2026-03-13T14:57:53.666Z
+Stopped at: Completed 07-02-PLAN.md
+Resume file: None
