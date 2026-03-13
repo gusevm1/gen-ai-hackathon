@@ -82,7 +82,7 @@ Each task was committed atomically:
 
 1. **Task 1: Analysis page route, components, and tests** - `48fa63f` (feat)
 
-**Plan metadata:** [pending] (docs: complete plan)
+**Plan metadata:** `50d64f4` (docs: complete plan)
 
 ## Files Created/Modified
 - `web/src/app/analysis/[listingId]/page.tsx` - Server component reading analysis from Supabase, rendering all sub-components
