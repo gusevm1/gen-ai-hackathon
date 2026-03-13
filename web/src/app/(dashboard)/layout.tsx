@@ -1,14 +1,10 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
-import {
-  SidebarProvider,
-  SidebarInset,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
+import { TopNavbar } from "@/components/top-navbar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NavUser } from "@/components/nav-user"
 import { ProfileSwitcher } from "@/components/profile-switcher"
+import { Home } from "lucide-react"
 
 export default async function DashboardLayout({
   children,
@@ -25,19 +21,20 @@ export default async function DashboardLayout({
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <div className="ml-auto flex items-center gap-2">
-            <ProfileSwitcher />
-            <ThemeToggle />
-            <NavUser user={{ email: user.email ?? "" }} />
-          </div>
-        </header>
-        <main className="flex-1 p-4">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="flex min-h-screen flex-col">
+      <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center gap-2">
+          <Home className="size-5 text-primary" />
+          <span className="text-lg font-semibold tracking-tight">HomeMatch</span>
+        </div>
+        <TopNavbar />
+        <div className="ml-auto flex items-center gap-2">
+          <ProfileSwitcher />
+          <ThemeToggle />
+          <NavUser user={{ email: user.email ?? "" }} />
+        </div>
+      </header>
+      <main className="flex-1 p-4">{children}</main>
+    </div>
   )
 }
