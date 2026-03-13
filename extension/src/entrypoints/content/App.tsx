@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import type { ScoreResponse } from '@/types/scoring';
@@ -22,18 +22,22 @@ interface BadgeMount {
 /**
  * Root React component for the HomeMatch content script.
  * Manages FAB, scoring state, and per-badge Shadow DOM injection.
+ *
+ * Uses refs for scores/openPanel to avoid stale closures in Shadow DOM roots.
  */
 export default function App({ ctx }: AppProps) {
   const [scores, setScores] = useState<Map<number, ScoreResponse>>(new Map());
   const [isScoring, setIsScoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [openPanelId, setOpenPanelId] = useState<number | null>(null);
 
-  // Keep track of mounted shadow UIs for badges
+  // Refs to avoid stale closures in separate React roots
+  const scoresRef = useRef<Map<number, ScoreResponse>>(new Map());
+  const openPanelRef = useRef<number | null>(null);
   const badgeMountsRef = useRef<Map<number, BadgeMount>>(new Map());
 
   /**
    * Render or update a badge inside its per-badge Shadow DOM root.
+   * Reads from refs (not state) so it always has fresh data.
    */
   const renderBadge = useCallback(
     (pk: number, score: ScoreResponse | null, panelOpenId: number | null) => {
@@ -46,7 +50,6 @@ export default function App({ ctx }: AppProps) {
             <ScoreBadge
               score={score}
               listingId={pk}
-              onTogglePanel={handleTogglePanel}
               isPanelOpen={panelOpenId === pk}
             />
             <SummaryPanel score={score} listingId={pk} isOpen={panelOpenId === pk} />
@@ -56,43 +59,39 @@ export default function App({ ctx }: AppProps) {
         mount.root.render(<LoadingSkeleton />);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
   /**
-   * Toggle panel expansion for a badge.
-   * Broadcasts via custom DOM event so all badge Shadow DOM roots update.
+   * Re-render all scored badges with current panel state.
    */
-  const handleTogglePanel = useCallback(
-    (id: number) => {
-      setOpenPanelId((prev) => {
-        const newId = prev === id ? null : id;
-
-        // Re-render all badges with updated panel state
-        for (const [pk, score] of scores.entries()) {
-          renderBadge(pk, score, newId);
-        }
-
-        return newId;
-      });
+  const rerenderAllBadges = useCallback(
+    (panelId: number | null) => {
+      for (const [pk, score] of scoresRef.current.entries()) {
+        renderBadge(pk, score, panelId);
+      }
     },
-    [scores, renderBadge],
+    [renderBadge],
   );
 
   /**
-   * Listen for panel toggle events from badge shadow roots.
+   * Listen for panel toggle events dispatched from badge Shadow DOM roots.
+   * Uses refs so the handler always has fresh state.
    */
-  const setupPanelToggleListener = useCallback(() => {
+  useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ id: number }>).detail;
-      handleTogglePanel(detail.id);
+      const id = detail.id;
+      const newId = openPanelRef.current === id ? null : id;
+      openPanelRef.current = newId;
+      rerenderAllBadges(newId);
     };
     document.addEventListener('homematch:panel-toggle', handler);
     ctx.onInvalidated(() =>
       document.removeEventListener('homematch:panel-toggle', handler),
     );
-  }, [ctx, handleTogglePanel]);
+    return () => document.removeEventListener('homematch:panel-toggle', handler);
+  }, [ctx, rerenderAllBadges]);
 
   /**
    * Inject a per-badge Shadow DOM root next to a listing card element.
@@ -146,10 +145,7 @@ export default function App({ ctx }: AppProps) {
 
   /**
    * Main scoring handler: triggered by clicking the FAB.
-   * 1. Gets session JWT from background script
-   * 2. Extracts visible listing PKs from DOM
-   * 3. Injects loading skeletons as per-badge Shadow DOM
-   * 4. Scores listings sequentially, updating badges progressively
+   * Skips already-scored listings.
    */
   const handleScore = useCallback(async () => {
     setError(null);
@@ -169,10 +165,11 @@ export default function App({ ctx }: AppProps) {
       return;
     }
 
-    // 2. Extract listing PKs from DOM
-    const pks = extractVisibleListingPKs();
+    // 2. Extract listing PKs from DOM, skip already scored
+    const allPks = extractVisibleListingPKs();
+    const pks = allPks.filter((pk) => !scoresRef.current.has(pk));
     if (pks.length === 0) {
-      setError('No listings found on this page');
+      // All visible listings already scored — nothing to do
       return;
     }
 
@@ -186,7 +183,8 @@ export default function App({ ctx }: AppProps) {
     // 4. Score listings and update badges progressively
     try {
       await scoreListings(pks, jwt, (id, result) => {
-        // Update scores state
+        // Update both ref and state
+        scoresRef.current.set(id, result);
         setScores((prev) => {
           const next = new Map(prev);
           next.set(id, result);
@@ -200,20 +198,14 @@ export default function App({ ctx }: AppProps) {
       const message =
         err instanceof Error ? err.message : 'Scoring failed';
       setError(message);
-      // Cleanup loading skeletons for PKs that didn't get scored
       const unscoredPks = pks.filter(
-        (pk) => !badgeMountsRef.current.has(pk) || !scores.has(pk),
+        (pk) => !scoresRef.current.has(pk),
       );
       cleanupBadges(unscoredPks);
     } finally {
       setIsScoring(false);
     }
-  }, [injectBadge, renderBadge, cleanupBadges, scores]);
-
-  // Set up panel toggle listener on first render
-  useState(() => {
-    setupPanelToggleListener();
-  });
+  }, [injectBadge, renderBadge, cleanupBadges]);
 
   return (
     <Fab
