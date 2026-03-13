@@ -88,7 +88,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md -- Install dependencies, fix dark mode CSS, create ThemeProvider, restructure into route groups
+- [x] 08-01-PLAN.md -- Install dependencies, fix dark mode CSS, create ThemeProvider, restructure into route groups
 - [ ] 08-02-PLAN.md -- Build sidebar + navbar + theme toggle + user menu + 21st.dev component + placeholder pages
 
 ### Phase 9: Web Profile Management
@@ -130,7 +130,7 @@ Note: Phase 8 depends on Phase 5 (not 7), so it could theoretically parallel 6-7
 | 4. Extension UI & Analysis Page | v1.0 | 5/5 | Complete | 2026-03-13 |
 | 5. DB Schema Migration | v1.1 | 1/1 | Complete | 2026-03-13 |
 | 6. Backend + Edge Function Update | v1.1 | 1/1 | Complete | 2026-03-13 |
-| 7. Preferences Schema Unification | v1.1 | 0/2 | Not started | - |
-| 8. UI Foundation | v1.1 | 0/2 | Not started | - |
+| 7. Preferences Schema Unification | v1.1 | 2/2 | Complete | 2026-03-13 |
+| 8. UI Foundation | v1.1 | 1/2 | In Progress | - |
 | 9. Web Profile Management | v1.1 | 0/? | Not started | - |
 | 10. Extension Profile Switcher | v1.1 | 0/? | Not started | - |
