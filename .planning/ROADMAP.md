@@ -23,7 +23,7 @@
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 5: DB Schema Migration** - Profiles table, analyses FK, data backfill, atomic profile switching RPC
+- [ ] **Phase 5: DB Schema Migration** - Profiles table, analyses FK, clean-slate drop, atomic profile switching RPC
 - [ ] **Phase 6: Backend + Edge Function Update** - Scoring pipeline becomes profile-aware end-to-end
 - [ ] **Phase 7: Preferences Schema Unification** - Canonical schema superset, updated Claude prompt with structured importance
 - [ ] **Phase 8: UI Foundation** - Sidebar layout, navbar, dark mode, 21st.dev component integration
@@ -33,15 +33,18 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 5: DB Schema Migration
-**Goal**: Database fully supports multiple profiles per user with atomic switching, and existing data is preserved via backfill
+**Goal**: Database fully supports multiple profiles per user with atomic switching via clean-slate migration (drop legacy tables, create new schema)
 **Depends on**: Phase 4 (v1.0 complete)
 **Requirements**: PROF-07
 **Success Criteria** (what must be TRUE):
-  1. A user's existing preferences from `user_preferences` are migrated into a default profile in the new `profiles` table with no data loss
+  1. Legacy `user_preferences` and `analyses` tables are dropped (clean slate -- only test data existed)
   2. The `profiles` table enforces at most one active profile per user at the database level (partial unique index on `is_default`)
   3. Calling the `set_active_profile()` RPC function atomically deactivates the old profile and activates the new one in a single transaction
   4. The `analyses` table has a `profile_id` foreign key and its unique constraint is `(user_id, listing_id, profile_id)`, allowing per-profile analysis history
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 05-01-PLAN.md -- Write and deploy profiles schema migration (profiles table, analyses FK, RLS, set_active_profile RPC)
 
 ### Phase 6: Backend + Edge Function Update
 **Goal**: The scoring pipeline reads preferences from the profiles table, resolves the active profile server-side, and stores profile attribution on every analysis
@@ -114,7 +117,7 @@ Note: Phase 8 depends on Phase 5 (not 7), so it could theoretically parallel 6-7
 | 2. Preferences & Data Pipeline | v1.0 | 2/2 | Complete | 2026-03-13 |
 | 3. LLM Scoring Pipeline | v1.0 | 2/2 | Complete | 2026-03-10 |
 | 4. Extension UI & Analysis Page | v1.0 | 5/5 | Complete | 2026-03-13 |
-| 5. DB Schema Migration | v1.1 | 0/? | Not started | - |
+| 5. DB Schema Migration | v1.1 | 0/1 | Planning complete | - |
 | 6. Backend + Edge Function Update | v1.1 | 0/? | Not started | - |
 | 7. Preferences Schema Unification | v1.1 | 0/? | Not started | - |
 | 8. UI Foundation | v1.1 | 0/? | Not started | - |
