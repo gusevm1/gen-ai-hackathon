@@ -1,140 +1,122 @@
-# Roadmap: HomeMatch v1.0
+# Roadmap: HomeMatch
 
-## Overview
+## Milestones
 
-HomeMatch v1.0 delivers a Chrome extension on Flatfox.ch paired with a Next.js preferences website and an EC2 FastAPI scoring backend. Users set preferences on the website, then score listings on-demand via a floating button in the extension. The backend fetches listing data from Flatfox's public API and evaluates each listing against the user's weighted preferences using Claude. Scores appear as badges with 3-5 bullet summaries; full analysis lives on the website.
-
-The build follows a dependency chain: infrastructure must exist before preferences can be stored, listing data must be fetchable before scoring, and scores must exist before badge UI renders. Within this chain, frontend and backend work is parallelized where possible.
-
-## Architecture
-
-```
-Next.js (Vercel) ──▶ Supabase (Auth + DB + Edge Functions) ──▶ EC2 FastAPI ──▶ Claude API
-                                    ▲                                    ──▶ Flatfox API
-Chrome Extension (WXT) ────────────┘
-```
+- :white_check_mark: **v1.0 MVP** - Phases 1-4 (shipped 2026-03-13)
+- :construction: **v1.1 Demo-Ready + Multi-Profile** - Phases 5-10 (in progress)
 
 ## Phases
 
+<details>
+<summary>v1.0 MVP (Phases 1-4) - SHIPPED 2026-03-13</summary>
+
+- [x] **Phase 1: Infrastructure & Auth** - Scaffold all codebases, deploy, configure Supabase auth + DB
+- [x] **Phase 2: Preferences & Data Pipeline** - Next.js preferences form + FastAPI Flatfox integration
+- [x] **Phase 3: LLM Scoring Pipeline** - Claude-powered evaluation endpoint + Supabase edge function proxy
+- [x] **Phase 4: Extension UI & Analysis Page** - Flatfox content script, FAB, badges, summary panel, full analysis page
+
+</details>
+
 **Phase Numbering:**
 - Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+- Decimal phases (5.1, 5.2): Urgent insertions (marked with INSERTED)
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Infrastructure & Auth** - Scaffold all codebases, deploy, configure Supabase auth + DB
-- [ ] **Phase 2: Preferences & Data Pipeline** - Next.js preferences form + FastAPI Flatfox integration (parallel tracks)
-- [x] **Phase 3: LLM Scoring Pipeline** - Claude-powered evaluation endpoint + Supabase edge function proxy (completed 2026-03-10)
-- [ ] **Phase 4: Extension UI & Analysis Page** - Flatfox content script, FAB, badges, summary panel, full analysis page
+- [ ] **Phase 5: DB Schema Migration** - Profiles table, analyses FK, data backfill, atomic profile switching RPC
+- [ ] **Phase 6: Backend + Edge Function Update** - Scoring pipeline becomes profile-aware end-to-end
+- [ ] **Phase 7: Preferences Schema Unification** - Canonical schema superset, updated Claude prompt with structured importance
+- [ ] **Phase 8: UI Foundation** - Sidebar layout, navbar, dark mode, 21st.dev component integration
+- [ ] **Phase 9: Web Profile Management** - Profile CRUD, preferences form restructure, analysis page redesign
+- [ ] **Phase 10: Extension Profile Switcher** - Popup profile display, switcher, stale badge guard, session health
 
 ## Phase Details
 
-### Phase 1: Infrastructure & Auth
-**Goal**: All codebases scaffolded, deployed, and connected via Supabase auth. Developer can log in on both website and extension, and the EC2 backend is reachable via edge functions.
-**Depends on**: Nothing (first phase)
-**Requirements**: AUTH-01, AUTH-02, AUTH-03, INFRA-01, INFRA-02, INFRA-03
-**Parallelization**: Next.js scaffold, FastAPI scaffold, extension scaffold, and Supabase setup can all proceed in parallel — they only converge when wiring auth.
+### Phase 5: DB Schema Migration
+**Goal**: Database fully supports multiple profiles per user with atomic switching, and existing data is preserved via backfill
+**Depends on**: Phase 4 (v1.0 complete)
+**Requirements**: PROF-07
 **Success Criteria** (what must be TRUE):
-  1. Next.js app is deployed on Vercel with a landing page and Supabase login/signup flow
-  2. FastAPI backend is deployed on EC2 via Docker with a health check endpoint
-  3. Chrome extension (WXT) is scaffolded with a popup that has Supabase email/password login
-  4. Supabase project has auth configured, database tables for preferences and analyses, and at least one edge function that can reach the EC2 backend
-  5. User can sign up on the website and log in with the same credentials in the extension
-**Plans**: 3 plans
+  1. A user's existing preferences from `user_preferences` are migrated into a default profile in the new `profiles` table with no data loss
+  2. The `profiles` table enforces at most one active profile per user at the database level (partial unique index on `is_default`)
+  3. Calling the `set_active_profile()` RPC function atomically deactivates the old profile and activates the new one in a single transaction
+  4. The `analyses` table has a `profile_id` foreign key and its unique constraint is `(user_id, listing_id, profile_id)`, allowing per-profile analysis history
+**Plans**: TBD
 
-Plans:
-- [ ] 01-01-PLAN.md — Scaffold all codebases (extension, web, backend, supabase) + database migrations
-- [ ] 01-02-PLAN.md — Next.js auth flow (login/signup/dashboard) + Vercel deployment
-- [ ] 01-03-PLAN.md — Extension popup auth + FastAPI EC2 deploy + edge function deploy
-
-### Phase 2: Preferences & Data Pipeline
-**Goal**: Users can set and save their property preferences on the website, and the backend can fetch + parse listing data from Flatfox's API
-**Depends on**: Phase 1
-**Requirements**: PREF-01, PREF-02, PREF-03, PREF-04, PREF-05, PREF-06, PREF-07, PREF-08, PREF-09, PREF-10, DATA-01, DATA-02
-**Parallelization**: Frontend preferences form and backend Flatfox integration are independent — can be built in parallel. They share the Supabase preferences table schema as their contract.
+### Phase 6: Backend + Edge Function Update
+**Goal**: The scoring pipeline reads preferences from the profiles table, resolves the active profile server-side, and stores profile attribution on every analysis
+**Depends on**: Phase 5
+**Requirements**: (enables PROF-05 end-to-end; no standalone requirement -- infrastructure phase)
 **Success Criteria** (what must be TRUE):
-  1. Next.js site has a single-page preferences form with collapsible sections for: standard filters (location, buy/rent, property type, budget, rooms, living space), soft criteria (free-text + reusable feature suggestions), and category weight sliders
-  2. Preferences are saved to Supabase PostgreSQL and load correctly on page refresh
-  3. FastAPI backend can fetch listing details from Flatfox API given a listing ID/URL
-  4. Backend parses Flatfox API response into a structured listing object (price, rooms, address, description, features, images, coordinates)
-  5. Backend has a test endpoint that accepts a listing ID and returns the parsed listing data
-**Plans**: 2 plans
+  1. FastAPI backend queries the `profiles` table (not `user_preferences`) to load preferences for scoring
+  2. The Supabase edge function resolves the active profile server-side by querying `profiles WHERE is_default = true` using the authenticated JWT -- never trusting a profile ID from the extension
+  3. Every new analysis row is saved with the `profile_id` that was used for scoring
+  4. Scoring a listing with one active profile, then switching active profile and re-scoring, produces two separate analysis records
+**Plans**: TBD
 
-Plans:
-- [ ] 02-01-PLAN.md — Next.js preferences form (Zod schema, React Hook Form, Accordion UI, Supabase save/load)
-- [ ] 02-02-PLAN.md — FastAPI Flatfox API integration (Pydantic models, httpx client, /listings/{pk} endpoint)
-
-### Phase 3: LLM Scoring Pipeline
-**Goal**: Backend can score a Flatfox listing against a user's weighted preferences via Claude, returning a structured score with category breakdown and reasoning
-**Depends on**: Phase 2
-**Requirements**: EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05
+### Phase 7: Preferences Schema Unification
+**Goal**: Web app, extension, and backend all share a single canonical preferences schema, and the Claude prompt uses structured importance levels for better scoring quality
+**Depends on**: Phase 6
+**Requirements**: PREF-13, PREF-14
 **Success Criteria** (what must be TRUE):
-  1. POST /score endpoint accepts listing IDs + user ID, fetches listing from Flatfox API and preferences from Supabase, sends to Claude for evaluation
-  2. Response includes a 0-100 overall score, per-category scores with weights applied, and 3-5 bullet-point reasoning per category
-  3. Evaluation explicitly states "I don't know" for data points the listing does not provide
-  4. Analysis is returned in the user's preferred language (DE/FR/IT/EN)
-  5. Supabase edge function proxies POST /score requests from extension to EC2 backend with auth validation
-  6. Analysis results are stored in Supabase for retrieval by the website's full analysis page
-**Plans**: 2 plans
+  1. A single canonical preferences schema defines all fields (including extension-only fields like `radiusKm`, `floorPreference`, `yearBuiltMin/Max`) and is used by the web app, extension, and backend
+  2. The backend Pydantic model accepts and passes all canonical fields to the Claude prompt -- no fields are silently dropped
+  3. The Claude scoring prompt uses structured importance levels (`critical`, `high`, `medium`, `low`) instead of floating-point weight decimals
+  4. Scoring a listing that involves previously-ignored fields (e.g., floor preference) now produces reasoning that references those fields
+**Plans**: TBD
 
-Plans:
-- [ ] 03-01-PLAN.md — Scoring models, Claude service, Supabase service, prompt templates, and test suite
-- [ ] 03-02-PLAN.md — POST /score endpoint, edge function proxy, main.py wiring, end-to-end verification
-
-### Phase 4: Extension UI & Analysis Page
-**Goal**: Users see score badges on Flatfox listings triggered by a floating action button, can read 3-5 bullet summaries, and can click through to full analysis on the website
-**Depends on**: Phase 3
-**Requirements**: EXT-01, EXT-02, EXT-03, EXT-04, EXT-05, EXT-06, EXT-07, EXT-08, WEB-01, WEB-02, WEB-03
-**Parallelization**: Wave 0 test scaffolding runs first. Then extension UI, website analysis page, and backend image enhancement proceed in parallel. Extension content script depends on extension infrastructure (Plan 01).
+### Phase 8: UI Foundation
+**Goal**: The web app has a professional SaaS layout shell with sidebar navigation, navbar with user identity, and dark/light mode -- ready for profile pages to be built inside it
+**Depends on**: Phase 5 (needs profiles table for navbar profile display)
+**Requirements**: UI-01, UI-02, UI-03, UI-05
 **Success Criteria** (what must be TRUE):
-  1. Extension content script activates on Flatfox.ch search results pages
-  2. Floating action button appears and triggers scoring for all visible listings when clicked
-  3. Extension extracts listing IDs from Flatfox search results DOM and sends them to backend via edge function
-  4. Score badges (0-100 + match label) are injected next to each listing, rendered in Shadow DOM
-  5. Clicking a badge expands a panel showing 3-5 key bullet points and a "See full analysis" link
-  6. "See full analysis" opens the Next.js website's analysis page for that listing
-  7. Full analysis page on Next.js shows complete category breakdown with weights, reasoning, and listing citations
-  8. Extension popup shows login state, profile summary, and link to preferences website
-  9. Loading skeleton/spinner shown while scores are being computed
-  10. Claude scoring prompt includes listing images (fetched from Flatfox API image URLs) for visual evaluation of condition, view, and interior quality
-**Plans**: 5 plans
+  1. The app has a collapsible sidebar with navigation links that persists across all pages
+  2. The navbar displays the logged-in user's identity, the active profile name, and a profile switcher dropdown
+  3. Dark/light mode toggle works and respects system preference on first load, with the choice persisting across sessions
+  4. At least one 21st.dev component is integrated via research-first workflow (agent checks GitHub usage/quality before installing)
+  5. No CSS variable conflicts or Base UI migration regressions (asChild removed, Accordion defaultValue as string array)
+**Plans**: TBD
 
-Plans:
-- [ ] 04-00-PLAN.md — Wave 0: Test scaffolding (extension + web vitest stubs for all automatable requirements)
-- [ ] 04-01-PLAN.md — Extension infrastructure: types, libs, background auth, WXT config, popup rewrite with Supabase login
-- [ ] 04-02-PLAN.md — Next.js full analysis page with category breakdown, checklist, and score visualization
-- [ ] 04-03-PLAN.md — Content script UI: FAB, score badges (Shadow DOM), summary panels, loading states on Flatfox.ch
-- [ ] 04-04-PLAN.md — Backend image analysis: extract listing image URLs, add to Claude scoring prompt
+### Phase 9: Web Profile Management
+**Goal**: Users can fully manage multiple search profiles from the web app, with a restructured preferences form that distinguishes dealbreakers from weighted preferences, and a redesigned analysis page ready for demo presentations
+**Depends on**: Phase 7 (canonical schema), Phase 8 (layout shell)
+**Requirements**: PROF-01, PROF-02, PROF-03, PROF-04, PROF-05, PROF-06, PREF-11, PREF-12, PREF-15, UI-04
+**Success Criteria** (what must be TRUE):
+  1. User can create, rename, duplicate, and delete profiles from a profile list page showing cards with name, key criteria summary, and active badge
+  2. User can set a profile as active from the profile list, and the active profile is reflected in the navbar immediately
+  3. Deleting the last remaining profile is blocked with an explanation
+  4. The preferences form distinguishes dealbreakers (hard constraints) from weighted soft preferences using importance chips (Low/Medium/High/Critical) instead of sliders for non-numeric criteria
+  5. A live profile summary preview on the preferences form shows the user a natural-language description of what the profile is looking for
+  6. The analysis page has a professional layout suitable for demo presentations with clear category breakdown and visual hierarchy
+**Plans**: TBD
 
-## Parallelization Strategy
-
-```
-Phase 1: ┌─ Next.js scaffold ──┐
-          ├─ FastAPI scaffold ──┤──▶ Wire auth + edge functions
-          ├─ Extension scaffold ┤
-          └─ Supabase setup ────┘
-
-Phase 2: ┌─ Preferences form (frontend) ─┐──▶ Integration test
-          └─ Flatfox API integration (backend) ─┘
-
-Phase 3: Wave 1: Scoring engine internals (models, services, prompts, tests)
-          Wave 2: HTTP endpoint + edge function + wiring
-
-Phase 4: Wave 0: Test scaffolding (04-00)
-          Wave 1: ┌─ Extension infra + popup auth (04-01) ─┐
-                  ├─ Analysis page (04-02)                  ├──▶ Wave 2: Content script UI (04-03)
-                  └─ Backend image analysis (04-04) ────────┘
-```
+### Phase 10: Extension Profile Switcher
+**Goal**: The Chrome extension displays the active profile, allows quick switching, guards against stale scores, and maintains session health for reliable demo presentations
+**Depends on**: Phase 9 (profile management must be stable)
+**Requirements**: EXT-09, EXT-10, EXT-11, EXT-12, EXT-13
+**Success Criteria** (what must be TRUE):
+  1. The extension popup shows the active profile name immediately on open
+  2. A profile switcher dropdown in the popup lets the user change active profile without leaving Flatfox
+  3. When the active profile changes mid-session, existing score badges on the page show a visual stale indicator
+  4. Clicking the FAB performs a session health check and the popup shows a "Connected" indicator when the session is valid
+  5. Score badges and summary panels have an improved, polished design consistent with the web app's visual language
+**Plans**: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
-Within phases, parallel tracks execute simultaneously where marked.
+Phases execute in numeric order: 5 -> 6 -> 7 -> 8 -> 9 -> 10
+Note: Phase 8 depends on Phase 5 (not 7), so it could theoretically parallel 6-7, but sequential execution avoids merge conflicts in shared files.
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Infrastructure & Auth | 0/3 | Planned | - |
-| 2. Preferences & Data Pipeline | 0/2 | Planned | - |
-| 3. LLM Scoring Pipeline | 2/2 | Complete   | 2026-03-10 |
-| 4. Extension UI & Analysis Page | 0/5 | Planned | - |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Infrastructure & Auth | v1.0 | 3/3 | Complete | 2026-03-13 |
+| 2. Preferences & Data Pipeline | v1.0 | 2/2 | Complete | 2026-03-13 |
+| 3. LLM Scoring Pipeline | v1.0 | 2/2 | Complete | 2026-03-10 |
+| 4. Extension UI & Analysis Page | v1.0 | 5/5 | Complete | 2026-03-13 |
+| 5. DB Schema Migration | v1.1 | 0/? | Not started | - |
+| 6. Backend + Edge Function Update | v1.1 | 0/? | Not started | - |
+| 7. Preferences Schema Unification | v1.1 | 0/? | Not started | - |
+| 8. UI Foundation | v1.1 | 0/? | Not started | - |
+| 9. Web Profile Management | v1.1 | 0/? | Not started | - |
+| 10. Extension Profile Switcher | v1.1 | 0/? | Not started | - |

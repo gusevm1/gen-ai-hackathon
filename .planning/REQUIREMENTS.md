@@ -1,17 +1,17 @@
 # Requirements: HomeMatch
 
 **Defined:** 2026-03-10
-**Core Value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website.
+**Core Value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website.
 
 ## v1.0 Requirements (Shipped)
 
 All v1.0 requirements shipped and validated. See MILESTONES.md for details.
 
-### Auth & Infrastructure — ✓ Complete
-### Preferences — ✓ Complete
-### Data & Scoring — ✓ Complete
-### Extension UI — ✓ Complete
-### Website Analysis Page — ✓ Complete
+### Auth & Infrastructure -- Complete
+### Preferences -- Complete
+### Data & Scoring -- Complete
+### Extension UI -- Complete
+### Website Analysis Page -- Complete
 
 ## v1.1 Requirements
 
@@ -83,9 +83,9 @@ Deferred to future release. Tracked but not in current roadmap.
 | Other property sites beyond Flatfox | v1.x is Flatfox only |
 | Mobile app | Web-first, mobile later |
 | Historical price tracking | Not core to matching value |
-| Automatic scoring | Claude API cost control — user must trigger via FAB |
+| Automatic scoring | Claude API cost control -- user must trigger via FAB |
 | Real-time chat / messaging | Not core to scoring tool |
-| Tenant screening / application scoring | Different product direction — validate with pilot first |
+| Tenant screening / application scoring | Different product direction -- validate with pilot first |
 
 ## Traceability
 
@@ -111,34 +111,34 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROF-07 | — | Pending |
-| PROF-01 | — | Pending |
-| PROF-02 | — | Pending |
-| PROF-03 | — | Pending |
-| PROF-04 | — | Pending |
-| PROF-05 | — | Pending |
-| PROF-06 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
-| UI-05 | — | Pending |
-| PREF-11 | — | Pending |
-| PREF-12 | — | Pending |
-| PREF-13 | — | Pending |
-| PREF-14 | — | Pending |
-| PREF-15 | — | Pending |
-| EXT-09 | — | Pending |
-| EXT-10 | — | Pending |
-| EXT-11 | — | Pending |
-| EXT-12 | — | Pending |
-| EXT-13 | — | Pending |
+| PROF-07 | Phase 5 | Pending |
+| PROF-01 | Phase 9 | Pending |
+| PROF-02 | Phase 9 | Pending |
+| PROF-03 | Phase 9 | Pending |
+| PROF-04 | Phase 9 | Pending |
+| PROF-05 | Phase 9 | Pending |
+| PROF-06 | Phase 9 | Pending |
+| UI-01 | Phase 8 | Pending |
+| UI-02 | Phase 8 | Pending |
+| UI-03 | Phase 8 | Pending |
+| UI-04 | Phase 9 | Pending |
+| UI-05 | Phase 8 | Pending |
+| PREF-11 | Phase 9 | Pending |
+| PREF-12 | Phase 9 | Pending |
+| PREF-13 | Phase 7 | Pending |
+| PREF-14 | Phase 7 | Pending |
+| PREF-15 | Phase 9 | Pending |
+| EXT-09 | Phase 10 | Pending |
+| EXT-10 | Phase 10 | Pending |
+| EXT-11 | Phase 10 | Pending |
+| EXT-12 | Phase 10 | Pending |
+| EXT-13 | Phase 10 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 22 total
-- Mapped to phases: 0
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22/22
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-10*
-*Last updated: 2026-03-13 after v1.1 milestone definition*
+*Last updated: 2026-03-13 after v1.1 roadmap creation*
