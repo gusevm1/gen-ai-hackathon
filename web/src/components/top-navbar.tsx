@@ -6,7 +6,7 @@ import { Home, User, BarChart3, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { title: "Dashboard", url: "/dashboard", icon: Home },
+  { title: "Preferences", url: "/dashboard", icon: Home },
   { title: "Profiles", url: "/profiles", icon: User },
   { title: "Analyses", url: "/analyses", icon: BarChart3 },
   { title: "Settings", url: "/settings", icon: Settings },
