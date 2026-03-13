@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Demo-Ready + Multi-Profile
-status: executing
+milestone: v1.0
+milestone_name: milestone
+status: planning
 stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-13T12:15:00.000Z"
-last_activity: 2026-03-13 -- Phase 5 Plan 01 complete
+last_updated: "2026-03-13T12:17:20.441Z"
+last_activity: 2026-03-13 -- Phase 5 Plan 01 complete (profiles schema migration deployed)
 progress:
   total_phases: 6
   completed_phases: 1
