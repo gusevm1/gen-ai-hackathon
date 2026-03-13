@@ -69,7 +69,11 @@ Plans:
   2. The backend Pydantic model accepts and passes all canonical fields to the Claude prompt -- no fields are silently dropped
   3. The Claude scoring prompt uses structured importance levels (`critical`, `high`, `medium`, `low`) instead of floating-point weight decimals
   4. Scoring a listing that involves previously-ignored fields (e.g., floor preference) now produces reasoning that references those fields
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md -- Define canonical Zod schema + rewrite Pydantic model with backward-compatible parsing
+- [ ] 07-02-PLAN.md -- Update Claude system/user prompts with importance levels and dealbreaker semantics
 
 ### Phase 8: UI Foundation
 **Goal**: The web app has a professional SaaS layout shell with sidebar navigation, navbar with user identity, and dark/light mode -- ready for profile pages to be built inside it
@@ -122,7 +126,7 @@ Note: Phase 8 depends on Phase 5 (not 7), so it could theoretically parallel 6-7
 | 4. Extension UI & Analysis Page | v1.0 | 5/5 | Complete | 2026-03-13 |
 | 5. DB Schema Migration | v1.1 | 1/1 | Complete | 2026-03-13 |
 | 6. Backend + Edge Function Update | v1.1 | 1/1 | Complete | 2026-03-13 |
-| 7. Preferences Schema Unification | v1.1 | 0/? | Not started | - |
+| 7. Preferences Schema Unification | v1.1 | 0/2 | Not started | - |
 | 8. UI Foundation | v1.1 | 0/? | Not started | - |
 | 9. Web Profile Management | v1.1 | 0/? | Not started | - |
 | 10. Extension Profile Switcher | v1.1 | 0/? | Not started | - |
