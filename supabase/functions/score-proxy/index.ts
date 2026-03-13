@@ -1,10 +1,11 @@
 /**
  * Supabase Edge Function: score-proxy
  *
- * Validates JWT auth via supabase.auth.getUser(), extracts user_id,
- * and proxies POST requests to the EC2 backend POST /score endpoint.
+ * Validates JWT auth via supabase.auth.getUser(), resolves the user's active
+ * profile (is_default=true) via RLS-enforced query, and proxies POST requests
+ * to the EC2 backend POST /score endpoint with profile context.
  *
- * Flow: Extension -> Edge Function (auth + proxy) -> EC2 Backend -> Claude -> Response
+ * Flow: Extension -> Edge Function (auth + profile resolution + proxy) -> EC2 Backend -> Claude -> Response
  *
  * Environment variables:
  * - SUPABASE_URL: Supabase project URL (auto-set by Supabase)
@@ -43,18 +44,35 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
   }
 
-  // Verify JWT via Supabase auth
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  // Create client with user's auth context for RLS-enforced queries
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } },
+  );
 
+  // Verify JWT
   const token = authHeader.replace("Bearer ", "");
-  const { data, error } = await supabase.auth.getUser(token);
+  const { data: authData, error: authError } = await supabase.auth.getUser(token);
 
-  if (error || !data?.user) {
+  if (authError || !authData?.user) {
     return new Response(
       JSON.stringify({ error: "Invalid or expired token" }),
       { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  // Resolve active profile server-side (RLS enforced -- user can only see own profiles)
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, preferences")
+    .eq("is_default", true)
+    .single();
+
+  if (profileError || !profile) {
+    return new Response(
+      JSON.stringify({ error: "No active profile found. Please set up your preferences." }),
+      { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
@@ -69,7 +87,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
   }
 
-  // Proxy to EC2 backend with authenticated user_id
+  // Forward to backend with profile context
   const backendUrl = Deno.env.get("BACKEND_URL");
   if (!backendUrl) {
     return new Response(
@@ -82,11 +100,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const backendResponse = await fetch(`${backendUrl}/score`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...body, user_id: data.user.id }),
+      body: JSON.stringify({
+        ...body,
+        user_id: authData.user.id,
+        profile_id: profile.id,
+        preferences: profile.preferences,
+      }),
     });
 
     const responseBody = await backendResponse.text();
-
     return new Response(responseBody, {
       status: backendResponse.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
