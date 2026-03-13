@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-13T14:08:19.983Z"
-last_activity: 2026-03-13 -- Phase 6 complete (profile-aware scoring pipeline deployed)
+status: executing
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-03-13T14:50:10.000Z"
+last_activity: 2026-03-13 -- Phase 7 Plan 01 complete (canonical preferences schema)
 progress:
   total_phases: 6
   completed_phases: 2
@@ -25,17 +25,17 @@ See: .planning/PROJECT.md (updated 2026-03-13)
 
 ## Current Position
 
-Phase: 6 of 10 (Backend + Edge Function Update) -- complete
-Plan: 1/1 complete
-Status: Phase 6 complete -- ready for Phase 7 planning
-Last activity: 2026-03-13 -- Phase 6 complete (profile-aware scoring pipeline deployed)
+Phase: 7 of 10 (Preferences Schema Unification) -- in progress
+Plan: 1/2 complete
+Status: Plan 01 complete (canonical schema) -- ready for Plan 02 (prompt update)
+Last activity: 2026-03-13 -- Phase 7 Plan 01 complete (canonical preferences schema)
 
 Progress: [###.......] 33% (2/6 v1.1 phases)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13 (12 v1.0 + 1 v1.1)
+- Total plans completed: 14 (12 v1.0 + 2 v1.1)
 - Average duration: --
 - Total execution time: --
 
@@ -46,10 +46,11 @@ Progress: [###.......] 33% (2/6 v1.1 phases)
 | 1-4 (v1.0) | 12 | -- | -- |
 | 5 (DB Schema Migration) | 1 | ~25min | ~25min |
 | 6 (Backend + Edge Function) | 1 | ~60min | ~60min |
+| 7 (Preferences Schema) | 1/2 | ~5min | ~5min |
 
 **Recent Trend:**
-- Last plan: 06-01 (~60min, 3 tasks, 7 files)
-- Trend: --
+- Last plan: 07-01 (~5min, 2 tasks, 9 files)
+- Trend: accelerating
 
 *Updated after each plan completion*
 
@@ -70,6 +71,9 @@ Recent decisions affecting current work:
 - [05-01]: Schema-qualify moddatetime as extensions.moddatetime() for remote Supabase compatibility
 - [05-01]: Clean-slate migration: drop legacy tables before creating new ones (only test data existed)
 - [05-01]: Partial unique index enforces one-active-profile-per-user at DB level instead of application logic
+- [07-01]: Importance levels default to medium when migrating old-format JSONB (no numeric weight conversion)
+- [07-01]: extra="ignore" on Pydantic model to silently drop legacy keys (weights, selectedFeatures)
+- [07-01]: Bridge fix for scoring prompt uses IMPORTANCE_WEIGHT_MAP pending Plan 02 full rewrite
 
 ### Pending Todos
 
@@ -77,12 +81,12 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-- Preferences divergence: extension wizard has richer schema than web app; backend reads web app format only -- Phase 7 resolves this
+- Preferences divergence: PARTIALLY RESOLVED by 07-01 (canonical schema defined); Plan 02 updates Claude prompt
 - No score caching (re-scores every FAB click) -- deferred to v2
 - `--no-verify-jwt` on edge function -- revisit security
 
 ## Session Continuity
 
-Last session: 2026-03-13T14:00:00.000Z
-Stopped at: Completed 06-01-PLAN.md
-Resume file: .planning/phases/06-backend-edge-function-update/06-01-SUMMARY.md
+Last session: 2026-03-13T14:50:10.000Z
+Stopped at: Completed 07-01-PLAN.md
+Resume file: .planning/phases/07-preferences-schema-unification/07-01-SUMMARY.md

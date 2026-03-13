@@ -72,7 +72,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md -- Define canonical Zod schema + rewrite Pydantic model with backward-compatible parsing
+- [x] 07-01-PLAN.md -- Define canonical Zod schema + rewrite Pydantic model with backward-compatible parsing
 - [ ] 07-02-PLAN.md -- Update Claude system/user prompts with importance levels and dealbreaker semantics
 
 ### Phase 8: UI Foundation
