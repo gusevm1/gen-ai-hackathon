@@ -12,16 +12,21 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import { StandardFilters } from '@/components/preferences/standard-filters'
-import { SoftCriteria } from '@/components/preferences/soft-criteria'
-import { WeightSliders } from '@/components/preferences/weight-sliders'
+import { LocationTypeSection } from '@/components/preferences/location-type-section'
+import { BudgetSection } from '@/components/preferences/budget-section'
+import { SizeRoomsSection } from '@/components/preferences/size-rooms-section'
+import { FeaturesSection } from '@/components/preferences/features-section'
+import { SoftCriteriaSection } from '@/components/preferences/soft-criteria-section'
+import { ImportanceSection } from '@/components/preferences/importance-section'
 
 interface PreferencesFormProps {
   defaultValues: Preferences
   onSave: (data: Preferences) => Promise<void>
+  profileId?: string
+  profileName?: string
 }
 
-export function PreferencesForm({ defaultValues, onSave }: PreferencesFormProps) {
+export function PreferencesForm({ defaultValues, onSave, profileId, profileName }: PreferencesFormProps) {
   const [saveMessage, setSaveMessage] = useState<{
     type: 'success' | 'error'
     text: string
@@ -51,27 +56,48 @@ export function PreferencesForm({ defaultValues, onSave }: PreferencesFormProps)
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <Accordion
           multiple
-          defaultValue={[0, 1, 2]}
+          defaultValue={["location", "budget", "size", "features", "soft", "importance"]}
           className="w-full"
         >
-          <AccordionItem>
-            <AccordionTrigger>Standard Filters</AccordionTrigger>
+          <AccordionItem value="location">
+            <AccordionTrigger>Location & Type</AccordionTrigger>
             <AccordionContent>
-              <StandardFilters form={form} />
+              <LocationTypeSection form={form} />
             </AccordionContent>
           </AccordionItem>
 
-          <AccordionItem>
+          <AccordionItem value="budget">
+            <AccordionTrigger>Budget</AccordionTrigger>
+            <AccordionContent>
+              <BudgetSection form={form} />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="size">
+            <AccordionTrigger>Size & Rooms</AccordionTrigger>
+            <AccordionContent>
+              <SizeRoomsSection form={form} />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="features">
+            <AccordionTrigger>Features & Availability</AccordionTrigger>
+            <AccordionContent>
+              <FeaturesSection form={form} />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="soft">
             <AccordionTrigger>Soft Criteria</AccordionTrigger>
             <AccordionContent>
-              <SoftCriteria form={form} />
+              <SoftCriteriaSection form={form} />
             </AccordionContent>
           </AccordionItem>
 
-          <AccordionItem>
-            <AccordionTrigger>Category Importance</AccordionTrigger>
+          <AccordionItem value="importance">
+            <AccordionTrigger>What Matters Most</AccordionTrigger>
             <AccordionContent>
-              <WeightSliders form={form} />
+              <ImportanceSection form={form} />
             </AccordionContent>
           </AccordionItem>
         </Accordion>
