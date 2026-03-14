@@ -19,11 +19,11 @@ Requirements for Demo-Ready + Multi-Profile milestone. Each maps to roadmap phas
 
 ### Multi-Profile Management
 
-- [ ] **PROF-01**: User can create a new named search profile
-- [ ] **PROF-02**: User can rename an existing profile
-- [ ] **PROF-03**: User can delete a profile (with confirmation, cannot delete last remaining profile)
-- [ ] **PROF-04**: User can duplicate an existing profile
-- [ ] **PROF-05**: User can set a profile as active (drives extension scoring)
+- [x] **PROF-01**: User can create a new named search profile
+- [x] **PROF-02**: User can rename an existing profile
+- [x] **PROF-03**: User can delete a profile (with confirmation, cannot delete last remaining profile)
+- [x] **PROF-04**: User can duplicate an existing profile
+- [x] **PROF-05**: User can set a profile as active (drives extension scoring)
 - [ ] **PROF-06**: User can see all profiles as cards with name, key criteria summary, and active badge
 - [x] **PROF-07**: DB schema supports multiple profiles per user with atomic active-profile switching via Postgres RPC
 
@@ -41,7 +41,7 @@ Requirements for Demo-Ready + Multi-Profile milestone. Each maps to roadmap phas
 - [x] **PREF-12**: Importance levels use chips (Low/Medium/High/Critical) instead of sliders for non-numeric criteria
 - [x] **PREF-13**: Web/extension/backend preference schemas unified into canonical superset
 - [x] **PREF-14**: Claude prompt updated to use structured importance levels and all preference fields
-- [ ] **PREF-15**: Live profile summary preview on the preferences form
+- [x] **PREF-15**: Live profile summary preview on the preferences form
 
 ### Extension Polish
 
@@ -112,11 +112,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PROF-07 | Phase 5 | Complete |
-| PROF-01 | Phase 9 | Pending |
-| PROF-02 | Phase 9 | Pending |
-| PROF-03 | Phase 9 | Pending |
-| PROF-04 | Phase 9 | Pending |
-| PROF-05 | Phase 9 | Pending |
+| PROF-01 | Phase 9 | Complete |
+| PROF-02 | Phase 9 | Complete |
+| PROF-03 | Phase 9 | Complete |
+| PROF-04 | Phase 9 | Complete |
+| PROF-05 | Phase 9 | Complete |
 | PROF-06 | Phase 9 | Pending |
 | UI-01 | Phase 8 | Complete |
 | UI-02 | Phase 8 | Complete |
@@ -127,7 +127,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PREF-12 | Phase 9 | Complete |
 | PREF-13 | Phase 7 | Complete |
 | PREF-14 | Phase 7 | Complete |
-| PREF-15 | Phase 9 | Pending |
+| PREF-15 | Phase 9 | Complete |
 | EXT-09 | Phase 10 | Pending |
 | EXT-10 | Phase 10 | Pending |
 | EXT-11 | Phase 10 | Pending |
