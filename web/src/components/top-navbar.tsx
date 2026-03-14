@@ -2,11 +2,10 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, User, BarChart3, Settings } from "lucide-react"
+import { User, BarChart3, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { title: "Preferences", url: "/dashboard", icon: Home },
   { title: "Profiles", url: "/profiles", icon: User },
   { title: "Analyses", url: "/analyses", icon: BarChart3 },
   { title: "Settings", url: "/settings", icon: Settings },
@@ -18,10 +17,7 @@ export function TopNavbar() {
   return (
     <nav className="flex items-center gap-1">
       {navItems.map((item) => {
-        const isActive =
-          item.url === "/dashboard"
-            ? pathname === "/dashboard"
-            : pathname.startsWith(item.url)
+        const isActive = pathname.startsWith(item.url)
 
         return (
           <Link

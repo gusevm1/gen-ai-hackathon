@@ -12,6 +12,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
+import { ProfileSummary } from '@/components/preferences/profile-summary'
 import { LocationTypeSection } from '@/components/preferences/location-type-section'
 import { BudgetSection } from '@/components/preferences/budget-section'
 import { SizeRoomsSection } from '@/components/preferences/size-rooms-section'
@@ -54,6 +55,7 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        {profileId && <ProfileSummary form={form} />}
         <Accordion
           multiple
           defaultValue={["location", "budget", "size", "features", "soft", "importance"]}
