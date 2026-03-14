@@ -24,7 +24,7 @@ Requirements for Demo-Ready + Multi-Profile milestone. Each maps to roadmap phas
 - [x] **PROF-03**: User can delete a profile (with confirmation, cannot delete last remaining profile)
 - [x] **PROF-04**: User can duplicate an existing profile
 - [x] **PROF-05**: User can set a profile as active (drives extension scoring)
-- [ ] **PROF-06**: User can see all profiles as cards with name, key criteria summary, and active badge
+- [x] **PROF-06**: User can see all profiles as cards with name, key criteria summary, and active badge
 - [x] **PROF-07**: DB schema supports multiple profiles per user with atomic active-profile switching via Postgres RPC
 
 ### UI Overhaul
@@ -117,7 +117,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROF-03 | Phase 9 | Complete |
 | PROF-04 | Phase 9 | Complete |
 | PROF-05 | Phase 9 | Complete |
-| PROF-06 | Phase 9 | Pending |
+| PROF-06 | Phase 9 | Complete |
 | UI-01 | Phase 8 | Complete |
 | UI-02 | Phase 8 | Complete |
 | UI-03 | Phase 8 | Complete |
