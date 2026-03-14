@@ -38,16 +38,27 @@ describe("NavUser", () => {
 })
 
 describe("ProfileSwitcher", () => {
-  it("renders the 'Meine Suche' placeholder text", () => {
-    render(<ProfileSwitcher />)
+  const mockProfiles = [
+    { id: "p1", name: "Zurich Apartment", is_default: true },
+    { id: "p2", name: "Basel Studio", is_default: false },
+  ]
 
-    expect(screen.getByText("Meine Suche")).toBeDefined()
+  it("renders the active profile name", () => {
+    render(<ProfileSwitcher profiles={mockProfiles} activeProfileId="p1" />)
+
+    expect(screen.getByText("Zurich Apartment")).toBeDefined()
+  })
+
+  it("renders 'No Profile' when no profiles exist", () => {
+    render(<ProfileSwitcher profiles={[]} />)
+
+    expect(screen.getByText("No Profile")).toBeDefined()
   })
 
   it("renders as a button element", () => {
-    render(<ProfileSwitcher />)
+    render(<ProfileSwitcher profiles={mockProfiles} activeProfileId="p1" />)
 
-    const button = screen.getByText("Meine Suche").closest("button")
+    const button = screen.getByText("Zurich Apartment").closest("button")
     expect(button).toBeDefined()
   })
 })

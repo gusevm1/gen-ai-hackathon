@@ -20,6 +20,14 @@ export default async function DashboardLayout({
     redirect("/")
   }
 
+  // Fetch all profiles for the current user
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, name, is_default')
+    .order('created_at', { ascending: true })
+
+  const activeProfile = profiles?.find(p => p.is_default) ?? profiles?.[0]
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -29,7 +37,10 @@ export default async function DashboardLayout({
         </div>
         <TopNavbar />
         <div className="ml-auto flex items-center gap-2">
-          <ProfileSwitcher />
+          <ProfileSwitcher
+            profiles={profiles ?? []}
+            activeProfileId={activeProfile?.id}
+          />
           <ThemeToggle />
           <NavUser user={{ email: user.email ?? "" }} />
         </div>
