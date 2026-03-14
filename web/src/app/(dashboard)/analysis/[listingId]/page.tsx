@@ -5,9 +5,21 @@ import { BulletSummary } from '@/components/analysis/BulletSummary'
 import { CategoryBreakdown } from '@/components/analysis/CategoryBreakdown'
 import { ChecklistSection } from '@/components/analysis/ChecklistSection'
 import Link from 'next/link'
+import { ChevronRight } from 'lucide-react'
 
 interface AnalysisPageProps {
   params: Promise<{ listingId: string }>
+}
+
+function formatDate(dateString: string): string {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 export default async function AnalysisPage({ params }: AnalysisPageProps) {
@@ -29,19 +41,32 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
 
   if (!analysis) {
     return (
-      <div className="container max-w-2xl mx-auto py-16 px-4 text-center">
+      <div className="container max-w-4xl mx-auto py-16 px-4 text-center">
         <h1 className="text-2xl font-bold mb-4">No analysis found</h1>
         <p className="text-muted-foreground mb-6">
           We could not find an analysis for listing {listingId}. It may not have been scored yet.
         </p>
         <Link
-          href="/dashboard"
+          href="/analyses"
           className="text-blue-600 hover:underline"
         >
-          Back to Dashboard
+          Back to Analyses
         </Link>
       </div>
     )
+  }
+
+  // Fetch profile name if available
+  let profileName: string | undefined
+  if (analysis.profile_id) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name')
+      .eq('id', analysis.profile_id)
+      .single()
+    if (profile) {
+      profileName = profile.name
+    }
   }
 
   const breakdown = analysis.breakdown as {
@@ -68,26 +93,43 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
   const checklist = breakdown.checklist ?? []
 
   return (
-    <div className="container max-w-2xl mx-auto py-8 px-4">
-      <Link
-        href="/dashboard"
-        className="mb-6 inline-block text-sm text-muted-foreground hover:text-foreground"
-      >
-        &larr; Back to Dashboard
-      </Link>
+    <div className="container max-w-4xl mx-auto py-8 px-4">
+      {/* Breadcrumb */}
+      <nav className="mb-6 flex items-center gap-1 text-sm text-muted-foreground">
+        <Link href="/analyses" className="hover:text-foreground transition-colors">
+          Analyses
+        </Link>
+        <ChevronRight className="h-3.5 w-3.5" />
+        <span className="text-foreground">Listing {listingId}</span>
+      </nav>
 
       <h1 className="sr-only">Analysis - Listing {listingId}</h1>
 
+      {/* Score header full width */}
       <ScoreHeader
         overallScore={overallScore}
         matchTier={matchTier}
         listingId={listingId}
+        profileName={profileName}
       />
 
-      <div className="mt-8 space-y-8">
-        <BulletSummary bullets={summaryBullets} />
-        <CategoryBreakdown categories={categories} />
-        <ChecklistSection checklist={checklist} />
+      {/* Timestamp */}
+      <p className="text-center text-xs text-muted-foreground -mt-4 mb-8">
+        Scored on {formatDate(analysis.created_at)}
+      </p>
+
+      {/* 2-column layout on lg screens */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+        {/* Left column: Key Takeaways + Category Breakdown */}
+        <div className="space-y-8">
+          <BulletSummary bullets={summaryBullets} />
+          <CategoryBreakdown categories={categories} />
+        </div>
+
+        {/* Right column: Checklist as sticky sidebar */}
+        <div className="lg:sticky lg:top-8 lg:self-start">
+          <ChecklistSection checklist={checklist} />
+        </div>
       </div>
     </div>
   )
