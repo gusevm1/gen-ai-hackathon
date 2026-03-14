@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-03-13T15:38:00Z"
-last_activity: 2026-03-13 -- Phase 8 complete (layout shell, navbar, theme toggle, user menu, 21st.dev)
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-03-14T15:49:20Z"
+last_activity: 2026-03-14 -- Phase 9 Plan 02 complete (preferences form restructured into 6 accordion sections)
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 4
-  completed_plans: 6
+  total_plans: 10
+  completed_plans: 8
   percent: 67
 ---
 
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-13)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website.
-**Current focus:** Phase 8 -- UI Foundation (v1.1)
+**Current focus:** Phase 9 -- Web Profile Management (v1.1)
 
 ## Current Position
 
-Phase: 8 of 10 (UI Foundation) -- COMPLETE
-Plan: 2/2 complete
-Status: Phase 8 complete -- layout shell with top navbar, theme toggle, user menu, 21st.dev integration. Ready for Phase 9.
-Last activity: 2026-03-13 -- Phase 8 Plan 02 complete (navbar, theme toggle, user menu, placeholder pages, 21st.dev)
+Phase: 9 of 10 (Web Profile Management)
+Plan: 2/4 complete
+Status: Preferences form restructured into 6 accordion sections with dealbreakers, floor preference, availability. Plans 01-02 complete.
+Last activity: 2026-03-14 -- Phase 9 Plan 02 complete (6-section preferences form with dealbreaker checkboxes)
 
-Progress: [######....] 67% (4/6 v1.1 phases complete)
+Progress: [##########] 95% (21/22 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17 (12 v1.0 + 5 v1.1)
+- Total plans completed: 19 (12 v1.0 + 7 v1.1)
 - Average duration: --
 - Total execution time: --
 
@@ -50,12 +50,13 @@ Progress: [######....] 67% (4/6 v1.1 phases complete)
 | 8 (UI Foundation) | 2/2 | ~9min | ~4.5min |
 
 **Recent Trend:**
-- Last plan: 08-02 (~5min, 4 tasks, 17 files)
+- Last plan: 09-02 (~3min, 2 tasks, 12 files)
 - Trend: accelerating
 
 *Updated after each plan completion*
 | Phase 08 P01 | 4min | 2 tasks | 11 files |
 | Phase 08 P02 | 5min | 4 tasks | 17 files |
+| Phase 09 P02 | 3min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,11 @@ Recent decisions affecting current work:
 - [08-02]: Dashboard renamed to Preferences in navigation (reflects actual page content)
 - [08-02]: DropdownMenuLabel must be wrapped in DropdownMenuGroup (Base UI crash fix)
 - [08-02]: ShimmerButton from magicui (21st.dev) chosen after research-first evaluation (12k+ GitHub stars)
+- [09-01]: Profile CRUD via Next.js server actions with revalidatePath for cache busting
+- [09-01]: ProfileSwitcher receives profiles as props from server component layout (no client-side fetching)
+- [09-02]: Explicit AccordionItem value props fix Base UI defaultValue bug (numeric indices fail)
+- [09-02]: Pre-installed card, alert-dialog, dialog for Plan 03 to consolidate install steps
+- [09-02]: Section component pattern: each accordion section is a separate component receiving UseFormReturn
 
 ### Pending Todos
 
@@ -99,6 +105,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-13T15:38:00Z
-Stopped at: Completed 08-02-PLAN.md (Phase 8 complete)
+Last session: 2026-03-14T15:49:20Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None

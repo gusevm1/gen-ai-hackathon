@@ -37,8 +37,8 @@ Requirements for Demo-Ready + Multi-Profile milestone. Each maps to roadmap phas
 
 ### Preferences UX
 
-- [ ] **PREF-11**: Preferences form distinguishes dealbreakers (hard constraints) from weighted soft preferences
-- [ ] **PREF-12**: Importance levels use chips (Low/Medium/High/Critical) instead of sliders for non-numeric criteria
+- [x] **PREF-11**: Preferences form distinguishes dealbreakers (hard constraints) from weighted soft preferences
+- [x] **PREF-12**: Importance levels use chips (Low/Medium/High/Critical) instead of sliders for non-numeric criteria
 - [x] **PREF-13**: Web/extension/backend preference schemas unified into canonical superset
 - [x] **PREF-14**: Claude prompt updated to use structured importance levels and all preference fields
 - [ ] **PREF-15**: Live profile summary preview on the preferences form
@@ -123,8 +123,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UI-03 | Phase 8 | Complete |
 | UI-04 | Phase 9 | Pending |
 | UI-05 | Phase 8 | Complete |
-| PREF-11 | Phase 9 | Pending |
-| PREF-12 | Phase 9 | Pending |
+| PREF-11 | Phase 9 | Complete |
+| PREF-12 | Phase 9 | Complete |
 | PREF-13 | Phase 7 | Complete |
 | PREF-14 | Phase 7 | Complete |
 | PREF-15 | Phase 9 | Pending |
