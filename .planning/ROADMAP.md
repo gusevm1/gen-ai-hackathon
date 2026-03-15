@@ -38,7 +38,7 @@
 - Integer phases (11, 12, 13, 14): Planned milestone work
 - Decimal phases (12.1, 12.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 11: Dynamic Preference Schema** - Add structured dynamic fields with importance levels across all layers
+- [x] **Phase 11: Dynamic Preference Schema** - Add structured dynamic fields with importance levels across all layers (completed 2026-03-15)
 - [ ] **Phase 12: Chat-Based Preference Discovery** - AI chat interface that generates editable preference fields
 - [ ] **Phase 13: Parallel Scoring** - Score all visible listings from a single FAB click with progress tracking
 - [ ] **Phase 14: UI Redesign & Extension Distribution** - Flatfox-inspired color palette and Chrome Web Store distribution
@@ -125,7 +125,7 @@ Note: Phases 13 and 14 are independent of 11-12 and could execute in any order. 
 | 8. UI Foundation | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 9. Web Profile Management | v1.1 | 4/4 | Complete | 2026-03-15 |
 | 10. Extension Profile Switcher | v1.1 | 3/3 | Complete | 2026-03-15 |
-| 11. Dynamic Preference Schema | 1/2 | In Progress|  | - |
+| 11. Dynamic Preference Schema | 2/2 | Complete   | 2026-03-15 | - |
 | 12. Chat-Based Preference Discovery | v2.0 | 0/TBD | Not started | - |
 | 13. Parallel Scoring | v2.0 | 0/TBD | Not started | - |
 | 14. UI Redesign & Extension Distribution | v2.0 | 0/TBD | Not started | - |
