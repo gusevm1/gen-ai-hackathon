@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Demo-Ready + Multi-Profile
-status: completed
-stopped_at: Milestone v1.1 complete
+milestone: v2.0
+milestone_name: Smart Preferences & UX Polish
+status: active
+stopped_at: null
 last_updated: "2026-03-15"
-last_activity: 2026-03-15 -- Milestone v1.1 completed and archived
+last_activity: 2026-03-15 -- Milestone v2.0 started
 progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 25
-  completed_plans: 25
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,13 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website.
-**Current focus:** Planning next milestone
+**Current focus:** Defining v2.0 requirements
 
 ## Current Position
 
-Milestone v1.1 shipped. All 10 phases (25 plans) complete across v1.0 and v1.1.
-
-Next step: `/gsd:new-milestone` to define v2.0 scope.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-15 — Milestone v2.0 started
 
 ## Accumulated Context
 
@@ -44,5 +45,5 @@ Decisions are logged in PROJECT.md Key Decisions table.
 ## Session Continuity
 
 Last session: 2026-03-15
-Stopped at: Milestone v1.1 complete
+Stopped at: Defining v2.0 requirements
 Resume file: None

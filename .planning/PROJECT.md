@@ -53,7 +53,14 @@ Help users instantly see how well each property listing matches their specific n
 
 ### Active
 
-(No active requirements — define in next milestone via `/gsd:new-milestone`)
+<!-- v2.0 Smart Preferences & UX Polish -->
+- [ ] Chat-based preference discovery that generates structured fields with priorities
+- [ ] User can view and edit AI-generated preference fields before saving
+- [ ] Basic fields (location, price, rooms) remain as standard form inputs
+- [ ] Custom/soft criteria replaced with dynamic AI-generated fields
+- [ ] UI rehaul with Flatfox-esque color scheme and polished UX
+- [ ] Parallel scoring — single FAB click scores all visible listings at once
+- [ ] Chrome extension download/install section on website
 
 ### Out of Scope
 
@@ -63,6 +70,17 @@ Help users instantly see how well each property listing matches their specific n
 - Automatic scoring (user must trigger via FAB — Claude API cost control)
 - Score caching by listing ID + profile hash
 - Offline mode
+
+## Current Milestone: v2.0 Smart Preferences & UX Polish
+
+**Goal:** Replace manual preference forms with AI chat-driven discovery, overhaul UI design, and enable parallel listing scoring.
+
+**Target features:**
+- Chat-based preference generation with editable output and priority assignment
+- Simplified preferences schema: standard fields + dynamic AI-generated fields
+- Flatfox-inspired UI redesign across web app
+- Parallel scoring of all visible listings from single FAB click
+- Chrome extension distribution from website
 
 ## Context
 
@@ -105,4 +123,4 @@ Help users instantly see how well each property listing matches their specific n
 | `--no-verify-jwt` on edge function | Gateway rejects extension JWTs; function handles auth itself | ⚠️ Revisit |
 
 ---
-*Last updated: 2026-03-15 after v1.1 milestone completion*
+*Last updated: 2026-03-15 after v2.0 milestone start*
