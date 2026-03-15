@@ -11,11 +11,11 @@ describe('loading state behavior', () => {
     expect(skeleton!.className).toContain('animate-pulse');
   });
 
-  it('renders with expected dimensions (80x32)', () => {
+  it('renders with expected dimensions (100x40)', () => {
     const { container } = render(createElement(LoadingSkeleton));
     const skeleton = container.firstElementChild as HTMLElement;
-    expect(skeleton.style.width).toBe('80px');
-    expect(skeleton.style.height).toBe('32px');
+    expect(skeleton.style.width).toBe('100px');
+    expect(skeleton.style.height).toBe('40px');
   });
 
   it('contains score circle and text placeholders', () => {

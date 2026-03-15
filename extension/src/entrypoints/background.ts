@@ -14,17 +14,6 @@ export type ExtMessage =
   | { action: 'healthCheck' };
 
 /**
- * Handle the onInstalled event. Exported for testability.
- */
-export async function handleInstalled(details: { reason: string }) {
-  if (details.reason === 'install') {
-    await browser.tabs.create({
-      url: browser.runtime.getURL('/onboarding.html'),
-    });
-  }
-}
-
-/**
  * Handle messages from the popup and content scripts.
  * Returns a promise that resolves with the result.
  */
@@ -80,8 +69,6 @@ export async function handleMessage(
 }
 
 export default defineBackground(() => {
-  browser.runtime.onInstalled.addListener(handleInstalled);
-
   browser.runtime.onMessage.addListener(
     (message: ExtMessage, _sender, sendResponse) => {
       handleMessage(message).then(sendResponse);

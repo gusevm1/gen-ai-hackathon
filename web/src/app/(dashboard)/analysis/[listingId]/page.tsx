@@ -37,7 +37,9 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
     .select('*')
     .eq('user_id', user.id)
     .eq('listing_id', listingId)
-    .single()
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (!analysis) {
     return (
