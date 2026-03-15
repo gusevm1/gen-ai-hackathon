@@ -1,752 +1,763 @@
-# Architecture Research
+# Architecture Patterns: v2.0 Integration
 
-**Domain:** Multi-profile integration for HomeMatch v1.1 — Chrome Extension + Next.js + FastAPI + Supabase
-**Researched:** 2026-03-13
-**Confidence:** HIGH (direct codebase analysis, no external verification needed for integration design)
-
----
-
-## Existing Architecture (v1.0 Baseline)
-
-Before documenting changes, this is what v1.0 actually built:
-
-```
-┌────────────────────┐     ┌────────────────────────┐     ┌──────────────────┐
-│  Next.js (Vercel)  │────►│  Supabase              │────►│  FastAPI (EC2)   │
-│                    │     │  - Auth (email/pw)      │     │                  │
-│  /              (home)   │  - user_preferences     │     │  POST /score     │
-│  /dashboard     (prefs)  │    (one row per user,   │     │  - Flatfox API   │
-│  /analysis/[id] (full)   │     JSONB)              │     │  - Claude API    │
-└────────────────────┘     │  - analyses             │     │  - save results  │
-                           │    (one per user+       │     └──────────────────┘
-┌────────────────────┐     │     listing, JSONB)     │
-│  Chrome Extension  │     │  - Edge Function:       │
-│  (WXT MV3)         │     │    score-proxy          │
-│                    │     │    (validates JWT,       │
-│  Popup:            │     │     proxies to EC2)     │
-│  - Login/logout    │     └────────────────────────┘
-│  - Link to web     │
-│                    │
-│  Content Script:   │
-│  - FAB button      │
-│  - Shadow DOM      │
-│    score badges    │
-│  - Summary panels  │
-└────────────────────┘
-```
-
-### Current DB Schema (v1.0)
-
-```sql
--- One row per user. Preferences stored as flat JSONB.
-user_preferences (
-  id uuid PK,
-  user_id uuid FK auth.users UNIQUE,  -- enforced single profile per user
-  preferences jsonb,                   -- { location, offerType, budgetMin, ..., weights }
-  updated_at timestamptz,
-  created_at timestamptz
-)
-
--- One row per user+listing pair.
-analyses (
-  id uuid PK,
-  user_id uuid FK auth.users,
-  listing_id text,
-  score numeric,
-  breakdown jsonb,   -- full ScoreResponse
-  summary text,
-  created_at timestamptz,
-  UNIQUE(user_id, listing_id)  -- one analysis per user per listing
-)
-```
-
-### Current Storage: Two-source Problem
-
-The extension stores a single `local:userProfile` in `browser.storage.local` (WXT wrapper for `chrome.storage.local`). The web app stores preferences in Supabase `user_preferences`. These are **two separate sources** that can diverge:
-
-- Extension wizard saves to `browser.storage.local` — the backend reads from Supabase
-- Web dashboard saves to Supabase `user_preferences` — extension does not sync back
-- Backend `supabase_service.get_preferences(user_id)` reads from Supabase, not extension storage
-
-**Result:** In v1.0, the extension wizard and web form are essentially independent data entry points for the same single profile. The backend always uses the Supabase copy.
+**Domain:** Chat-based preferences, dynamic schema, parallel scoring, extension distribution
+**Researched:** 2026-03-15
+**Confidence:** HIGH (direct codebase analysis + verified API documentation)
 
 ---
 
-## Target Architecture (v1.1 Multi-Profile)
-
-The core change: one user can have **N named profiles** (e.g., "Family in Zurich", "Studio near Basel"). The active profile drives scoring. The extension popup shows which profile is active and lets the user switch.
+## Current Architecture (v1.1 Baseline)
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│  Next.js (Vercel)                                                       │
-│                                                                         │
-│  /                         (landing / sign-in)                          │
-│  /dashboard                (profile list + "New Profile" CTA)           │
-│  /profiles/[id]            (edit a single profile's preferences)        │
-│  /analysis/[listingId]     (full analysis — now profile-aware)          │
-│                                                                         │
-│  Server Actions:                                                        │
-│  - listProfiles(userId)         → profiles[]                           │
-│  - createProfile(userId, name)  → profile                              │
-│  - updateProfile(profileId, data)                                       │
-│  - deleteProfile(profileId)                                             │
-│  - setActiveProfile(userId, profileId)                                  │
-└────────────────────────────────────────────────────────────────────────┘
-        │ writes/reads Supabase
-        ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  Supabase                                                               │
-│                                                                         │
-│  profiles (NEW TABLE)                                                   │
-│    id uuid PK                                                           │
-│    user_id uuid FK auth.users                                           │
-│    name text                     -- "Family in Zurich"                  │
-│    preferences jsonb             -- same shape as old user_preferences  │
-│    is_default boolean default false                                     │
-│    created_at / updated_at                                              │
-│                                                                         │
-│  user_active_profile (NEW TABLE or column)                              │
-│    user_id uuid FK auth.users UNIQUE                                    │
-│    profile_id uuid FK profiles                                          │
-│    updated_at                                                           │
-│                                                                         │
-│  analyses (MODIFIED)                                                    │
-│    + profile_id uuid FK profiles   -- which profile scored this         │
-│    UNIQUE changed: (user_id, listing_id, profile_id)                   │
-│                                                                         │
-│  user_preferences (DEPRECATED, kept for migration only)                │
-│                                                                         │
-│  Edge Function: score-proxy (MODIFIED)                                  │
-│    Accepts optional profile_id in request body                          │
-│    If no profile_id: use user's active profile                          │
-│    Fetches from profiles table instead of user_preferences              │
-└────────────────────────────────────────────────────────────────────────┘
-        │ proxies to EC2
-        ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  FastAPI (EC2)                                                          │
-│                                                                         │
-│  POST /score (MODIFIED)                                                 │
-│    ScoreRequest now accepts profile_id (optional)                       │
-│    SupabaseService.get_preferences(user_id, profile_id=None)           │
-│      - if profile_id: fetch from profiles table by profile_id          │
-│      - else: fetch user's active profile from user_active_profile      │
-│                                                                         │
-│  SupabaseService.save_analysis(user_id, listing_id, score_data,        │
-│                                profile_id)   ← NEW param               │
-└────────────────────────────────────────────────────────────────────────┘
-        │
-        ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  Chrome Extension (WXT MV3)                                            │
-│                                                                         │
-│  Popup (MODIFIED):                                                      │
-│    - Shows active profile name (fetched from Supabase or extension     │
-│      storage)                                                           │
-│    - Profile switcher: dropdown or list of profiles                    │
-│    - "Manage profiles" → opens web dashboard                           │
-│                                                                         │
-│  browser.storage.local (MODIFIED key structure):                       │
-│    local:activeProfileId   → uuid string                               │
-│    local:activeProfileData → full preferences JSONB (cached copy)      │
-│    (old local:userProfile deprecated)                                  │
-│                                                                         │
-│  Content Script (UNCHANGED for scoring):                               │
-│    Sends { listing_id } to score-proxy                                 │
-│    Edge function resolves active profile server-side                   │
-│    No change needed here                                               │
-│                                                                         │
-│  Background Service Worker (MODIFIED):                                 │
-│    New message: { action: 'getProfiles' }                              │
-│    New message: { action: 'setActiveProfile', profileId }              │
-│    Fetches profile list from Supabase REST API on demand               │
-└────────────────────────────────────────────────────────────────────────┘
+Extension (WXT)                 Supabase                    EC2 Backend
++-----------------+      +--------------------+      +------------------+
+| Content Script  |      | Edge Function:     |      | POST /score      |
+|  FAB --------->-|----->| score-proxy        |----->|  1. flatfox API  |
+|  Badges (Shadow)|      |  - JWT verify      |      |  2. image fetch  |
+|  Summary Panels |      |  - resolve profile |      |  3. Claude call  |
+| Popup           |      |  - proxy to EC2    |      |  4. save analysis|
+|  ProfileSwitcher|      +--------------------+      +------------------+
++-----------------+      | DB (PostgreSQL)    |
+                         |  profiles (JSONB)  |      Next.js (Vercel)
+                         |  analyses          |      +------------------+
+                         |  RPC: set_active_  |      | /profiles/[id]   |
+                         |    profile         |<-----| PreferencesForm  |
+                         +--------------------+      | /analysis/[id]   |
+                                                     +------------------+
 ```
+
+### Key Data Flow for Scoring (current)
+
+1. User clicks FAB on Flatfox.ch
+2. Content script calls `scoreListings()` -- **sequentially**, one listing at a time
+3. Each call: Extension -> score-proxy edge function (JWT auth, resolve active profile, read preferences JSONB) -> EC2 `/score`
+4. Backend: fetch listing from Flatfox API, fetch images, call Claude `messages.parse()`, save to `analyses` table
+5. Badge rendered per listing as each result arrives
+
+### Key Data for Preferences (current)
+
+```
+Zod schema (frontend)  <-->  JSONB in profiles.preferences  <-->  Pydantic model (backend)
+
+Fixed fields: location, offerType, objectCategory, budgetMin/Max, roomsMin/Max,
+              livingSpaceMin/Max, budgetDealbreaker, roomsDealbreaker, livingSpaceDealbreaker,
+              floorPreference, availability, features[], softCriteria[], importance{}, language
+```
+
+The `softCriteria` field is a `list[str]` of free-text tags the user adds manually. The `features` field is a `list[str]` of predefined feature toggles (balcony, elevator, etc.). The `importance` field maps 5 fixed categories to importance levels.
 
 ---
 
-## DB Schema Changes
+## Integration 1: Chat-Based Preference Discovery
 
-### New Tables
+### What Changes
 
-```sql
--- Migration: 002_multi_profile.sql
+Replace the manual `softCriteria` free-text tags and partially the `features` checkboxes with an AI-powered chat that generates structured preference fields from natural language conversation.
 
--- Profiles: one-to-many, user can have N profiles
-CREATE TABLE profiles (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  name text NOT NULL,
-  preferences jsonb NOT NULL DEFAULT '{}',
-  is_default boolean NOT NULL DEFAULT false,
-  created_at timestamptz DEFAULT now() NOT NULL,
-  updated_at timestamptz DEFAULT now() NOT NULL
-);
+### Architecture Decision: Where to Run the Chat LLM
 
--- Enforce max one default per user at DB level via partial unique index
-CREATE UNIQUE INDEX profiles_one_default_per_user
-  ON profiles (user_id)
-  WHERE is_default = true;
+**Use the Vercel AI SDK on the Next.js frontend, calling Claude directly from server actions.** Do NOT route chat through the EC2 backend.
 
--- Active profile pointer per user (alternative: just query is_default)
--- Simple approach: active = is_default = true. No separate table needed.
+Rationale:
+- The chat is a **web-only** feature (users set preferences on the website, not the extension)
+- Vercel AI SDK v6 provides `streamText` + `useChat` with built-in Anthropic provider, streaming, and structured output
+- The EC2 backend is purpose-built for the scoring pipeline (Flatfox fetch + image extraction + Claude scoring); adding a chat endpoint would couple unrelated concerns
+- Server actions eliminate the need for API route boilerplate
 
--- Analyses: add profile_id foreign key, relax unique constraint
-ALTER TABLE analyses
-  ADD COLUMN profile_id uuid REFERENCES profiles(id) ON DELETE SET NULL;
+### New Component: Chat Preferences Flow
 
--- Old unique(user_id, listing_id) → new unique(user_id, listing_id, profile_id)
-ALTER TABLE analyses DROP CONSTRAINT analyses_user_id_listing_id_key;
-CREATE UNIQUE INDEX analyses_unique_per_profile
-  ON analyses (user_id, listing_id, profile_id);
-
--- RLS for profiles
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own profiles"
-  ON profiles FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own profiles"
-  ON profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own profiles"
-  ON profiles FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own profiles"
-  ON profiles FOR DELETE USING (auth.uid() = user_id);
-
--- Backfill: migrate existing user_preferences → profiles (one default profile each)
-INSERT INTO profiles (user_id, name, preferences, is_default, created_at, updated_at)
-SELECT user_id, 'My Profile', preferences, true, created_at, updated_at
-FROM user_preferences
-ON CONFLICT DO NOTHING;
+```
+Next.js Frontend                                    Claude API
++----------------------------------+                (via Vercel AI SDK)
+| /profiles/[id]/chat  (NEW PAGE) |
+|                                  |
+| ChatInterface component         |     streamText()
+|   useChat() hook  ------------->|---> anthropic('claude-haiku-4-5')
+|   - User describes needs        |     System prompt: extract preferences
+|   - AI asks clarifying Qs       |     Multi-turn conversation
+|   - AI generates structured     |<--- Streamed response
+|     preference fields           |
+|                                  |
+| PreferenceReview component (NEW) |
+|   - Shows AI-generated fields   |
+|   - User can edit/remove/add    |
+|   - User confirms and saves     |
+|                                  |
+| On save: merge with standard    |
+|   fields -> update profiles     |
+|   .preferences JSONB            |
++----------------------------------+
 ```
 
-### Active Profile Approach
+### Implementation Details
 
-Use `is_default = true` as the active profile marker. This avoids a separate `user_active_profile` join table. The partial unique index guarantees exactly one default per user at the DB level.
+**Server Action for Chat (new file: `web/src/app/(dashboard)/profiles/[profileId]/chat/actions.ts`)**
 
-Switching active profile = a transaction that:
-1. `UPDATE profiles SET is_default = false WHERE user_id = $1`
-2. `UPDATE profiles SET is_default = true WHERE id = $2 AND user_id = $1`
+```typescript
+'use server'
+import { streamText } from 'ai'
+import { anthropic } from '@ai-sdk/anthropic'
+import { createStreamableValue } from 'ai/rsc'
 
-This must be done atomically to avoid a window where no profile is default.
+export async function chatWithPreferences(messages: Message[]) {
+  const stream = createStreamableValue()
+
+  ;(async () => {
+    const result = streamText({
+      model: anthropic('claude-haiku-4-5'),
+      system: PREFERENCE_DISCOVERY_SYSTEM_PROMPT,
+      messages,
+    })
+    // pipe stream to client
+  })()
+
+  return { output: stream.value }
+}
+```
+
+**Alternatively, use the API route + useChat pattern (simpler):**
+
+```typescript
+// web/src/app/api/chat/route.ts
+import { anthropic } from '@ai-sdk/anthropic'
+import { streamText } from 'ai'
+
+export async function POST(req: Request) {
+  const { messages } = await req.json()
+  const result = streamText({
+    model: anthropic('claude-haiku-4-5'),
+    system: PREFERENCE_DISCOVERY_PROMPT,
+    messages,
+  })
+  return result.toDataStreamResponse()
+}
+
+// Client: useChat({ api: '/api/chat' })
+```
+
+**Preference Extraction (structured output at end of conversation):**
+
+When the user indicates they are done chatting, a final call uses `generateObject` with a Zod schema to extract structured preferences:
+
+```typescript
+import { generateObject } from 'ai'
+import { z } from 'zod'
+
+const dynamicPreferenceSchema = z.object({
+  fields: z.array(z.object({
+    label: z.string(),           // "Natural light"
+    description: z.string(),     // "Lots of windows, south-facing"
+    importance: z.enum(['critical', 'high', 'medium', 'low']),
+    category: z.enum(['location', 'features', 'condition', 'lifestyle', 'other']),
+  })),
+  suggestedFeatures: z.array(z.string()),  // Map to existing features list
+  suggestedLocation: z.string().optional(),
+  suggestedBudget: z.object({
+    min: z.number().nullable(),
+    max: z.number().nullable(),
+  }).optional(),
+})
+```
+
+### Schema Evolution: Dynamic Preferences
+
+**Current schema** has fixed `softCriteria: string[]` -- unstructured free text.
+
+**New schema** replaces `softCriteria` with `dynamicFields`:
+
+```typescript
+// Added to preferences schema (both Zod and Pydantic)
+dynamicFields: z.array(z.object({
+  id: z.string(),               // UUID for stable identity
+  label: z.string(),            // Human-readable name
+  description: z.string(),      // What the user means
+  importance: importanceLevelSchema,  // critical/high/medium/low
+  category: z.string(),         // grouping for UI/prompt
+})).default([])
+```
+
+**Migration path:** Keep `softCriteria` as an alias. The backend Pydantic model validator already handles migration (see `migrate_legacy_format`). Add a new validator that converts old `softCriteria` strings into `dynamicFields` with `importance: 'medium'`.
+
+**Impact on scoring prompt:** The `build_user_prompt()` function in `backend/app/prompts/scoring.py` currently formats `softCriteria` as:
+```
+**Soft criteria:** criterion1, criterion2
+```
+
+This changes to format each dynamic field with its importance:
+```
+**Custom Criteria:**
+- Natural light (HIGH): Lots of windows, south-facing
+- Quiet neighborhood (CRITICAL): No busy roads nearby
+- Modern kitchen (MEDIUM): Recently renovated kitchen
+```
+
+### New Dependencies
+
+| Package | Where | Purpose |
+|---------|-------|---------|
+| `ai` (Vercel AI SDK) | web | `streamText`, `generateObject`, `useChat` |
+| `@ai-sdk/anthropic` | web | Claude provider for AI SDK |
+
+### Environment Variables
+
+| Variable | Where | Purpose |
+|----------|-------|---------|
+| `ANTHROPIC_API_KEY` | Vercel (web) | Claude API for chat (separate from EC2 backend key) |
+
+### Files Changed
+
+| File | Change Type | What |
+|------|-------------|------|
+| `web/src/lib/schemas/preferences.ts` | MODIFY | Add `dynamicFields` to Zod schema |
+| `web/src/app/api/chat/route.ts` | NEW | API route for streaming chat |
+| `web/src/app/(dashboard)/profiles/[profileId]/chat/page.tsx` | NEW | Chat page |
+| `web/src/components/chat/chat-interface.tsx` | NEW | Chat UI with `useChat` |
+| `web/src/components/chat/preference-review.tsx` | NEW | Review/edit extracted prefs |
+| `web/src/lib/prompts/preference-discovery.ts` | NEW | System prompt for chat |
+| `backend/app/models/preferences.py` | MODIFY | Add `dynamic_fields`, migration |
+| `backend/app/prompts/scoring.py` | MODIFY | Format dynamic fields in prompt |
 
 ---
 
-## Component Boundaries: New vs Modified
+## Integration 2: Parallel Listing Scoring
 
-### New Components
+### What Changes
 
-| Component | Location | What It Is |
-|-----------|----------|------------|
-| `profiles` DB table | Supabase | Replaces `user_preferences` for multi-profile |
-| `ProfileList` | `web/src/components/profiles/` | Dashboard list: name, edit, delete, set-active |
-| `ProfileForm` | `web/src/components/profiles/` | Create/edit a profile (wraps preferences form) |
-| `ProfileSwitcher` | `extension/src/components/popup/` | Dropdown in popup for switching active profile |
-| `listProfiles` server action | `web/src/app/dashboard/` | Load all profiles for user |
-| `createProfile` server action | `web/src/app/dashboard/` | Create new named profile |
-| `setActiveProfile` server action | `web/src/app/dashboard/` | Set `is_default` flag |
-| `deleteProfile` server action | `web/src/app/dashboard/` | Delete profile (guard: can't delete last one) |
-| `/profiles/[id]` route | `web/src/app/profiles/[id]/` | Edit a specific profile |
-| `002_multi_profile.sql` | `supabase/migrations/` | DB schema migration |
-| `local:activeProfileId` storage key | Extension | Cached active profile UUID |
-| `local:activeProfileData` storage key | Extension | Cached active preferences data |
+Currently `scoreListings()` in `extension/src/lib/api.ts` scores listings **sequentially** in a `for` loop. Change to parallel execution with concurrency control.
 
-### Modified Components
+### Architecture Decision: Where to Parallelize
 
-| Component | Location | Change |
-|-----------|----------|--------|
-| `score-proxy` edge function | `supabase/functions/score-proxy/` | Read from `profiles` (active) instead of `user_preferences` |
-| `ScoreRequest` model | `backend/app/models/scoring.py` | Add optional `profile_id` field |
-| `SupabaseService.get_preferences` | `backend/app/services/supabase.py` | Query `profiles` table; resolve active by `is_default` |
-| `SupabaseService.save_analysis` | `backend/app/services/supabase.py` | Include `profile_id` when saving to `analyses` |
-| `UserPreferences` model | `backend/app/models/preferences.py` | No schema change; source table changes |
-| `Dashboard` popup component | `extension/src/components/popup/` | Add profile name display + switcher |
-| `background.ts` | `extension/src/entrypoints/` | Add `getProfiles` and `setActiveProfile` message handlers |
-| `api.ts` | `extension/src/lib/` | Add `fetchProfiles(jwt)` function calling Supabase REST |
-| `profile-storage.ts` | `extension/src/storage/` | Add `activeProfileId` and `activeProfileData` storage items |
-| `DashboardPage` | `web/src/app/dashboard/` | Replace single preferences form with profile list |
-| `analyses` DB table | Supabase | Add `profile_id` FK, update unique constraint |
-| `AnalysisPage` | `web/src/app/analysis/[listingId]/` | Show which profile was used |
+**Parallelize at both the extension client AND the backend.**
 
-### Unchanged Components
+**Extension side:** Send N requests to the edge function concurrently (with concurrency limit).
+**Backend side:** No changes needed -- FastAPI is already async. Each request is handled independently. The `claude_scorer.score_listing()` already uses `AsyncAnthropic` with `await`, so multiple concurrent requests naturally parallelize.
 
-| Component | Reason |
-|-----------|--------|
-| Content script (`App.tsx`, `Fab`, `ScoreBadge`, `SummaryPanel`) | No change: scoring flow unchanged from extension's perspective |
-| Scoring pipeline in FastAPI (orchestration logic in `scoring.py`) | Only the preferences-fetch method changes, not the flow |
-| Claude scorer and prompts | Preferences data shape is unchanged |
-| Flatfox API client | No relation to profiles |
-| Auth flow (background.ts signIn/signOut) | Unchanged |
-| Web analysis page structure | Minor addition only (which profile label) |
+The edge function is stateless and handles each request independently, so concurrent calls from the extension work without modification.
+
+### Rate Limit Analysis
+
+The backend uses `claude-haiku-4-5` (configurable via `CLAUDE_MODEL` env var).
+
+Claude Haiku 4.5 rate limits (from official docs):
+- **Tier 1:** 50 RPM, 50K ITPM, 10K OTPM
+- **Tier 2:** 1,000 RPM, 450K ITPM, 90K OTPM
+
+A typical scoring request: ~2-3K input tokens (listing data + preferences + images), ~1-2K output tokens (ScoreResponse). So at Tier 1, scoring 50 listings concurrently is feasible within RPM but may hit ITPM limits (50 x 3K = 150K > 50K ITPM). A concurrency limit of 5-10 is safe for Tier 1.
+
+**Recommendation: Default concurrency of 5, configurable.** This stays well within Tier 1 limits and provides ~5x speedup over sequential.
+
+### Client-Side Changes (Extension)
+
+```typescript
+// extension/src/lib/api.ts -- MODIFIED
+
+const DEFAULT_CONCURRENCY = 5;
+
+export async function scoreListings(
+  listingIds: number[],
+  jwt: string,
+  onResult?: (id: number, result: ScoreResponse) => void,
+  concurrency: number = DEFAULT_CONCURRENCY,
+): Promise<Map<number, ScoreResponse>> {
+  const results = new Map<number, ScoreResponse>();
+
+  // Process in batches of `concurrency`
+  for (let i = 0; i < listingIds.length; i += concurrency) {
+    const batch = listingIds.slice(i, i + concurrency);
+    const promises = batch.map(async (id) => {
+      try {
+        const result = await scoreListing(id, jwt);
+        results.set(id, result);
+        onResult?.(id, result);
+      } catch (err) {
+        // Individual failure doesn't stop the batch
+        console.error(`Scoring failed for listing ${id}:`, err);
+      }
+    });
+    await Promise.all(promises);
+  }
+
+  return results;
+}
+```
+
+### Alternative: Backend Batch Endpoint
+
+NOT recommended for v2.0. A backend `POST /score/batch` endpoint would:
+- Require a new edge function or edge function modification
+- Add complexity to error handling (partial failures)
+- Lose progressive badge rendering (one badge at a time appearing)
+
+The client-side parallelization preserves the existing per-listing API contract and progressive rendering while being much simpler to implement.
+
+### Files Changed
+
+| File | Change Type | What |
+|------|-------------|------|
+| `extension/src/lib/api.ts` | MODIFY | Add concurrency parameter, batch with `Promise.all` |
+| `extension/src/entrypoints/content/App.tsx` | MODIFY | Pass concurrency to `scoreListings` |
+
+### No Backend Changes Required
+
+The FastAPI backend is already async. Multiple concurrent `POST /score` requests are handled by the event loop. `AsyncAnthropic` handles Claude API calls concurrently. No new endpoints, no batch logic.
+
+### FAB UX Changes
+
+The FAB already shows a scored count badge. For parallel scoring, add a progress indicator:
+
+```
+Current: FAB shows spinner -> done
+New:     FAB shows "3/12" counter -> done
+```
+
+The content script's `handleScore` already calls `onResult` per listing for progressive rendering. The only change is updating the FAB to show progress count.
+
+| File | Change Type | What |
+|------|-------------|------|
+| `extension/src/entrypoints/content/components/Fab.tsx` | MODIFY | Show progress count during scoring |
+| `extension/src/entrypoints/content/App.tsx` | MODIFY | Track total/completed for progress |
+
+---
+
+## Integration 3: Dynamic Preference Schema Changes
+
+### Database Impact
+
+The `profiles.preferences` column is `jsonb NOT NULL DEFAULT '{}'`. No schema migration needed -- JSONB absorbs new fields automatically. The `dynamicFields` array is just new keys in the JSONB blob.
+
+### Schema Synchronization
+
+Three schemas must stay in sync (existing pattern from v1.1):
+
+```
+Zod (web/src/lib/schemas/preferences.ts)
+  |
+  |-- preferencesSchema adds dynamicFields
+  |-- Used by: PreferencesForm, chat extraction, server actions
+
+Pydantic (backend/app/models/preferences.py)
+  |
+  |-- UserPreferences adds dynamic_fields
+  |-- Used by: scoring pipeline, prompt builder
+  |-- model_validator migrates softCriteria -> dynamicFields
+
+JSONB (profiles.preferences in Supabase)
+  |
+  |-- Stores whatever the frontend writes
+  |-- Backend reads via edge function proxy
+```
+
+### New Pydantic Model
+
+```python
+class DynamicField(BaseModel):
+    """A single AI-generated preference field."""
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    id: str = Field(description="Stable UUID for this field")
+    label: str = Field(description="Human-readable field name")
+    description: str = Field(description="What the user means by this")
+    importance: ImportanceLevel = ImportanceLevel.MEDIUM
+    category: str = Field(default="other", description="Grouping category")
+
+class UserPreferences(BaseModel):
+    # ... existing fields ...
+
+    # NEW: replaces soft_criteria for AI-generated fields
+    dynamic_fields: list[DynamicField] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_format(cls, data: dict) -> dict:
+        # ... existing migrations ...
+
+        # Migrate softCriteria -> dynamicFields (if only softCriteria exists)
+        if "softCriteria" in data and "dynamicFields" not in data:
+            import uuid
+            data["dynamicFields"] = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "label": criterion,
+                    "description": criterion,
+                    "importance": "medium",
+                    "category": "other",
+                }
+                for criterion in data["softCriteria"]
+                if criterion.strip()
+            ]
+        return data
+```
+
+### Prompt Impact
+
+The `build_user_prompt()` in `backend/app/prompts/scoring.py` needs to format dynamic fields:
+
+```python
+def _format_dynamic_fields(prefs: UserPreferences) -> str:
+    if not prefs.dynamic_fields:
+        return "**Custom criteria:** None"
+
+    lines = ["**Custom Criteria:**"]
+    for field in prefs.dynamic_fields:
+        lines.append(
+            f"- {field.label} ({field.importance.value.upper()}): {field.description}"
+        )
+    return "\n".join(lines)
+```
+
+This replaces the current `**Soft criteria:** {", ".join(prefs.soft_criteria)}` line.
+
+### Backward Compatibility
+
+- Old profiles with `softCriteria` continue to work via Pydantic migration
+- The `softCriteria` field remains in the Zod schema as optional/deprecated
+- Extension does not need changes -- it never reads preferences directly (edge function resolves them)
+- The scoring prompt adapts: if `dynamic_fields` is empty but `soft_criteria` is present, fall back to old format
+
+---
+
+## Integration 4: Chrome Extension Distribution
+
+### The Problem
+
+Currently users must load the extension as an unpacked folder via `chrome://extensions` in developer mode. For the hackathon demo and pilot with Vera, this needs to be easier.
+
+### Options Analysis
+
+| Method | Effort | User Experience | Maintenance |
+|--------|--------|----------------|-------------|
+| Chrome Web Store | High (review process, 5+ days) | Best (1-click install) | Auto-updates |
+| Direct .zip download + sideload instructions | Low | Medium (5-step manual process) | Manual |
+| Self-hosted .crx | Low | BROKEN (Chrome blocks non-CWS CRX since v68) | N/A |
+
+### Architecture Decision: .zip Download with Guided Install Page
+
+**Use a download page on the Next.js website** that provides:
+1. A downloadable .zip of the built extension
+2. Step-by-step visual instructions for sideloading
+3. Optional: start Chrome Web Store review in parallel
+
+Rationale:
+- CRX sideloading no longer works on Chrome for Windows/Mac (blocked since Chrome 68)
+- Chrome Web Store takes 5+ days for initial review -- too slow for hackathon timeline
+- A .zip + developer mode is the only reliable pre-CWS distribution method
+- The guided install page can be replaced with a CWS link once published
+
+### Implementation
+
+**Build pipeline (existing):**
+```bash
+cd extension && npm run build  # -> dist/chrome-mv3/
+```
+
+**New: Package the build output as a .zip in the web app's public directory:**
+```bash
+cd extension && npm run build && cd dist && zip -r ../../web/public/homematch-extension.zip chrome-mv3/
+```
+
+Add this as a script in the extension's `package.json`:
+```json
+{
+  "scripts": {
+    "build:dist": "npm run build && cd dist && zip -r ../../web/public/homematch-extension.zip chrome-mv3/"
+  }
+}
+```
+
+**New page: `web/src/app/(dashboard)/extension/page.tsx`** (or public, non-auth page):
+
+```
+/extension (or /install-extension)
+  +-----------------------------------------+
+  |  Install HomeMatch Chrome Extension     |
+  |                                         |
+  |  [Download Extension (.zip)]            |
+  |                                         |
+  |  Installation Steps:                    |
+  |  1. Download and unzip the file         |
+  |  2. Open chrome://extensions            |
+  |  3. Enable "Developer mode" toggle      |
+  |  4. Click "Load unpacked"              |
+  |  5. Select the chrome-mv3 folder        |
+  |                                         |
+  |  [Screenshot of each step]              |
+  +-----------------------------------------+
+```
+
+### Considerations
+
+- The .zip must be rebuilt and committed/deployed to Vercel whenever extension code changes
+- Consider making this a public (non-auth) page so prospects can see install instructions before signing up
+- Add a version number to the .zip filename for cache-busting: `homematch-extension-v2.0.zip`
+- Include a note about Chrome Web Store availability coming soon
+
+### Files Changed
+
+| File | Change Type | What |
+|------|-------------|------|
+| `web/public/homematch-extension.zip` | NEW | Built extension archive |
+| `web/src/app/install/page.tsx` | NEW | Download + install guide page |
+| `extension/package.json` | MODIFY | Add `build:dist` script |
+| `web/src/components/top-navbar.tsx` | MODIFY | Add nav link to install page |
+
+---
+
+## Component Boundaries
+
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| Chat Interface (NEW) | Multi-turn conversation for preference discovery | Vercel AI SDK -> Claude API |
+| Preference Review (NEW) | Display/edit AI-generated fields before saving | Supabase (profiles table) |
+| Chat API Route (NEW) | Server-side streaming endpoint for chat | Claude API via `@ai-sdk/anthropic` |
+| Dynamic Fields Schema (MOD) | Extended preference data model | All layers (Zod, JSONB, Pydantic) |
+| Parallel Scorer (MOD) | Concurrent listing scoring from extension | Edge function -> EC2 -> Claude API |
+| Install Page (NEW) | Extension distribution | Static .zip download |
+| Scoring Prompt (MOD) | Formats dynamic fields for Claude evaluation | Backend prompt builder |
 
 ---
 
 ## Data Flow Changes
 
-### Scoring Flow (v1.1)
+### New Flow: Chat-Based Preference Creation
 
 ```
-User clicks FAB on Flatfox
-    |
-    v
-Content script: sends { action: 'getSession' } to background
-    |
-    v
-Background: returns JWT access_token
-    |
-    v
-Content script: POST to score-proxy edge function
-  body: { listing_id: 12345 }        <-- no profile_id sent (server resolves)
-  headers: Authorization: Bearer JWT
-    |
-    v
-score-proxy edge function:
-  1. Validate JWT → get user_id
-  2. Query: SELECT * FROM profiles
-            WHERE user_id = $1 AND is_default = true
-            LIMIT 1
-  3. If no profile found → 404 "Please create a profile"
-  4. Proxy to EC2: { listing_id, user_id, profile_id: profile.id }
-    |
-    v
-FastAPI POST /score:
-  1. Fetch listing from Flatfox
-  2. get_preferences(user_id, profile_id) → reads from profiles table
-  3. Fetch images
-  4. Claude scoring (unchanged)
-  5. save_analysis(user_id, listing_id, score_data, profile_id)
-  6. Return ScoreResponse
+1. User navigates to /profiles/[id]/chat
+2. ChatInterface renders with useChat() hook
+3. User types: "I need a quiet 3-room apartment near Zurich HB,
+   max CHF 2500, natural light is very important"
+4. POST /api/chat -> streamText(anthropic('claude-haiku-4-5'), messages)
+5. Claude asks: "What's your budget range? Any must-have features?"
+6. ... multi-turn conversation (2-5 turns) ...
+7. User clicks "Generate Preferences"
+8. generateObject() with dynamicPreferenceSchema extracts structured fields
+9. PreferenceReview component shows:
+   - Standard fields auto-populated (location: "Zurich", budgetMax: 2500, roomsMin: 3)
+   - Dynamic fields: [{label: "Natural light", importance: "critical", ...},
+                       {label: "Quiet location", importance: "high", ...}]
+10. User reviews, edits if needed, confirms
+11. Server action: merge into profiles.preferences JSONB
+12. Profile ready for scoring
 ```
 
-### Profile Switch Flow (Extension)
+### Modified Flow: Parallel Scoring
 
 ```
-User opens popup
-    |
-    v
-Dashboard component: sends { action: 'getProfiles' } to background
-    |
-    v
-Background: fetches from Supabase REST API
-  GET /rest/v1/profiles?user_id=eq.{uid}&select=id,name,is_default
-  Authorization: Bearer JWT
-    |
-    v
-Background: returns profiles[] to popup
-    |
-    v
-Dashboard: renders ProfileSwitcher with list of profiles
-    |
-    v
-User selects different profile
-    |
-    v
-Dashboard: sends { action: 'setActiveProfile', profileId } to background
-    |
-    v
-Background: calls Supabase REST API (PATCH to set is_default)
-  OR: Next.js server action via fetch (simpler, keeps business logic in web)
-    |
-    v
-Background: updates local:activeProfileId and local:activeProfileData in storage
-    |
-    v
-Next FAB click uses updated active profile (resolved server-side)
+1. User clicks FAB on Flatfox.ch
+2. Content script extracts N listing PKs from DOM (existing)
+3. Loading skeletons injected for all N listings (existing)
+4. scoreListings(pks, jwt, onResult, concurrency=5) -- MODIFIED
+5. Batch 1: 5 concurrent requests -> edge function -> EC2 -> Claude
+   Each result triggers onResult -> badge appears immediately
+6. Batch 2: next 5 concurrent requests
+   ...
+7. All N badges rendered
 ```
 
-**Decision: Where to handle setActiveProfile from extension**
+### Unchanged Flows
 
-Option A: Extension background calls Supabase REST API directly (PATCH profiles).
-Option B: Extension background calls a Next.js API route or server action endpoint.
-
-Recommendation: **Option A** (direct Supabase REST from background). Simpler, fewer hops. The background already has the JWT and the Supabase URL/anon key. RLS ensures users can only update their own profiles.
-
-### Profile Management Flow (Web)
-
-```
-User visits /dashboard (now a profile list page)
-    |
-    v
-Server component: listProfiles(userId) → profiles[]
-    |
-    v
-ProfileList rendered with cards: name, "Edit", "Delete", active indicator
-    |
-    v
-User clicks "New Profile" → modal or /profiles/new route
-    |
-    v
-createProfile server action: INSERT INTO profiles (user_id, name, preferences)
-  First profile: is_default = true automatically
-  Subsequent profiles: is_default = false
-    |
-    v
-User clicks "Edit" → /profiles/[id] route
-    |
-    v
-updateProfile server action: UPDATE profiles SET preferences = $1 WHERE id = $2
-    |
-    v
-User clicks "Set Active" → setActiveProfile server action (transaction)
-```
+- Profile CRUD on web app (no changes)
+- Profile switching in extension popup (no changes)
+- Stale badge detection (no changes)
+- Analysis page viewing (no changes, but will render dynamic fields in checklist)
+- Edge function score-proxy (no changes -- already handles concurrent requests)
 
 ---
 
-## Extension Profile Sync Strategy
+## Patterns to Follow
 
-The extension needs to know the active profile to display it in the popup. Two approaches:
+### Pattern 1: Vercel AI SDK Server Action Chat
 
-**Approach 1: Always server-authoritative (no local cache)**
-- Popup always fetches profile list from Supabase on open
-- No `local:activeProfileId` storage needed
-- Pro: Always accurate. Con: 200-400ms network call on every popup open.
+**What:** Use the Vercel AI SDK `useChat` hook + API route pattern for streaming chat.
+**When:** Any time the web app needs multi-turn Claude conversation.
+**Why:** Built-in streaming, message management, error handling. No custom WebSocket or SSE code needed.
 
-**Approach 2: Cache active profile in extension storage**
-- On login or profile switch: store `activeProfileId` and `activeProfileData` locally
-- Popup reads from local storage first, shows stale data instantly, refreshes in background
-- Pro: Fast popup. Con: Stale if user switches profile on web.
-
-Recommendation: **Approach 1** for v1.1. The popup is opened infrequently (a few times per session). Network latency is acceptable. Avoids stale-cache bugs entirely. Cache can be added later if needed.
-
-The critical insight: **scoring does not use the extension's local profile at all**. The backend resolves the active profile server-side using the JWT. Extension storage is only needed for popup display, not for scoring correctness.
-
----
-
-## Architectural Patterns
-
-### Pattern 1: Server-Authoritative Active Profile
-
-**What:** The active profile is resolved server-side on every score request. The extension never sends `profile_id` in the score request body — the edge function queries Supabase for `is_default = true`.
-
-**When to use:** Always, for scoring. This eliminates the class of bugs where the extension's local `activeProfileId` diverges from what Supabase considers active.
-
-**Trade-offs:** One extra DB query per score request (cheap). Eliminates need to sync active profile ID to extension before scoring.
-
-**Example (edge function):**
 ```typescript
-// score-proxy/index.ts — modified preference fetch
-const { data: profile, error } = await supabase
-  .from('profiles')
-  .select('preferences, id')
-  .eq('user_id', data.user.id)
-  .eq('is_default', true)
-  .single();
+// API route (server)
+import { anthropic } from '@ai-sdk/anthropic'
+import { streamText } from 'ai'
 
-if (!profile) {
-  return new Response(
-    JSON.stringify({ error: 'No active profile. Please create one at homematch.app' }),
-    { status: 404, headers: corsHeaders }
-  );
+export async function POST(req: Request) {
+  const { messages } = await req.json()
+  const result = streamText({
+    model: anthropic('claude-haiku-4-5'),
+    system: '...',
+    messages,
+  })
+  return result.toDataStreamResponse()
 }
 
-// Forward profile_id to backend for analysis attribution
-const backendPayload = { ...body, user_id: data.user.id, profile_id: profile.id };
-```
+// Component (client)
+import { useChat } from '@ai-sdk/react'
 
-### Pattern 2: Partial Unique Index for Single Default
-
-**What:** A PostgreSQL partial unique index enforces "at most one default profile per user" at the database level, not in application code.
-
-**When to use:** Any time you need a "selected one" from a one-to-many relationship.
-
-**Trade-offs:** Requires a transaction to switch the active profile (SET old to false, SET new to true atomically). If you only SET new to true without clearing old, the index constraint fires.
-
-**Example:**
-```sql
--- Partial unique index
-CREATE UNIQUE INDEX profiles_one_default_per_user
-  ON profiles (user_id)
-  WHERE is_default = true;
-
--- Switch active profile (must be atomic)
-BEGIN;
-  UPDATE profiles SET is_default = false WHERE user_id = $1 AND is_default = true;
-  UPDATE profiles SET is_default = true WHERE id = $2 AND user_id = $1;
-COMMIT;
-```
-
-In Supabase, this transaction can be done via a Postgres function (RPC) called from the edge function, or via a server action using the service role client.
-
-### Pattern 3: Profile-Aware Analysis Attribution
-
-**What:** Every analysis row now stores `profile_id`. When viewing past analyses on the web, filter by the currently-selected profile to show relevant history.
-
-**When to use:** Once multi-profile is live. Before, all analyses were implicitly "for the user." Now they're "for a specific profile of that user."
-
-**Trade-offs:** `analyses` unique constraint changes from `(user_id, listing_id)` to `(user_id, listing_id, profile_id)`. This means the same listing can be scored under different profiles, producing different results. This is the desired behavior.
-
-**Example (analysis page query):**
-```typescript
-// web/src/app/analysis/[listingId]/page.tsx
-const { data: analysis } = await supabase
-  .from('analyses')
-  .select('*')
-  .eq('user_id', user.id)
-  .eq('listing_id', listingId)
-  .eq('profile_id', activeProfileId)  // NEW: filter by profile
-  .order('created_at', { ascending: false })
-  .limit(1)
-  .single();
-```
-
-### Pattern 4: Extension Popup Profile Switcher
-
-**What:** The popup fetches all profiles for the user, displays the active one prominently, and allows switching via a dropdown or list. Profile switching calls Supabase REST directly from the background service worker.
-
-**When to use:** On every popup open (Approach 1 — always fresh).
-
-**Trade-offs:** One network call per popup open. Acceptable given popup usage patterns.
-
-**Example (background.ts additions):**
-```typescript
-type ProfileMessage =
-  | { action: 'getProfiles' }
-  | { action: 'setActiveProfile'; profileId: string };
-
-case 'getProfiles': {
-  const { data: session } = await supabase.auth.getSession();
-  if (!session.session) return { profiles: [], error: 'Not authenticated' };
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, name, is_default')
-    .order('created_at', { ascending: true });
-
-  return { profiles: data ?? [], error: error?.message ?? null };
+export function ChatInterface() {
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat()
+  // render chat UI
 }
+```
 
-case 'setActiveProfile': {
-  // Use a Supabase RPC for atomic swap, or two sequential updates
-  const { error } = await supabase.rpc('set_active_profile', {
-    p_user_id: (await supabase.auth.getUser()).data.user?.id,
-    p_profile_id: message.profileId,
-  });
-  return { error: error?.message ?? null };
+### Pattern 2: Structured Extraction at Conversation End
+
+**What:** After multi-turn chat, use `generateObject` with Zod schema for guaranteed structured output.
+**When:** Converting free-form conversation into structured preference data.
+**Why:** Claude's structured output mode guarantees schema compliance. No parsing errors.
+
+```typescript
+import { generateObject } from 'ai'
+
+const { object } = await generateObject({
+  model: anthropic('claude-haiku-4-5'),
+  schema: dynamicPreferenceSchema,
+  prompt: `Based on this conversation, extract structured preferences:\n${conversationText}`,
+})
+```
+
+### Pattern 3: Batched Concurrency with Progressive Results
+
+**What:** Process N items in batches of K, calling a callback as each completes.
+**When:** Parallel API calls with rate limit awareness.
+**Why:** `Promise.all` on the full list could overwhelm rate limits; sequential is too slow.
+
+```typescript
+async function processBatch<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  onResult: (item: T, result: R) => void,
+  concurrency: number = 5,
+): Promise<Map<T, R>> {
+  const results = new Map<T, R>();
+  for (let i = 0; i < items.length; i += concurrency) {
+    const batch = items.slice(i, i + concurrency);
+    await Promise.all(batch.map(async (item) => {
+      const result = await fn(item);
+      results.set(item, result);
+      onResult(item, result);
+    }));
+  }
+  return results;
 }
 ```
 
 ---
 
-## Integration Points
+## Anti-Patterns to Avoid
 
-### New Integration Points (v1.1)
+### Anti-Pattern 1: Routing Chat Through EC2 Backend
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Extension popup → Supabase REST | Background fetches `profiles` table via REST API with JWT | Background already has supabase client — add `getProfiles` message handler |
-| Extension background → Supabase RPC | `setActiveProfile` calls a Postgres function for atomic default swap | Alternative: two PATCH requests (not atomic, but acceptable if error handled) |
-| score-proxy → `profiles` table | Edge function queries `profiles WHERE is_default = true` instead of `user_preferences` | Requires edge function update; critical path change |
-| FastAPI → `profiles` table | `SupabaseService.get_preferences` queries `profiles` by `profile_id` | Requires Python model update |
-| `analyses` → `profiles` | FK relationship; analysis stores which profile scored it | Requires migration + upsert key change |
-| Web `/profiles/[id]` → `PreferencesForm` | Reuse existing form component with profile data | The form component itself is unchanged — it gets different `defaultValues` |
-| Web `/dashboard` → `ProfileList` | New component replaces single preferences form | Dashboard page is substantially rewritten |
+**What:** Adding a `/chat` endpoint to the FastAPI backend for preference discovery.
+**Why bad:** Couples unrelated concerns (scoring pipeline vs. preference chat), adds latency (extra hop through edge function), and the backend lacks streaming infrastructure.
+**Instead:** Use Vercel AI SDK directly from Next.js server actions or API routes. The web app already has direct access to Supabase for saving results.
 
-### Unchanged Integration Points
+### Anti-Pattern 2: Full-List Promise.all for Parallel Scoring
 
-| Boundary | Notes |
-|----------|-------|
-| Content script → background → score-proxy | Same message flow, no change |
-| score-proxy → FastAPI EC2 | Same HTTP proxy pattern, adds `profile_id` to body |
-| FastAPI → Flatfox API | Completely unchanged |
-| FastAPI → Claude API | Completely unchanged |
-| Supabase Auth | Completely unchanged |
-| Extension login/logout | Completely unchanged |
+**What:** `await Promise.all(allListingIds.map(id => scoreListing(id, jwt)))` -- firing all requests simultaneously.
+**Why bad:** 20+ concurrent Claude API calls will hit RPM/ITPM rate limits. At Tier 1, 50 RPM with token bucket means burst is possible but sustained 20+ concurrent requests with image content will hit ITPM.
+**Instead:** Batch with concurrency limit (5-10). Use the batched concurrency pattern above.
 
----
+### Anti-Pattern 3: Storing Chat History in Database
 
-## Build Order (Dependency Graph)
+**What:** Saving every chat message to Supabase for the preference discovery conversation.
+**Why bad:** The chat is ephemeral -- its purpose is to generate structured preferences. Once preferences are extracted and saved, the conversation has no value. Storing it adds schema complexity and storage cost.
+**Instead:** Keep chat history in React state only. The output (dynamicFields) is what gets persisted.
 
-Build in this exact order — each step unblocks the next:
+### Anti-Pattern 4: Two Separate Preference Edit UIs
 
-```
-Step 1: DB Migration (002_multi_profile.sql)
-  - Creates profiles table with is_default flag + partial unique index
-  - Adds profile_id FK to analyses, updates unique constraint
-  - Backfills existing user_preferences → one default profile per user
-  - No code changes needed yet; can validate schema independently
-  - MUST be deployed before any backend or edge function changes
+**What:** Having the chat generate preferences that bypass the form, creating two disconnected editing paths.
+**Why bad:** Users lose the ability to fine-tune AI-generated preferences. Creates data inconsistency risk.
+**Instead:** Chat outputs structured data that populates the existing form. The form is always the final editing UI. Chat is an alternative to manual entry, not a replacement for it.
 
-Step 2: FastAPI Backend (supabase.py + scoring.py models)
-  - Update SupabaseService.get_preferences to query profiles table
-  - Update SupabaseService.save_analysis to accept + store profile_id
-  - Add profile_id to ScoreRequest model
-  - Deploy to EC2 before edge function update
-  - Backend is now profile-aware but edge function still sends no profile_id (OK:
-    backend will resolve via active profile)
+### Anti-Pattern 5: CRX Self-Hosting
 
-Step 3: Edge Function (score-proxy)
-  - Change preference fetch: user_preferences → profiles WHERE is_default = true
-  - Add profile_id to backend proxy payload
-  - Deploy to Supabase
-  - End-to-end scoring now uses profiles table — test with existing seeded profile
-
-Step 4: Web Dashboard Overhaul (new profile management UI)
-  - New server actions: listProfiles, createProfile, updateProfile,
-    deleteProfile, setActiveProfile
-  - New /profiles/[id] route for editing a profile
-  - Rewrite /dashboard page to show ProfileList instead of single form
-  - Navbar component (new — no deps)
-  - This is the biggest chunk; can develop against migration-seeded test profiles
-
-Step 5: Extension Popup Profile Switcher
-  - Add getProfiles + setActiveProfile message handlers to background.ts
-  - Add ProfileSwitcher component to popup Dashboard
-  - Fetch and display active profile name on popup open
-  - Depends on Step 1 (profiles table) and Step 3 (active profile semantics)
-
-Step 6: Analysis Page + Cross-profile polish
-  - Update analysis queries to filter by profile_id
-  - Add "scored with profile: X" label on analysis page
-  - Verify scoring produces separate rows for same listing under different profiles
-```
-
-**Rationale:**
-- DB first: nothing works without the schema
-- Backend before edge function: edge function now sends `profile_id` which backend must accept
-- Edge function before frontend: ensures scoring works before building the UI that drives it
-- Web before extension popup: web is the primary profile management surface; extension popup is secondary display
-- Analysis page last: low-risk, no blockers once profiles exist
+**What:** Hosting a .crx file on the website for direct extension install.
+**Why bad:** Chrome blocks .crx installs from non-Chrome-Web-Store sources since Chrome 68 (2018) on Windows and Mac. Users would see an error.
+**Instead:** Distribute as .zip with developer mode sideload instructions. Plan for Chrome Web Store submission in parallel.
 
 ---
 
-## Recommended Project Structure Changes
+## Scalability Considerations
 
-Only additions/modifications to existing structure:
-
-```
-web/src/
-├── app/
-│   ├── dashboard/
-│   │   ├── page.tsx              (REWRITE: profile list, not single form)
-│   │   └── actions.ts            (ADD: listProfiles, createProfile, deleteProfile, setActiveProfile)
-│   └── profiles/                 (NEW)
-│       ├── new/
-│       │   └── page.tsx          (NEW: create profile form)
-│       └── [id]/
-│           ├── page.tsx          (NEW: edit profile — reuses PreferencesForm)
-│           └── actions.ts        (NEW: updateProfile server action)
-├── components/
-│   ├── layout/                   (NEW)
-│   │   └── Navbar.tsx            (NEW: top nav with logo, user menu)
-│   └── profiles/                 (NEW)
-│       ├── ProfileList.tsx       (NEW: list of profile cards)
-│       ├── ProfileCard.tsx       (NEW: single profile card with actions)
-│       └── ProfileForm.tsx       (NEW: wraps PreferencesForm with name field)
-
-extension/src/
-├── components/popup/
-│   ├── Dashboard.tsx             (MODIFY: add ProfileSwitcher, active profile display)
-│   └── ProfileSwitcher.tsx       (NEW: dropdown list of profiles)
-├── entrypoints/
-│   └── background.ts             (MODIFY: add getProfiles + setActiveProfile handlers)
-└── storage/
-    └── profile-storage.ts        (MODIFY: add activeProfileId storage item; deprecate userProfile)
-
-backend/app/
-├── models/
-│   └── scoring.py                (MODIFY: add profile_id to ScoreRequest)
-└── services/
-    └── supabase.py               (MODIFY: query profiles table; accept profile_id in save_analysis)
-
-supabase/
-├── migrations/
-│   └── 002_multi_profile.sql     (NEW: profiles table, analyses FK, backfill)
-└── functions/
-    └── score-proxy/
-        └── index.ts              (MODIFY: query profiles WHERE is_default=true)
-```
+| Concern | Current (v1.1) | v2.0 Changes | Future Scale |
+|---------|----------------|--------------|--------------|
+| Scoring throughput | Sequential (1 req/time) | 5 concurrent/user | Rate limit tiers or batch API |
+| Chat API cost | N/A | ~2-5K tokens per chat session | Negligible -- Haiku is $0.80/M input |
+| DB storage | JSONB preferences ~1KB | +dynamicFields ~2KB | No concern, still small JSONB |
+| Edge function concurrency | 1 request/user | 5 concurrent/user | Supabase auto-scales edge functions |
+| Extension distribution | Manual sideload | .zip download page | Chrome Web Store |
+| Claude API key exposure | EC2 only (safe) | Also Vercel env (safe) | Both server-side, never client |
 
 ---
 
-## Anti-Patterns
+## Build Order (Dependency-Aware)
 
-### Anti-Pattern 1: Passing profile_id from Extension to Edge Function
+The four features have minimal inter-dependencies. Recommended build order based on what unblocks what:
 
-**What people do:** Store `activeProfileId` in `browser.storage.local`, read it in the content script, and send it in the score request body.
+### Phase 1: Dynamic Preference Schema
+**Why first:** Every other feature touches the preferences schema. Get the schema right before building UI or modifying scoring.
+- Add `dynamicFields` to Zod schema
+- Add `DynamicField` + `dynamic_fields` to Pydantic model
+- Add migration validator for `softCriteria` -> `dynamicFields`
+- Update `build_user_prompt()` to format dynamic fields
+- Update scoring prompt instructions for dynamic fields
 
-**Why it's wrong:** This creates a sync problem. If the user switches their active profile on the web, the extension still has the stale `activeProfileId`. The next scoring request uses the wrong profile silently.
+### Phase 2: Chat-Based Preference Discovery
+**Why second:** Depends on Phase 1 schema. The biggest new feature surface area.
+- Install Vercel AI SDK + Anthropic provider
+- Create API route for streaming chat
+- Build ChatInterface component with `useChat`
+- Build PreferenceReview component for editing extracted fields
+- Create preference discovery system prompt
+- Wire chat output into profile preferences form
+- Integration test: chat -> extract -> save -> score
 
-**Do this instead:** Never send `profile_id` from the extension. Let the edge function resolve the active profile server-side from `is_default = true`. The extension is a thin client for scoring — it does not own profile state.
+### Phase 3: Parallel Scoring
+**Why third:** Independent of schema changes, but lower effort. Quick win.
+- Modify `scoreListings()` with concurrency parameter
+- Add progress counter to FAB component
+- Update content script to track scoring progress
+- Test with 10+ listings on a Flatfox search page
 
-### Anti-Pattern 2: Non-Atomic Default Profile Switch
-
-**What people do:** Two separate UPDATE statements without a transaction:
-```sql
-UPDATE profiles SET is_default = true WHERE id = $newId;
-UPDATE profiles SET is_default = false WHERE id = $oldId;
-```
-
-**Why it's wrong:** If the second UPDATE fails, two profiles are simultaneously `is_default = true`. The partial unique index will prevent this for the first update pattern (SET true first) but not the second (SET false first still leaves two rows if the second SET true fails). Either way, partial failure leads to zero or two active profiles.
-
-**Do this instead:** Use a Postgres function (RPC) called via Supabase:
-```sql
-CREATE OR REPLACE FUNCTION set_active_profile(p_user_id uuid, p_profile_id uuid)
-RETURNS void AS $$
-BEGIN
-  UPDATE profiles SET is_default = false WHERE user_id = p_user_id;
-  UPDATE profiles SET is_default = true WHERE id = p_profile_id AND user_id = p_user_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-```
-
-### Anti-Pattern 3: Rewriting the Preferences Form Component
-
-**What people do:** Create a new `ProfilePreferencesForm` component that duplicates `PreferencesForm` logic with a profile name field added.
-
-**Why it's wrong:** Doubles the maintenance surface. Any improvement to the preferences form must be made twice.
-
-**Do this instead:** Wrap the existing `PreferencesForm` in a `ProfileForm` that adds only the `name` input above it. Pass `defaultValues` (including the profile name) down. Keep `PreferencesForm` focused on preferences only.
-
-### Anti-Pattern 4: Storing Full Preferences in Extension Storage
-
-**What people do:** Cache all N profiles' preferences in `browser.storage.local` for offline use.
-
-**Why it's wrong:** `browser.storage.local` has a 10MB quota. Preferences data can grow large (many soft criteria, free text). With many profiles, this approaches the limit. More importantly, the extension only needs to *score* — which is a network operation anyway. There's no offline use case.
-
-**Do this instead:** Cache only the active profile's ID (and optionally display name) for popup rendering. Resolve preferences server-side on every score request.
-
-### Anti-Pattern 5: Changing the `analyses` Unique Constraint Without Backfilling
-
-**What people do:** Drop `UNIQUE(user_id, listing_id)` and add `UNIQUE(user_id, listing_id, profile_id)` without ensuring existing rows have a non-null `profile_id`.
-
-**Why it's wrong:** Existing rows have `profile_id = NULL`. NULL values are not equal to each other in SQL unique constraints, meaning the old uniqueness guarantee is lost entirely — you can end up with multiple analyses for the same user+listing once `profile_id` is NULL.
-
-**Do this instead:** In the migration, first backfill `profile_id` on existing analyses rows using the user's (newly created) default profile, then change the unique constraint:
-```sql
--- Backfill profile_id on existing analyses
-UPDATE analyses a
-SET profile_id = p.id
-FROM profiles p
-WHERE p.user_id = a.user_id AND p.is_default = true;
-
--- Then add the new constraint (all rows now have non-null profile_id)
-CREATE UNIQUE INDEX analyses_unique_per_profile
-  ON analyses (user_id, listing_id, profile_id);
-```
+### Phase 4: UI Redesign + Extension Distribution
+**Why last:** Pure UX, no architectural dependencies on other phases. Can be split across phases.
+- Flatfox-inspired color scheme (CSS/Tailwind changes only)
+- Extension download page with install instructions
+- Build script for .zip packaging
+- Chrome Web Store submission (parallel, async)
 
 ---
 
-## Scaling Considerations
+## Environment Variable Summary
 
-| Scale | Architecture Notes |
-|-------|-------------------|
-| 1-10 users (pilot) | Current EC2 + Supabase architecture is fine. No changes needed. |
-| 100 users | Profile queries are indexed (user_id, is_default). Supabase free tier handles this comfortably. |
-| 10k users | Profiles table is small per user. Main bottleneck remains EC2 LLM cost per score, not DB. |
+| Variable | Service | Purpose | Exists? |
+|----------|---------|---------|---------|
+| `ANTHROPIC_API_KEY` | EC2 Backend | Claude API for scoring | YES |
+| `ANTHROPIC_API_KEY` | Vercel (web) | Claude API for chat | NEW |
+| `SUPABASE_URL` | All | Database | YES |
+| `SUPABASE_ANON_KEY` | Web, Extension | Client-side Supabase | YES |
+| `SUPABASE_SERVICE_ROLE_KEY` | EC2 Backend | Server-side DB writes | YES |
+| `BACKEND_URL` | Edge Function | EC2 address | YES |
+| `CLAUDE_MODEL` | EC2 Backend | Model selection | YES |
 
-The multi-profile feature adds minimal DB overhead: profiles table has ~3-5 rows per user on average. The `is_default` partial unique index makes the "get active profile" query O(1).
+Note: The `ANTHROPIC_API_KEY` for Vercel can be the same key as the backend, or a separate key for cost tracking. Vercel environment variables are set in the project settings dashboard and are never exposed to the client.
+
+---
+
+## Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| Chat generates incorrect preference structure | Medium | Low | `generateObject` with Zod schema guarantees structure; user reviews before saving |
+| Parallel scoring hits rate limits | Medium | Medium | Concurrency limit of 5; exponential backoff on 429; monitor via response headers |
+| Schema migration breaks old profiles | Low | High | Pydantic `model_validator` handles migration; test with real v1.1 JSONB data |
+| Vercel AI SDK version incompatibility | Low | Low | Pin to specific version; AI SDK is mature and stable |
+| Extension .zip download blocked by browser | Low | Low | .zip is not .crx; browsers do not block .zip downloads |
 
 ---
 
 ## Sources
 
-- Direct codebase analysis: `/Users/maximgusev/workspace/gen-ai-hackathon/` — HIGH confidence
-- Supabase partial unique index docs (known pattern) — HIGH confidence
-- Supabase RLS and RPC patterns (established in existing schema) — HIGH confidence
-- PostgreSQL atomic UPDATE pattern for single-default row — HIGH confidence
-
----
-*Architecture research for: HomeMatch v1.1 Multi-Profile Integration*
-*Researched: 2026-03-13*
+- [Anthropic Rate Limits (official docs)](https://platform.claude.com/docs/en/api/rate-limits) -- Tier-specific RPM, ITPM, OTPM for all models. HIGH confidence.
+- [Anthropic Structured Outputs (official docs)](https://platform.claude.com/docs/en/build-with-claude/structured-outputs) -- Schema-guaranteed JSON output. HIGH confidence.
+- [Vercel AI SDK - Anthropic Provider](https://ai-sdk.dev/providers/ai-sdk-providers/anthropic) -- `@ai-sdk/anthropic` installation, supported functions, model IDs. HIGH confidence.
+- [Vercel AI SDK 6 announcement](https://vercel.com/blog/ai-sdk-6) -- Server actions, `streamText`, `useChat` patterns. HIGH confidence.
+- [Chrome Extension Sideloading](https://webkul.com/blog/how-to-install-the-unpacked-extension-in-chrome/) -- Developer mode + load unpacked process. HIGH confidence.
+- [Chrome CRX restrictions](https://www.chromium.org/developers/extensions-deployment-faq/) -- CRX blocked from non-CWS sources since Chrome 68. HIGH confidence.
+- [FastAPI Concurrency](https://fastapi.tiangolo.com/async/) -- Async concurrency model, `asyncio.gather` patterns. HIGH confidence.

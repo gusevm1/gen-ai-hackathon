@@ -1,198 +1,186 @@
 # Project Research Summary
 
-**Project:** HomeMatch v1.1 — UI Overhaul + Multi-Profile Support
-**Domain:** AI-powered property scoring SaaS with Chrome extension + multi-profile management
-**Researched:** 2026-03-13
+**Project:** HomeMatch v2.0 — Smart Preferences & UX Polish
+**Domain:** AI-powered property scoring tool with chat-based preference discovery
+**Researched:** 2026-03-15
 **Confidence:** HIGH
 
 ## Executive Summary
 
-HomeMatch v1.1 is a focused enhancement milestone on top of a working v1.0 product: it adds a professional SaaS-grade UI (sidebar layout, navbar, dark mode), multi-profile management (users can maintain multiple named search profiles for different property searches), and a structural improvement to the preferences UX that directly improves Claude scoring quality. The stack is already in place — Next.js 16.1.6 + React 19 + shadcn v4 (Base UI primitives, not Radix) + Supabase + FastAPI + WXT Chrome extension. The only new library required is `next-themes` for dark mode. All other additions are shadcn component installs via CLI. The architecture is well-understood from direct codebase analysis.
+HomeMatch v2.0 is an incremental milestone on a validated v1.1 architecture (Next.js + Supabase + FastAPI on EC2 + WXT Chrome extension). The v2.0 work is additive: replace manual free-text soft criteria with AI-generated structured preference fields via a chat interface, parallelize listing scoring for a dramatic UX speedup, and polish the product for B2B pilot distribution. The research is unusually high confidence because it builds on a production codebase that was directly analyzed — most findings are verified against the actual code, not just documentation.
 
-The recommended implementation sequence is schema-first: the `profiles` table and `analyses.profile_id` FK must land before any UI or backend changes. The multi-profile feature touches 6 separate layers (DB, edge function, FastAPI backend, web app, Chrome extension popup), and each layer has a clear dependency on the one before. The scoring path's critical change is in the Supabase edge function `score-proxy`: it must resolve the active profile server-side (by `is_default = true`) rather than relying on any profile ID passed from the extension. This server-authoritative pattern eliminates an entire class of stale-state bugs.
+The single most important architectural decision is the schema change: `softCriteria: string[]` becomes `dynamicFields: DynamicField[]` with importance levels, and this change must land across Zod (web), Pydantic (backend), and the Claude scoring prompt simultaneously before any chat UI is built. The chat feature itself is a thin layer on top of Vercel AI SDK (`useChat` + `generateObject`) — only three new npm packages needed across the entire project. Parallel scoring requires zero new packages; `asyncio.Semaphore(3)` in the backend and a concurrency-pooled `Promise.allSettled()` in the extension are the entire implementation.
 
-The top risk is a known schema divergence between the web app and Chrome extension preference schemas: the extension has richer fields (`radiusKm`, `floorPreference`, `yearBuiltMin/Max`) that the backend silently ignores today. This must be resolved during the preferences form restructure phase before the B2B demo. Additional critical risks are the `analyses` unique constraint (must be changed before multi-profile scoring is wired up) and Base UI migration gotchas (`asChild` removal, Accordion `defaultValue` string type requirement). All have clear prevention steps documented in PITFALLS.md.
-
----
+The primary risks are operational, not architectural: (1) chat-save accidentally overwriting manually-configured standard fields (budget, rooms, location) via a full-replace instead of JSONB merge; (2) unbounded parallel scoring hitting Claude API rate limits and Flatfox scraping limits simultaneously; and (3) the Chrome extension requiring developer-mode sideloading for the pilot customer, which erodes trust. The first two risks have clear, low-effort mitigations. The third is best solved by submitting to Chrome Web Store Unlisted early in the milestone — $5 developer fee, 1-3 day review, zero code changes.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing stack requires no structural changes for v1.1. The project already runs on Next.js 16.1.6 + React 19 + TypeScript 5 on Vercel, with shadcn v4 using the `base-nova` style (Base UI primitives via `@base-ui/react`), TailwindCSS v4, Supabase auth + PostgreSQL + edge functions, and a WXT MV3 Chrome extension. The only new dependency is `next-themes@0.4.6` for dark mode. All new UI components are added via `npx shadcn@latest add` which reads `components.json` and installs Base UI variants automatically.
+The existing stack requires only three new packages added to the web app: `ai` (Vercel AI SDK core), `@ai-sdk/react` (the `useChat` hook), and `@ai-sdk/anthropic` (the Anthropic provider). All are well-maintained and version-compatible with the current Next.js 16 + React 19 + Zod v4 setup. Backend, extension, and Supabase edge functions require zero new dependencies.
 
-**Core new additions:**
-- `shadcn Sidebar component` — collapsible app layout with SidebarFooter profile switcher slot built in; `globals.css` already has all sidebar CSS variables pre-defined
-- `next-themes@0.4.6` — dark/light mode; canonical solution for Next.js; 2-line integration; handles SSR flash and `localStorage` persistence automatically
-- `search_profiles` Supabase table (pure SQL migration, no new packages) — replaces single-row `user_preferences` with a one-to-many profile table per user; partial unique index enforces single active profile at DB level
-- `shadcn DropdownMenu`, `Avatar`, `Tooltip`, `Dialog` — supporting components for profile switcher, user avatar, collapsed sidebar tooltips, and profile CRUD modals
+**Core technologies (new additions only):**
+- `ai` v6.x: AI SDK core — `streamText`, `generateObject`, `convertToModelMessages`; eliminates all custom SSE parsing and streaming state management; 20M+ monthly downloads
+- `@ai-sdk/react` v3.x: The `useChat` hook with built-in streaming state machine (`ready/submitted/streaming/error`), message history, and abort support; ~10 lines replaces ~200 lines of custom code
+- `@ai-sdk/anthropic` v3.x: Anthropic provider wrapper for Claude Haiku 4.5; wraps `@anthropic-ai/sdk` internally — do NOT also install that package separately or version conflicts occur
 
-**What not to use:** Radix UI primitives for any new components (project is on Base UI), `framer-motion` (use `tw-animate-css` already installed), `react-query`/`swr` for profile fetching (server components + server actions are sufficient), CSS-in-JS, or storing `active_profile_id` on `auth.users` (locked auth schema).
+**Critical env var addition:** `ANTHROPIC_API_KEY` must be added to Vercel environment variables. This is the first time the web app calls Claude directly (previously all Claude calls went through EC2 backend only). The key can be shared with EC2 or separate for cost tracking.
+
+**What does NOT change:** CSS theming is a pure `globals.css` variable swap (~15 HSL values). Parallel scoring is `asyncio.Semaphore(3)` + `Promise.allSettled()`. Extension distribution adds a static download page and `.zip` artifact. No design token system, no new CSS-in-JS, no job queue, no message broker.
+
+See `.planning/research/STACK.md` for full version compatibility matrix and alternatives considered.
 
 ### Expected Features
 
-**Must have for v1.1 demo (P1):**
-- Navbar with user identity anchor + profile switcher dropdown — professional baseline; without it the app looks like a hackathon prototype
-- Profiles list page with profile cards (name, key criteria summary, active badge) — landing page after login
-- Create / rename / delete profile with confirmation dialog — core CRUD; guarded delete required; disable delete on last remaining profile
-- Set active profile — drives extension scoring; must update `is_default` atomically in DB via Postgres RPC
-- Preferences form restructured with dealbreaker vs. weighted preference distinction — direct improvement to Claude prompt quality, not just UX polish
-- Profile summary preview (live natural-language summary on form) — builds user trust, catches errors before scoring
-- Extension popup shows active profile name — prevents scoring-against-wrong-profile during demo
+Features are well-defined in PROJECT.md with explicit v2.0 scope. There is no ambiguity about what this milestone delivers.
 
-**Should have (P2 — add post-demo when validated):**
-- Duplicate profile — high B2B value (property manager workflow), low implementation cost
-- Analysis history filtered by profile — needs `profile_id` FK on analyses, already planned in migration
-- Profile name as Claude prompt context — one-line prompt change; validate impact on scoring quality first
+**Must have (table stakes for v2.0):**
+- Chat-based preference discovery — the headline feature; replaces tedious manual soft-criteria entry with multi-turn AI conversation
+- Review/edit UI for AI-generated preferences — required for user trust; chat output must be editable before save
+- Dynamic preference fields replacing `softCriteria` — the foundation schema change; enables structured AI preferences with importance levels (critical/high/medium/low)
+- Parallel scoring (concurrency=5) — ~5x speedup; sequential scoring of 15+ listings currently takes 60+ seconds
+- Extension download page — static page on website; `.zip` download + sideload guide or CWS Unlisted link
 
-**Defer to v2+:**
-- Team / organization model with RBAC — only if B2B pilot proves out with Bellevia Immobilien
-- Profile templates for common searches — broker onboarding feature
-- Score caching per profile and new listing notifications — requires server-side monitoring infrastructure
+**Should have (low-effort differentiators):**
+- Scoring progress indicator "3 of 12 scored" on FAB — trivial to implement alongside parallel scoring
+- Chat auto-suggests standard fields (budget, rooms, location) — extractable during `generateObject` call at no extra cost
+- Chrome Web Store Unlisted submission — start immediately; review takes 1-3 business days
 
-**Key UX finding on preferences form:** Structured inputs materially outperform freeform text for LLM consumption. Replace weight sliders with a two-tier system (dealbreakers as hard constraints + importance chips Low/Medium/High/Critical for soft preferences). Keep sliders only for numeric ranges (budget, sqm). Pass importance to Claude as labeled levels (`"critical"`, `"must_not_exceed"`) not floating-point decimals.
+**Defer to v2.1:**
+- Full Flatfox UI redesign beyond color palette swap — lower priority than functional features; minimal color update sufficient for v2.0
+- Chat conversation memory across sessions — sessionStorage persistence is the v2.0 mitigation
+- CWS public listing — niche extension (Flatfox only + HomeMatch account); unlisted is correct for B2B pilot
+
+**Anti-features (explicitly do not build):**
+- Chat in the Chrome extension popup — extension is for scoring, not setup; popup is too small for chat UI
+- Auto-scoring without FAB click — API cost risk; FAB is the intentional user trigger
+- Backend batch endpoint — client-side concurrency with the existing single-listing endpoint preserves progressive badge rendering and is far simpler
+- Persistent chat history in Supabase — chat is ephemeral; only the extracted `dynamicFields` should be persisted
+
+See `.planning/research/FEATURES.md` for full dependency graph and MVP recommendation.
 
 ### Architecture Approach
 
-The architecture is an incremental migration from single-profile to multi-profile across 6 layers with clear dependency ordering. The foundational insight is that active profile resolution belongs server-side: the edge function queries `profiles WHERE is_default = true` using the authenticated JWT, and never trusts a `profile_id` passed from the extension. The extension is a thin scoring client — it does not own profile state. A PostgreSQL partial unique index enforces the "at most one default profile per user" invariant at the DB level, eliminating application-layer enforcement bugs.
+The v2.0 architecture adds one new layer (a Next.js chat route handler calling Claude directly) to the existing v1.1 topology while keeping all existing data flows intact. The key principle is separation of concerns: chat preference discovery runs entirely through the web app (Vercel -> Claude -> Supabase); scoring continues through the existing pipeline (Extension -> Edge Function -> EC2 -> Claude -> Supabase). These two Claude usage paths share the same API key but never cross.
 
-**Major components and responsibilities:**
-1. `profiles` DB table — stores N profiles per user; `is_default` boolean + partial unique index enforces single active profile; preferences stored as JSONB (same shape as old `user_preferences`)
-2. `score-proxy` edge function (modified) — resolves active profile server-side; adds `profile_id` to backend proxy payload; returns 404 if no profile exists (guides new users)
-3. FastAPI `SupabaseService` (modified) — queries `profiles` table by `profile_id`; saves `profile_id` on each analysis row
-4. Web dashboard + `/profiles/[id]` routes (new) — full profile CRUD via Next.js server actions; reuses existing `PreferencesForm` wrapped in `ProfileForm` to avoid duplication
-5. Extension popup profile switcher (new) — fetches profiles from Supabase REST on every popup open (always-fresh, no stale cache); switches active profile via Supabase RPC for atomic default swap
-6. `analyses` table (modified) — adds `profile_id` FK; unique constraint changes from `(user_id, listing_id)` to `(user_id, listing_id, profile_id)` enabling per-profile analysis history
+**Major components:**
+1. Chat Interface (`/profiles/[id]/chat`) — new Next.js page with `useChat` hook; multi-turn conversation or single-shot input; sessionStorage persistence keyed by profile ID prevents loss on navigation
+2. Chat API Routes (`/api/chat` + `/api/chat/extract`) — streaming route handler using `streamText`; separate extraction endpoint using `generateObject` with Zod schema for guaranteed structured output
+3. Preference Review component — displays AI-extracted `dynamicFields` with importance levels; user edits/removes/adds before JSONB merge-save to Supabase (NOT full replace)
+4. Dynamic Schema layer (`dynamicFields: DynamicField[]`) — added to Zod (web), Pydantic (backend), and scoring prompt in one coordinated change; migrates legacy `softCriteria` via existing `model_validator` pattern
+5. Parallel Scorer — `scoreListings()` refactored with `concurrency=5` batching via `Promise.allSettled()`; FAB adds progress counter; backend adds `asyncio.Semaphore(3)` around both Claude API calls AND Flatfox HTML fetches
+6. Extension Install Page (`/install`) — static Next.js page; `.zip` download + step-by-step guide; CWS Unlisted link replaces sideload instructions once published
 
-**Build order is strictly:** DB migration → FastAPI backend → edge function → web dashboard → extension popup → analysis page polish. Each step is independently testable before the next.
+**Key patterns to follow:**
+- JSONB merge-save (`preferences || $dynamic_only`) instead of full replace — critical to preserve standard fields (budget, rooms, location)
+- `generateObject` with Zod schema for structured preference extraction — guarantees schema compliance, eliminates JSON parsing errors
+- Batched concurrency with progressive results: `Promise.allSettled()` in batches of 5 with `onResult` callback; loading skeletons injected for all badges before batch starts
+
+See `.planning/research/ARCHITECTURE.md` for full data flow diagrams, file change inventory, and anti-patterns.
 
 ### Critical Pitfalls
 
-1. **`analyses` unique(user_id, listing_id) constraint silently overwrites analyses under multi-profile** — Add `profile_id` FK to `analyses`, change unique constraint to `(user_id, listing_id, profile_id)`, backfill existing rows with the default profile ID before dropping the old constraint. Must land in the DB migration phase, before multi-profile scoring is wired up.
+1. **Chat save overwrites standard fields (CRITICAL)** — use JSONB merge (`preferences || $chat_output`) not full replace; show preview before save; strip standard fields from chat output server-side. Recovery requires restoring from Supabase audit log — very painful.
 
-2. **Web/extension preference schema divergence causes rich extension criteria to be silently ignored by backend** — The extension schema has `radiusKm`, `yearBuiltMin/Max`, `floorPreference`, `availability` that the backend `UserPreferences` Pydantic model drops silently. Define a canonical superset schema before v1.1 demo; update backend Python models and Claude prompt to use new fields.
+2. **Unbounded parallel scoring hits both Claude API and Flatfox rate limits (CRITICAL)** — add `asyncio.Semaphore(3)` to backend Claude calls AND to `FlatfoxClient` HTML fetches; reuse a single `httpx.AsyncClient` for Flatfox scraping. Both semaphores must be in place before enabling parallel requests in the extension.
 
-3. **shadcn Base UI migration breaks existing patterns without errors** — Two specific silent failures: (a) `asChild` prop silently ignored — use `render` prop instead; grep `web/src/` for all `asChild` usage post-migration; (b) Accordion `defaultValue` must be a string array matching explicit `AccordionItem value` props — numeric indices silently collapse all sections.
+3. **Dynamic fields silently dropped by Pydantic `extra="ignore"` (CRITICAL)** — add `dynamic_fields: list[DynamicField]` to `UserPreferences` model BEFORE the chat UI generates any fields. Otherwise scoring silently ignores all chat-generated criteria — no error, no warning, just wrong scores.
 
-4. **Tailwind v4 + shadcn globals.css CSS variable double-definition corrupts theme colors** — `create-next-app` scaffolded CSS variables conflict with shadcn init's `@theme inline` block. Clear the default Next.js `--background`/`--foreground` variables from `globals.css` before running `npx shadcn init`. Verify exactly one `:root {}` block in the final file.
+4. **Dynamic fields not weighted in scoring prompt (CRITICAL)** — extend `build_user_prompt()` to render a "Custom Criteria" section with importance levels; update `ChecklistItem` or add a 6th scoring category. Without this, CRITICAL chat-generated criteria produce the same score as LOW criteria.
 
-5. **Extension scores against stale active profile when `activeProfileId` is cached in component state** — Never store `activeProfileId` in React state or local variables in the content script. Read fresh from `browser.storage.local` at the moment the FAB is clicked. The edge function also resolves the active profile server-side, so scoring correctness is maintained even if popup display is stale.
+5. **Chrome extension sideloading alienates pilot customer (HIGH)** — submit to Chrome Web Store Unlisted immediately (start of Phase 4 at latest); $5 developer fee; 1-3 day review. Sideloading triggers Chrome's "disable developer mode extensions" banner and disables auto-updates — wrong first impression for B2B.
 
-6. **Demo session expiry causes blank scoring at the pilot meeting** — Supabase JWT expires after 1 hour; background service worker refresh cycle stops after 30s idle. Add a session health check on FAB click; display a "Connected" indicator in popup; re-authenticate 30 minutes before the Bellevia Immobilien demo; pre-score demo listings as a fallback.
-
----
+See `.planning/research/PITFALLS.md` for 10 additional moderate/minor pitfalls with detection checklists and recovery costs.
 
 ## Implications for Roadmap
 
-Based on research, the build has strict dependency ordering and naturally decomposes into 6 phases. The first three phases are infrastructure/schema with no visible UI changes and must complete before frontend work begins.
+Based on combined research, the phase order is driven by one hard dependency chain: dynamic schema must land across all layers before the chat UI generates fields; chat UI must work before it is wired into the profile form. Parallel scoring and UI changes are fully independent and can run concurrently with later chat phases or in separate workstreams.
 
-### Phase 1: DB Schema Migration
+### Phase 1: Dynamic Preference Schema Foundation
 
-**Rationale:** Nothing else works without the correct schema. The `user_preferences` unique(user_id) constraint and the `analyses` unique(user_id, listing_id) constraint are both actively hostile to multi-profile. Must land first, before any backend or frontend change. The `set_active_profile` Postgres RPC function should be written here too as a critical path item used by both the backend and extension.
-**Delivers:** `profiles` table with `is_default` partial unique index + RLS policies + `user_id` index; `analyses.profile_id` FK + updated unique constraint + backfill of existing analysis rows; data backfill from `user_preferences` to `profiles`; `set_active_profile()` Postgres RPC function for atomic default swap
-**Addresses:** Foundation for all P1 features
-**Avoids:** Pitfall 1 (analyses constraint overwrite), Pitfall 6 (user_preferences unique constraint blocks multi-profile row insert)
+**Rationale:** Every other v2.0 feature touches `preferences`. The Pydantic `extra="ignore"` pitfall means dynamic fields must exist in the backend model before any frontend code generates them — there is no safe way to develop chat and schema in parallel. Get schema right first, eliminate all downstream rework risk.
+**Delivers:** `dynamicFields: DynamicField[]` in Zod + Pydantic with backward-compat migration from `softCriteria`; updated scoring prompt rendering dynamic fields with importance levels as a separate "Custom Criteria" section; updated `ChecklistItem` to carry importance weighting.
+**Addresses features:** Dynamic AI-generated fields replacing soft criteria; scoring prompt update to weight custom criteria.
+**Avoids pitfalls:** Pitfall 3 (dynamic fields not weighted in prompt) and Pitfall 8 (backend silently drops unknown fields via `extra="ignore"`). Both are prevention-only — no viable fix after the fact without data loss.
+**Research flag:** SKIP — Pydantic model validators, Zod schema extension, JSONB migration, and `model_validator` backward-compat are all established patterns with direct codebase examples from v1.1 schema unification.
 
-### Phase 2: Backend + Edge Function Update
+### Phase 2: Chat-Based Preference Discovery
 
-**Rationale:** Backend must accept `profile_id` before the edge function changes; edge function must resolve active profile from the new table before any UI drives scoring. These two layers deploy together as a tested unit.
-**Delivers:** FastAPI `SupabaseService` queries `profiles` table; edge function resolves active profile server-side (`is_default = true`); `profile_id` stored on analysis rows; scoring is end-to-end multi-profile-aware; `profile_id` ownership validated in edge function (security)
-**Addresses:** Set active profile (scoring side), analysis attribution to profile
-**Avoids:** Pitfall 4 (stale profile ID in scoring path), security mistake of unvalidated `profile_id` from extension
+**Rationale:** The headline feature of v2.0; depends on Phase 1 schema. Installs the only new packages (`ai`, `@ai-sdk/react`, `@ai-sdk/anthropic`). Largest new feature surface area with the most product judgment required (conversation design, prompt engineering, single-shot vs multi-turn tradeoff).
+**Delivers:** Chat page at `/profiles/[id]/chat`; streaming chat route handler (`/api/chat`); structured extraction endpoint (`/api/chat/extract`); PreferenceReview component with edit-before-save; JSONB merge-save (NOT full replace); sessionStorage conversation persistence; `ANTHROPIC_API_KEY` on Vercel.
+**Uses stack:** Vercel AI SDK `useChat` + `streamText` + `generateObject`; `@ai-sdk/anthropic` provider.
+**Avoids pitfalls:** Pitfall 1 (standard field overwrite — merge-save is the implementation requirement); Pitfall 4 (conversation lost on navigation — sessionStorage persistence); Pitfall 11 (chat API error handling — retry button, timeout).
+**Research flag:** NEEDS RESEARCH — the preference discovery conversation design is underspecified. Specifically: (a) single-shot (user writes one paragraph, AI extracts) vs multi-turn (AI asks clarifying questions); (b) system prompt structure for extraction quality; (c) how to guide users toward the right level of specificity. Single-shot is simpler and avoids state complexity; multi-turn is richer but harder to implement well. This warrants a focused `/gsd:research-phase` pass before building the chat UI.
 
-### Phase 3: Preferences Schema Unification
+### Phase 3: Parallel Scoring
 
-**Rationale:** The web/extension schema divergence means rich extension fields are silently dropped by the backend today. This must be resolved before the preferences form restructure because both form and Claude prompt must reference the same canonical schema. Failing to unify before the demo means all preferences UX improvements have no effect on actual scoring quality.
-**Delivers:** Canonical superset preferences schema; updated Pydantic models in FastAPI; Claude prompt updated to use `radiusKm`, `floorPreference`, `yearBuiltMin/Max`; structured importance levels (`critical`/`high`/`medium`/`low`) replace floating-point weight decimals in Claude prompt
-**Addresses:** Better Claude prompt quality (prerequisite for dealbreaker vs. preference distinction)
-**Avoids:** Pitfall 5 (web/extension schema divergence)
+**Rationale:** Independent of schema and chat changes. Delivers the highest-visible UX improvement (60s -> ~12s for 15 listings) with the least code. Must be shipped as a complete unit: backend semaphore + Flatfox client hardening + extension concurrency pool must all land together to avoid partial-failure states.
+**Delivers:** `scoreListings()` with `concurrency=5` batching via `Promise.allSettled()`; `asyncio.Semaphore(3)` wrapping Claude API calls in backend; `asyncio.Semaphore(3)` + persistent `httpx.AsyncClient` in `FlatfoxClient` for HTML fetches; FAB progress counter "N of M scored".
+**Avoids pitfalls:** Pitfall 2 (Claude API 429 rate limits); Pitfall 9 (Flatfox HTML scraping rate limits — new client per request is the current code flaw); Pitfall 5 (edge function redundant work — client-side batching reduces total invocations); Pitfall 13 (out-of-order badge display — existing `onResult` callback pattern handles this already).
+**Research flag:** SKIP — `asyncio.Semaphore`, `Promise.allSettled()` batching, `httpx.AsyncClient` connection reuse are standard and well-documented. Rate limits verified against official Anthropic docs.
 
-### Phase 4: UI Foundation (Layout + Dark Mode)
+### Phase 4: UI Redesign + Extension Distribution
 
-**Rationale:** Before building profile-specific UI, the app needs its permanent layout shell. The shadcn Sidebar + next-themes integration happens once and affects all subsequent pages. Base UI migration gotchas (asChild, Accordion, CSS variables) must be resolved here before more components are added on top.
-**Delivers:** shadcn Sidebar layout with `SidebarProvider`; navbar with user identity + active profile display + dark/light toggle; `next-themes` ThemeProvider in root layout; all Base UI migration fixes (asChild grep-and-fix, Accordion defaultValue strings, globals.css cleanup); `cache()` deduplication for navbar auth fetch
-**Uses:** `shadcn sidebar`, `shadcn dropdown-menu`, `shadcn avatar`, `shadcn tooltip`, `next-themes@0.4.6`, chosen 21st.dev navbar component
-**Avoids:** Pitfall 3 (CSS variable double-definition), Pitfall 7 (navbar auth waterfall), Pitfall 8 (asChild removal)
-
-### Phase 5: Web Profile Management
-
-**Rationale:** Primary profile management surface for the demo. Replaces the single-form `/dashboard` with a profile list + per-profile edit routes. Depends on Phase 4 layout shell being in place and Phase 3 preferences schema being canonical.
-**Delivers:** `/dashboard` rewritten as profile list with profile cards; `/profiles/[id]` edit route reusing existing `PreferencesForm` wrapped in `ProfileForm`; create/rename/delete/set-active profile via server actions; preferences form restructured with dealbreakers + category labels + importance chips + profile summary preview; empty state for new users
-**Addresses:** All P1 must-have features for web app; P2 duplicate profile
-**Avoids:** Anti-pattern of duplicating `PreferencesForm`; Pitfall 2 (Accordion defaultValue after migration); freeform text as primary input (use structured form with optional notes supplement)
-
-### Phase 6: Extension Profile Switcher + Demo Preparation
-
-**Rationale:** Extension changes are the final integration layer. All server-side profile state must be stable before adding the popup UI. Demo preparation (session health check, pre-scoring, rehearsal) is bundled here as a hard dependency on demo day.
-**Delivers:** Extension popup shows active profile name on open; profile switcher dropdown in popup; `getProfiles` + `setActiveProfile` message handlers in background service worker (using Supabase RPC for atomic swap); stale badge indicator when profile switches mid-session; session health check on FAB click; "Connected" indicator in popup; active profile name on FAB tooltip
-**Addresses:** Extension popup active profile display (P1); stale badge UX guard
-**Avoids:** Pitfall 4 (stale `activeProfileId` in content script — read fresh at FAB click time), Pitfall 9 (profile switch shows stale badges without visual warning), Pitfall 10 (expired session on demo day)
+**Rationale:** Pure UX polish with no architectural dependencies on earlier phases. Can be split across two parallel workstreams: color palette (CSS-only, hours of work) and extension distribution (static page + CWS submission process). Chrome Web Store Unlisted submission should start at the beginning of this phase — not the end — because the review takes 1-3 days.
+**Delivers:** Flatfox-inspired teal/green primary color palette in `globals.css`; verified WCAG AA badge contrast on Flatfox pages; extension install page at `/install`; `.zip` build script in `extension/package.json`; Chrome Web Store Unlisted submission.
+**Avoids pitfalls:** Pitfall 6 (badge visibility — define two separate palettes before any CSS changes; test on actual Flatfox page); Pitfall 7 (sideloading UX alienating pilot users — CWS Unlisted is the correct solution); Pitfall 10 (extension popup color breakage — rebuild extension after any `globals.css` change and verify popup).
+**Research flag:** SKIP for color palette (CSS-only; Flatfox exact colors need visual tuning by inspection, not research). SKIP for install page (standard static Next.js page). CWS submission process is well-documented at developer.chrome.com.
 
 ### Phase Ordering Rationale
 
-- DB migration is strictly first because the unique constraints actively corrupt multi-profile data if not changed before any profile rows are written
-- Backend before edge function: edge function starts forwarding `profile_id` downstream, which the backend must already accept
-- Schema unification before preferences form restructure: form and Claude prompt changes must reference the same field names or the UX improvements have no effect on scoring
-- Layout shell before profile pages: profile pages inherit the sidebar layout; building them without the shell creates throwaway work
-- Web before extension: web is the authoritative profile management surface; extension popup is a secondary display and quick-switch UI
-- Demo prep bundled with extension phase: session health check and stale-badge guard are both extension-layer concerns; rehearsal gates the entire milestone
+- **Phase 1 before Phase 2 (hard dependency):** Pydantic `extra="ignore"` silently discards unknown fields. If Phase 2 chat generates `dynamicFields` before the backend model declares them, scoring silently ignores all custom criteria. No workaround exists without a backend redeploy.
+- **Phase 3 can run in parallel with Phase 2:** Parallel scoring is architecturally independent. A second team member could implement Phase 3 while Phase 2 chat work is in progress. Recommend merging Phase 3 before Phase 2 (lower risk) to avoid compounding changes during final integration.
+- **Phase 4 after Phases 1-2:** Color palette changes are best done on a stabilized codebase to avoid visual regressions during active feature development. Exception: CWS submission should start immediately regardless — it is a background process with no code dependency.
+- **CWS Unlisted submission:** Start in parallel with Phase 1 development. Review takes 1-3 days; there is no reason to wait until Phase 4.
 
 ### Research Flags
 
-Phases needing deeper investigation during planning:
-- **Phase 3 (Preferences Schema Unification):** The exact delta between web and extension schemas requires a line-by-line audit of `web/src/lib/schemas/preferences.ts` vs `extension/src/schema/profile.ts` vs `backend/app/models/preferences.py`. The Claude prompt changes require empirical testing to verify measurable scoring improvement. May surface additional fields the current form does not expose at all.
-- **Phase 6 (Extension Profile Switcher):** The stale-badge notification pathway (background → content script) has edge cases around tab enumeration (which tabs to notify) and cross-tab consistency. The `setActiveProfile` RPC call error-handling path needs explicit specification.
+**Phases needing `/gsd:research-phase` during planning:**
+- **Phase 2 (Chat UI conversation design):** The product decision between single-shot and multi-turn preference discovery is not resolved by current research. Single-shot (user writes a paragraph, AI extracts preferences) is simpler and avoids session state complexity. Multi-turn (AI asks clarifying questions across 3-5 turns) is richer but requires sessionStorage persistence, turn limits, and more complex prompt engineering. The system prompt quality directly determines extraction quality — this warrants deliberate design before implementation begins.
 
-Phases with well-documented patterns (skip research-phase):
-- **Phase 1 (DB Migration):** SQL migration fully specified in ARCHITECTURE.md and STACK.md with exact DDL. Standard Supabase migration workflow with `supabase migration new`.
-- **Phase 2 (Backend + Edge Function):** FastAPI Pydantic model changes are minor additions. Edge function pattern is established in existing `score-proxy`. Fully specified in ARCHITECTURE.md.
-- **Phase 4 (UI Foundation):** shadcn sidebar + next-themes is a well-documented standard pattern. Installation commands and integration code are fully specified in STACK.md. asChild grep-and-fix is mechanical.
-
----
+**Phases with standard patterns (skip research-phase):**
+- **Phase 1 (Schema):** Pydantic model validators, Zod schema extension, JSONB migration, backward-compat migration — all established patterns with direct codebase examples from v1.1.
+- **Phase 3 (Parallel Scoring):** `asyncio.Semaphore`, `Promise.allSettled()` batching, `httpx.AsyncClient` reuse — standard Python/TypeScript patterns, fully documented.
+- **Phase 4 (UI + Distribution):** CSS variable theming, static Next.js page, WXT zip packaging, CWS Unlisted submission — all well-documented. Flatfox color values need visual validation during implementation, not upfront research.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All technologies verified against official changelogs and docs; `components.json` and `globals.css` verified from codebase directly; version compatibility confirmed for March 2026 |
-| Features | MEDIUM-HIGH | UI patterns well-documented; LLM structured-input research is solid (multiple concordant sources); B2B multi-profile specifics inferred from analogous SaaS tools (Google Analytics, Salesforce) rather than Swiss real estate-specific precedent |
-| Architecture | HIGH | Based on direct codebase analysis; schema, data flows, and component boundaries derived from actual running code; all integration points verified against existing code paths |
-| Pitfalls | HIGH | 7 of 10 pitfalls verified directly from codebase (schema files, migration SQL, Supabase functions); 3 pitfalls verified against official shadcn changelogs and GitHub issues with specific issue numbers and reproducible error conditions |
+| Stack | HIGH | Verified against official AI SDK docs (ai-sdk.dev), npm registry version numbers, Anthropic rate limit docs. Medium-confidence item: exact Flatfox color HSL values (no public style guide; must tune by visual inspection). |
+| Features | HIGH | Features drawn directly from PROJECT.md active requirements. Integration patterns verified against official docs. Anti-features supported by clear technical rationale. |
+| Architecture | HIGH | Codebase analyzed directly. Data flows, file paths, model fields, and existing patterns (migration validators, async patterns) all verified against real source files. |
+| Pitfalls | HIGH | Six critical pitfalls identified with direct codebase evidence (specific file paths and code patterns). Rate limits verified against official Anthropic and Supabase docs. Chrome extension restrictions verified against official Chrome for Developers docs. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Canonical preferences schema superset:** The exact list of extension fields to add to the web form and backend is not enumerated in research. Requires side-by-side comparison of `web/src/lib/schemas/preferences.ts` vs `extension/src/schema/profile.ts` vs `backend/app/models/preferences.py` as the first task in Phase 3.
-- **21st.dev navbar component selection:** Research identified 43 navbar components on 21st.dev but the specific one to use has not been chosen. Must browse `21st.dev/s/navbar` and select before Phase 4 implementation begins. Risk is LOW — all components install via the same shadcn CLI pattern and land as editable source files.
-- **B2B profile count soft cap:** Research recommends 5-10 profiles but the right number for the Bellevia Immobilien pilot is unknown. Validate with Vera Caflisch at the demo and enforce the limit post-pilot.
-- **`set_active_profile` Postgres RPC function testing:** The RPC function is specified in ARCHITECTURE.md but not yet written. Write and test it during Phase 1 alongside the migration; it is a critical path item for both Phase 2 (backend) and Phase 6 (extension).
-
----
+- **Chat conversation design:** The single-shot vs multi-turn tradeoff is flagged for a Phase 2 research pass. The technical implementation of both approaches is understood; the product decision requires deliberate thought before UI construction begins.
+- **Flatfox color values:** The exact HSL values for Flatfox's primary teal/green palette are not publicly documented. The `hsl(168 76% 36%)` approximation must be tuned by visual comparison with flatfox.ch during implementation. Low impact — CSS-only change.
+- **Anthropic API tier level:** Research assumes Tier 1 (50 RPM) as the conservative baseline for semaphore sizing. If the account is on Tier 2 (1000 RPM), the concurrency limit of 3 could safely increase to 10. Check in the Anthropic console before finalizing Phase 3 implementation.
+- **Chrome Web Store reviewer requirements:** CWS review may require a privacy policy URL and detailed permission justifications for host permissions on `flatfox.ch`. Prepare these before submission to avoid rejection delays.
+- **Flatfox rate limiting specifics:** Flatfox does not publish rate limit documentation. The threshold estimate (~10-20 concurrent requests) is based on common patterns for similar-sized services. Needs empirical validation during Phase 3 testing.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [shadcn/ui Changelog — January 2026 Base UI](https://ui.shadcn.com/docs/changelog/2026-01-base-ui) — Base UI component availability confirmed
-- [shadcn/ui Migration Guide: Radix to Base UI — GitHub Discussion #9562](https://github.com/shadcn-ui/ui/discussions/9562) — `asChild` removal and `render` prop migration confirmed
-- [Base UI Accordion `asChild` removed — GitHub Issue #9049](https://github.com/shadcn-ui/ui/issues/9049) — confirms silent failure mode
-- [shadcn/ui Tailwind v4 Guide + GitHub Issue #4845](https://ui.shadcn.com/docs/tailwind-v4) — CSS variable double-definition bug pattern confirmed
-- [shadcn/ui Sidebar Docs + Blocks](https://ui.shadcn.com/docs/components/radix/sidebar) — SidebarFooter + DropdownMenu profile switcher pattern
-- [next-themes GitHub v0.4.6](https://github.com/pacocoursey/next-themes) — Next.js 16 + Tailwind v4 compatibility confirmed
-- [Supabase RLS and RPC docs](https://supabase.com/docs/guides/database/postgres/row-level-security) — `auth.uid()` policy pattern; RLS performance index requirement confirmed
-- Direct codebase analysis: `supabase/migrations/001_initial_schema.sql`, `web/src/lib/schemas/preferences.ts`, `extension/src/schema/profile.ts`, `backend/app/models/preferences.py`, `web/components.json`, `web/src/app/globals.css`, `supabase/functions/score-proxy/index.ts` — schema gaps, constraint structure, and integration points confirmed
+- [AI SDK Documentation](https://ai-sdk.dev/docs/introduction) — SDK packages, `useChat` hook API, `streamText`, `generateObject`, migration guide 6.0
+- [AI SDK Anthropic Provider](https://ai-sdk.dev/providers/ai-sdk-providers/anthropic) — model IDs, provider setup, `generateObject` support
+- [Anthropic Rate Limits](https://platform.claude.com/docs/en/api/rate-limits) — RPM/ITPM/OTPM by tier for Haiku 4.5; image token counts (~1334 per image)
+- [Anthropic Structured Outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs) — `generateObject` schema guarantee
+- [Chrome Extension Distribution](https://developer.chrome.com/docs/extensions/how-to/distribute/install-extensions) — CRX blocked on Windows/macOS; developer mode sideloading process
+- [Chrome Web Store Distribution Settings](https://developer.chrome.com/docs/webstore/cws-dashboard-distribution) — Unlisted/private/public visibility options; $5 developer fee
+- [Supabase Edge Function Limits](https://supabase.com/docs/guides/functions/limits) — 150s timeout, V8 isolates per invocation
+- [FastAPI Concurrency Docs](https://fastapi.tiangolo.com/async/) — async/await patterns, `asyncio.gather`
+- [Python asyncio Semaphore](https://docs.python.org/3/library/asyncio-sync.html) — stdlib concurrency primitives
+- Direct codebase analysis: `extension/src/lib/api.ts`, `backend/app/services/claude.py`, `backend/app/services/flatfox.py`, `backend/app/models/preferences.py`, `backend/app/prompts/scoring.py`, `supabase/functions/score-proxy/index.ts`, `web/src/app/globals.css`, `extension/src/types/scoring.ts`
 
 ### Secondary (MEDIUM confidence)
-- [From Prompts to Parameters — Medium/DevOps AI](https://medium.com/devops-ai/from-prompts-to-parameters-the-case-for-structured-inputs-0fda3b69609f) — structured inputs vs. freeform for LLM consumption
-- [Baymard Institute — Slider UX](https://baymard.com/blog/slider-interfaces) — chip selectors preferred over sliders for importance levels
-- [B2B SaaS UX Design 2026 — Onething Design](https://www.onething.design/post/b2b-saas-ux-design) — multi-persona profile switching patterns
-- [Mastering CRUD Operations UX — Medium/Design Bootcamp](https://medium.com/design-bootcamp/mastering-crud-operations-a-framework-for-seamless-product-design-2630affbc1e5) — confirmation dialog patterns for destructive actions
-- [Managing Supabase Auth State — DEV Community](https://dev.to/jais_mukesh/managing-supabase-auth-state-across-server-client-components-in-nextjs-2h2b) — `cache()` deduplication for navbar auth fetch
-
-### Tertiary (LOW confidence — inferred from analogous domains)
-- B2B profile count cap (5-10) — inferred from analogous SaaS tools; validate with actual pilot user
-- Profile template feature value for broker onboarding — inferred; needs pilot validation before building
+- [DEPT Agency — Flatfox Brand Case Study](https://www.deptagency.com/de-dach/case/upgrades-fuer-die-groesste-schweizer-immobilienplattform/) — brand palette described as teal/turquoise; "light and agile," "fresh, bold colors"
+- [FastAPI rate limiting with asyncio.Semaphore](https://medium.com/@reesel/build-faster-more-reliable-fastapi-apps-with-concurrency-e726784a0299) — community best practice for external API rate limiting
+- [Dynamic Pydantic models pattern](https://itracer.medium.com/dynamic-pydantic-models-ac91e8acedcd) — community pattern for runtime model creation
 
 ---
-*Research completed: 2026-03-13*
+*Research completed: 2026-03-15*
 *Ready for roadmap: yes*
