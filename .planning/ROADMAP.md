@@ -57,8 +57,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 11-01-PLAN.md -- DynamicField types in Zod + Pydantic schemas, backward-compat migration, tests
-- [ ] 11-02-PLAN.md -- Scoring prompt with importance weighting, DynamicFieldsSection UI, migration wiring
+- [x] 11-01-PLAN.md -- DynamicField types in Zod + Pydantic schemas, backward-compat migration, tests
+- [x] 11-02-PLAN.md -- Scoring prompt with importance weighting, DynamicFieldsSection UI, migration wiring
 
 ### Phase 12: Chat-Based Preference Discovery
 **Goal**: Users can discover and define their preferences through a conversational AI interface instead of manual form entry
@@ -70,12 +70,12 @@ Plans:
   3. User can edit, add, or delete any AI-generated field before saving to their profile
   4. Saving chat-generated fields preserves existing standard fields (location, budget, rooms) via JSONB merge
   5. Chat conversation survives page navigation within the same browser session
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 12-01: TBD
-- [ ] 12-02: TBD
-- [ ] 12-03: TBD
+- [ ] 12-01-PLAN.md -- AI SDK install, lib/chat layer (system prompt, extraction schema, merge utility), chat API route, extraction server action, tests
+- [ ] 12-02-PLAN.md -- Chat UI components (ChatPanel, ChatMessages, ChatInput), profile page integration, sessionStorage persistence
+- [ ] 12-03-PLAN.md -- ExtractedFieldsReview component, extraction trigger + merge wiring, full-flow human verification checkpoint
 
 ### Phase 13: Parallel Scoring
 **Goal**: Users can score all visible Flatfox listings at once instead of one at a time, with clear progress feedback
@@ -125,7 +125,7 @@ Note: Phases 13 and 14 are independent of 11-12 and could execute in any order. 
 | 8. UI Foundation | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 9. Web Profile Management | v1.1 | 4/4 | Complete | 2026-03-15 |
 | 10. Extension Profile Switcher | v1.1 | 3/3 | Complete | 2026-03-15 |
-| 11. Dynamic Preference Schema | 2/2 | Complete    | 2026-03-15 | - |
-| 12. Chat-Based Preference Discovery | v2.0 | 0/TBD | Not started | - |
+| 11. Dynamic Preference Schema | v2.0 | 2/2 | Complete | 2026-03-15 |
+| 12. Chat-Based Preference Discovery | v2.0 | 0/3 | Not started | - |
 | 13. Parallel Scoring | v2.0 | 0/TBD | Not started | - |
 | 14. UI Redesign & Extension Distribution | v2.0 | 0/TBD | Not started | - |
