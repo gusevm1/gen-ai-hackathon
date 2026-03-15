@@ -1,12 +1,13 @@
 """Unit tests for prompt template generation.
 
 Covers: EVAL-05 (language in prompt), prompt formatting, data handling,
-        PREF-14 (importance levels, dealbreaker semantics in prompts).
+        PREF-14 (importance levels, dealbreaker semantics in prompts),
+        SCHM-04 (dynamic fields with importance weighting in prompts).
 """
 
 import pytest
 from app.models.listing import FlatfoxListing
-from app.models.preferences import UserPreferences
+from app.models.preferences import DynamicField, UserPreferences
 
 
 class TestBuildSystemPrompt:
@@ -244,3 +245,169 @@ class TestBuildUserPrompt:
         prompt = build_user_prompt(full_listing, prefs)
         # Should not have a budget dealbreaker line since no threshold
         assert "Budget max" not in prompt or "HARD LIMIT" not in prompt
+
+
+class TestDynamicFieldsPrompt:
+    """Tests for dynamic fields rendering in scoring prompts (SCHM-04)."""
+
+    @pytest.fixture
+    def listing(self):
+        return FlatfoxListing(
+            pk=1,
+            slug="test",
+            url="/en/flat/test/1/",
+            short_url="https://flatfox.ch/en/flat/1/",
+            status="act",
+            offer_type="RENT",
+            object_category="APARTMENT",
+            object_type="APARTMENT",
+            rent_gross=1800,
+            number_of_rooms="3.5",
+            description="Test listing",
+        )
+
+    @pytest.fixture
+    def prefs_with_dynamic_fields(self):
+        return UserPreferences(
+            location="Zurich",
+            offer_type="RENT",
+            object_category="APARTMENT",
+            budget_max=2500,
+            features=["balcony"],
+            importance={
+                "location": "high",
+                "price": "critical",
+                "size": "medium",
+                "features": "low",
+                "condition": "medium",
+            },
+            dynamic_fields=[
+                DynamicField(name="Near train station", value="within 500m", importance="critical"),
+                DynamicField(name="Quiet neighborhood", value="", importance="high"),
+                DynamicField(name="Good school district", value="", importance="medium"),
+                DynamicField(name="Nice view", value="mountain view preferred", importance="low"),
+            ],
+        )
+
+    @pytest.fixture
+    def prefs_no_dynamic_fields(self):
+        """Preferences with soft_criteria but no dynamic_fields (backward compat)."""
+        return UserPreferences(
+            location="Zurich",
+            offer_type="RENT",
+            object_category="APARTMENT",
+            soft_criteria=["near Bahnhof", "quiet neighborhood"],
+            features=["balcony"],
+            importance={
+                "location": "medium",
+                "price": "medium",
+                "size": "medium",
+                "features": "medium",
+                "condition": "medium",
+            },
+        )
+
+    def test_dynamic_fields_shows_custom_criteria_header(self, listing, prefs_with_dynamic_fields):
+        """Prompt with dynamic fields shows 'Custom Criteria (by importance):' section."""
+        from app.prompts.scoring import build_user_prompt
+
+        prompt = build_user_prompt(listing, prefs_with_dynamic_fields)
+        assert "Custom Criteria (by importance):" in prompt
+
+    def test_critical_importance_label(self, listing, prefs_with_dynamic_fields):
+        """Critical-importance field appears under 'CRITICAL (must have):' label."""
+        from app.prompts.scoring import build_user_prompt
+
+        prompt = build_user_prompt(listing, prefs_with_dynamic_fields)
+        assert "CRITICAL (must have):" in prompt
+        assert "Near train station" in prompt
+
+    def test_high_importance_label(self, listing, prefs_with_dynamic_fields):
+        """High-importance field appears under 'HIGH (strongly preferred):' label."""
+        from app.prompts.scoring import build_user_prompt
+
+        prompt = build_user_prompt(listing, prefs_with_dynamic_fields)
+        assert "HIGH (strongly preferred):" in prompt
+        assert "Quiet neighborhood" in prompt
+
+    def test_medium_importance_label(self, listing, prefs_with_dynamic_fields):
+        """Medium-importance field appears under 'MEDIUM (nice to have):' label."""
+        from app.prompts.scoring import build_user_prompt
+
+        prompt = build_user_prompt(listing, prefs_with_dynamic_fields)
+        assert "MEDIUM (nice to have):" in prompt
+        assert "Good school district" in prompt
+
+    def test_low_importance_label(self, listing, prefs_with_dynamic_fields):
+        """Low-importance field appears under 'LOW (minor preference):' label."""
+        from app.prompts.scoring import build_user_prompt
+
+        prompt = build_user_prompt(listing, prefs_with_dynamic_fields)
+        assert "LOW (minor preference):" in prompt
+        assert "Nice view" in prompt
+
+    def test_dynamic_field_with_value_renders_name_colon_value(self, listing, prefs_with_dynamic_fields):
+        """Dynamic field with value renders as 'name: value'."""
+        from app.prompts.scoring import build_user_prompt
+
+        prompt = build_user_prompt(listing, prefs_with_dynamic_fields)
+        assert "Near train station: within 500m" in prompt
+
+    def test_dynamic_field_without_value_renders_name_only(self, listing, prefs_with_dynamic_fields):
+        """Dynamic field without value renders as just 'name'."""
+        from app.prompts.scoring import build_user_prompt
+
+        prompt = build_user_prompt(listing, prefs_with_dynamic_fields)
+        # "Quiet neighborhood" has no value, should appear without colon
+        # Check it appears but NOT with a trailing ": "
+        assert "Quiet neighborhood" in prompt
+        # Ensure "Quiet neighborhood:" is NOT in the prompt (no trailing colon for empty value)
+        lines = prompt.split("\n")
+        quiet_lines = [l for l in lines if "Quiet neighborhood" in l]
+        assert len(quiet_lines) > 0
+        for line in quiet_lines:
+            # Should be "- Quiet neighborhood" not "- Quiet neighborhood: "
+            assert "Quiet neighborhood:" not in line
+
+    def test_empty_dynamic_fields_no_custom_criteria_section(self, listing):
+        """Empty dynamic_fields produces no Custom Criteria section."""
+        from app.prompts.scoring import build_user_prompt
+
+        prefs = UserPreferences(
+            location="Zurich",
+            offer_type="RENT",
+            object_category="APARTMENT",
+            dynamic_fields=[],
+            features=[],
+            importance={
+                "location": "medium",
+                "price": "medium",
+                "size": "medium",
+                "features": "medium",
+                "condition": "medium",
+            },
+        )
+        prompt = build_user_prompt(listing, prefs)
+        assert "Custom Criteria" not in prompt
+
+    def test_system_prompt_references_custom_criterion(self):
+        """System prompt references 'custom criterion' instead of 'soft criterion'."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        assert "custom criterion" in prompt or "custom criteria" in prompt
+
+    def test_prompt_no_soft_criteria_line_when_dynamic_fields_exist(self, listing, prefs_with_dynamic_fields):
+        """Prompt no longer contains 'Soft criteria:' line when dynamic fields exist."""
+        from app.prompts.scoring import build_user_prompt
+
+        prompt = build_user_prompt(listing, prefs_with_dynamic_fields)
+        assert "Soft criteria:" not in prompt
+
+    def test_backward_compat_soft_criteria_when_no_dynamic_fields(self, listing, prefs_no_dynamic_fields):
+        """Existing soft_criteria still render when dynamic_fields is empty."""
+        from app.prompts.scoring import build_user_prompt
+
+        prompt = build_user_prompt(listing, prefs_no_dynamic_fields)
+        assert "near Bahnhof" in prompt
+        assert "quiet neighborhood" in prompt
