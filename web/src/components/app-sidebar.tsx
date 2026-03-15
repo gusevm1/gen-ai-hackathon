@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Home, User, BarChart3, Settings, ChevronsLeft, ChevronsRight } from "lucide-react"
 import {
@@ -32,7 +33,13 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1">
-          <Home className="size-5 shrink-0 text-primary" />
+          <Image
+            src="/logo.png"
+            alt="HomeMatch logo"
+            width={28}
+            height={28}
+            className="rounded"
+          />
           {!isCollapsed && (
             <span className="text-lg font-semibold tracking-tight">
               HomeMatch
