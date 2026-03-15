@@ -9,11 +9,11 @@ Requirements for Smart Preferences & UX Polish milestone. Each maps to roadmap p
 
 ### Preference Schema
 
-- [ ] **SCHM-01**: User preferences support dynamic AI-generated fields with importance levels (critical/high/medium/low) replacing softCriteria
-- [ ] **SCHM-02**: Zod schema (web) includes DynamicField type with name, value, and importance
-- [ ] **SCHM-03**: Pydantic model (backend) includes dynamic_fields with proper validation (not silently dropped)
+- [x] **SCHM-01**: User preferences support dynamic AI-generated fields with importance levels (critical/high/medium/low) replacing softCriteria
+- [x] **SCHM-02**: Zod schema (web) includes DynamicField type with name, value, and importance
+- [x] **SCHM-03**: Pydantic model (backend) includes dynamic_fields with proper validation (not silently dropped)
 - [ ] **SCHM-04**: Claude scoring prompt renders dynamic fields as weighted custom criteria section
-- [ ] **SCHM-05**: Existing softCriteria data migrates to dynamicFields format via backward-compat migration
+- [x] **SCHM-05**: Existing softCriteria data migrates to dynamicFields format via backward-compat migration
 
 ### Chat Preferences
 
@@ -74,11 +74,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCHM-01 | Phase 11 | Pending |
-| SCHM-02 | Phase 11 | Pending |
-| SCHM-03 | Phase 11 | Pending |
+| SCHM-01 | Phase 11 | Complete |
+| SCHM-02 | Phase 11 | Complete |
+| SCHM-03 | Phase 11 | Complete |
 | SCHM-04 | Phase 11 | Pending |
-| SCHM-05 | Phase 11 | Pending |
+| SCHM-05 | Phase 11 | Complete |
 | CHAT-01 | Phase 12 | Pending |
 | CHAT-02 | Phase 12 | Pending |
 | CHAT-03 | Phase 12 | Pending |
