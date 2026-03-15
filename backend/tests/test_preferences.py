@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from app.models.preferences import (
     IMPORTANCE_WEIGHT_MAP,
+    DynamicField,
     Importance,
     ImportanceLevel,
     UserPreferences,
@@ -192,3 +193,143 @@ class TestLanguageLiteral:
         """Language field rejects invalid values."""
         with pytest.raises(ValidationError):
             UserPreferences(language="es")
+
+
+class TestDynamicFields:
+    """Tests for the DynamicField model and dynamicFields on UserPreferences."""
+
+    def test_dynamic_field_parses_from_camel_case(self):
+        """DynamicField with name/value/importance parses correctly from camelCase JSON."""
+        data = {"name": "near Bahnhof", "value": "within 500m", "importance": "high"}
+        field = DynamicField.model_validate(data)
+
+        assert field.name == "near Bahnhof"
+        assert field.value == "within 500m"
+        assert field.importance == ImportanceLevel.HIGH
+
+    def test_user_preferences_with_dynamic_fields(self):
+        """UserPreferences with dynamicFields array parses and round-trips."""
+        data = {
+            "dynamicFields": [
+                {"name": "near Bahnhof", "value": "", "importance": "high"},
+                {"name": "quiet neighborhood", "value": "no main road", "importance": "medium"},
+            ]
+        }
+        prefs = UserPreferences.model_validate(data)
+
+        assert len(prefs.dynamic_fields) == 2
+        assert prefs.dynamic_fields[0].name == "near Bahnhof"
+        assert prefs.dynamic_fields[0].value == ""
+        assert prefs.dynamic_fields[0].importance == ImportanceLevel.HIGH
+        assert prefs.dynamic_fields[1].name == "quiet neighborhood"
+        assert prefs.dynamic_fields[1].value == "no main road"
+        assert prefs.dynamic_fields[1].importance == ImportanceLevel.MEDIUM
+
+    def test_empty_dict_produces_empty_dynamic_fields(self):
+        """Empty dict parse produces dynamic_fields=[] (default)."""
+        prefs = UserPreferences.model_validate({})
+        assert prefs.dynamic_fields == []
+
+    def test_dynamic_field_rejects_empty_name(self):
+        """DynamicField rejects empty name (min length validation)."""
+        with pytest.raises(ValidationError):
+            DynamicField.model_validate({"name": "", "importance": "medium"})
+
+    def test_dynamic_field_rejects_invalid_importance(self):
+        """DynamicField rejects invalid importance level."""
+        with pytest.raises(ValidationError):
+            DynamicField.model_validate({"name": "test", "importance": "urgent"})
+
+    def test_dynamic_field_defaults(self):
+        """DynamicField defaults value to '' and importance to 'medium'."""
+        field = DynamicField.model_validate({"name": "test criterion"})
+
+        assert field.value == ""
+        assert field.importance == ImportanceLevel.MEDIUM
+
+    def test_sample_preferences_json_with_dynamic_fields(self):
+        """SAMPLE_PREFERENCES_JSON (updated with dynamicFields) parses correctly."""
+        prefs = UserPreferences.model_validate(SAMPLE_PREFERENCES_JSON)
+
+        assert len(prefs.dynamic_fields) == 2
+        assert prefs.dynamic_fields[0].name == "near Bahnhof"
+        assert prefs.dynamic_fields[0].importance == ImportanceLevel.HIGH
+        assert prefs.dynamic_fields[1].name == "quiet neighborhood"
+        assert prefs.dynamic_fields[1].importance == ImportanceLevel.MEDIUM
+
+
+class TestSoftCriteriaMigration:
+    """Tests for softCriteria -> dynamicFields migration in model_validator."""
+
+    def test_soft_criteria_migrates_to_dynamic_fields(self):
+        """JSONB with softCriteria but no dynamicFields auto-migrates."""
+        data = {
+            "softCriteria": ["near Bahnhof", "quiet neighborhood"],
+        }
+        prefs = UserPreferences.model_validate(data)
+
+        assert len(prefs.dynamic_fields) == 2
+        assert prefs.dynamic_fields[0].name == "near Bahnhof"
+        assert prefs.dynamic_fields[0].value == ""
+        assert prefs.dynamic_fields[0].importance == ImportanceLevel.MEDIUM
+        assert prefs.dynamic_fields[1].name == "quiet neighborhood"
+        assert prefs.dynamic_fields[1].value == ""
+        assert prefs.dynamic_fields[1].importance == ImportanceLevel.MEDIUM
+
+    def test_both_soft_criteria_and_dynamic_fields_preserves_dynamic(self):
+        """JSONB with both softCriteria and dynamicFields preserves dynamicFields."""
+        data = {
+            "softCriteria": ["old criterion"],
+            "dynamicFields": [
+                {"name": "new criterion", "value": "details", "importance": "high"},
+            ],
+        }
+        prefs = UserPreferences.model_validate(data)
+
+        # dynamicFields preserved, softCriteria NOT migrated (no double migration)
+        assert len(prefs.dynamic_fields) == 1
+        assert prefs.dynamic_fields[0].name == "new criterion"
+        assert prefs.dynamic_fields[0].importance == ImportanceLevel.HIGH
+
+    def test_snake_case_soft_criteria_migrates(self):
+        """JSONB with soft_criteria (snake_case) also migrates correctly."""
+        data = {
+            "soft_criteria": ["near Bahnhof", "quiet area"],
+        }
+        prefs = UserPreferences.model_validate(data)
+
+        assert len(prefs.dynamic_fields) == 2
+        assert prefs.dynamic_fields[0].name == "near Bahnhof"
+        assert prefs.dynamic_fields[1].name == "quiet area"
+
+    def test_legacy_json_migrates_soft_criteria(self):
+        """LEGACY_PREFERENCES_JSON (softCriteria only) auto-migrates to dynamicFields."""
+        prefs = UserPreferences.model_validate(LEGACY_PREFERENCES_JSON)
+
+        assert len(prefs.dynamic_fields) == 2
+        assert prefs.dynamic_fields[0].name == "near Bahnhof"
+        assert prefs.dynamic_fields[0].importance == ImportanceLevel.MEDIUM
+        assert prefs.dynamic_fields[1].name == "quiet neighborhood"
+        assert prefs.dynamic_fields[1].importance == ImportanceLevel.MEDIUM
+
+    def test_migration_filters_empty_strings(self):
+        """Migration filters out empty strings from softCriteria."""
+        data = {
+            "softCriteria": ["near Bahnhof", "", "  ", "quiet area"],
+        }
+        prefs = UserPreferences.model_validate(data)
+
+        assert len(prefs.dynamic_fields) == 2
+        assert prefs.dynamic_fields[0].name == "near Bahnhof"
+        assert prefs.dynamic_fields[1].name == "quiet area"
+
+    def test_existing_tests_still_pass(self):
+        """Verify SAMPLE_PREFERENCES_JSON and LEGACY_PREFERENCES_JSON still parse."""
+        # SAMPLE_PREFERENCES_JSON -- should parse without error
+        prefs_sample = UserPreferences.model_validate(SAMPLE_PREFERENCES_JSON)
+        assert prefs_sample.location == "Zurich"
+
+        # LEGACY_PREFERENCES_JSON -- should parse without error (with migration)
+        prefs_legacy = UserPreferences.model_validate(LEGACY_PREFERENCES_JSON)
+        assert prefs_legacy.location == "Zurich"
+        assert prefs_legacy.features == ["balcony", "parking"]
