@@ -120,7 +120,12 @@ Plans:
   3. When the active profile changes mid-session, existing score badges on the page show a visual stale indicator
   4. Clicking the FAB performs a session health check and the popup shows a "Connected" indicator when the session is valid
   5. Score badges and summary panels have an improved, polished design consistent with the web app's visual language
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 10-01-PLAN.md -- Active profile storage item, extended background messages (getProfiles, switchProfile, healthCheck), Wave 0 test scaffolds
+- [ ] 10-02-PLAN.md -- Popup UI: ProfileSection dropdown, ConnectionStatus indicator, Dashboard refactor
+- [ ] 10-03-PLAN.md -- Content script stale badge detection, visual polish for badges, panels, FAB
 
 ## Progress
 
@@ -139,4 +144,4 @@ Note: Phase 8 depends on Phase 5 (not 7), so it could theoretically parallel 6-7
 | 7. Preferences Schema Unification | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 8. UI Foundation | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 9. Web Profile Management | v1.1 | 0/4 | Not started | - |
-| 10. Extension Profile Switcher | v1.1 | 0/? | Not started | - |
+| 10. Extension Profile Switcher | v1.1 | 0/3 | Not started | - |
