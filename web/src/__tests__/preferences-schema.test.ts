@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { preferencesSchema } from '@/lib/schemas/preferences'
+import { preferencesSchema, dynamicFieldSchema, migratePreferences } from '@/lib/schemas/preferences'
 
 describe('preferencesSchema', () => {
   it('returns all defaults when parsing empty object', () => {
@@ -16,8 +16,9 @@ describe('preferencesSchema', () => {
     expect(result.livingSpaceMin).toBeNull()
     expect(result.livingSpaceMax).toBeNull()
 
-    // Soft criteria and features
+    // Soft criteria, dynamic fields, and features
     expect(result.softCriteria).toEqual([])
+    expect(result.dynamicFields).toEqual([])
     expect(result.features).toEqual([])
 
     // Dealbreaker toggles
@@ -158,5 +159,111 @@ describe('preferencesSchema', () => {
     expect(() =>
       preferencesSchema.parse({ floorPreference: 'top_floor' })
     ).toThrow()
+  })
+})
+
+describe('dynamicFields', () => {
+  it('empty object parse produces dynamicFields=[]', () => {
+    const result = preferencesSchema.parse({})
+    expect(result.dynamicFields).toEqual([])
+  })
+
+  it('dynamicFields with valid entries round-trips through parse', () => {
+    const input = {
+      dynamicFields: [
+        { name: 'near Bahnhof', value: 'within 500m', importance: 'high' as const },
+        { name: 'quiet area', value: '', importance: 'medium' as const },
+      ],
+    }
+    const result = preferencesSchema.parse(input)
+
+    expect(result.dynamicFields).toHaveLength(2)
+    expect(result.dynamicFields[0].name).toBe('near Bahnhof')
+    expect(result.dynamicFields[0].value).toBe('within 500m')
+    expect(result.dynamicFields[0].importance).toBe('high')
+    expect(result.dynamicFields[1].name).toBe('quiet area')
+    expect(result.dynamicFields[1].value).toBe('')
+    expect(result.dynamicFields[1].importance).toBe('medium')
+  })
+
+  it('dynamicFieldSchema rejects empty name (min 1 char)', () => {
+    expect(() =>
+      dynamicFieldSchema.parse({ name: '', importance: 'medium' })
+    ).toThrow()
+  })
+
+  it('dynamicFieldSchema defaults value to empty string and importance to medium', () => {
+    const result = dynamicFieldSchema.parse({ name: 'test criterion' })
+
+    expect(result.value).toBe('')
+    expect(result.importance).toBe('medium')
+  })
+
+  it('dynamicFieldSchema rejects invalid importance level', () => {
+    expect(() =>
+      dynamicFieldSchema.parse({ name: 'test', importance: 'urgent' })
+    ).toThrow()
+  })
+})
+
+describe('migratePreferences', () => {
+  it('converts softCriteria strings to dynamicFields with importance=medium', () => {
+    const raw = {
+      softCriteria: ['near Bahnhof', 'quiet neighborhood'],
+    }
+    const migrated = migratePreferences(raw)
+
+    expect(migrated.dynamicFields).toEqual([
+      { name: 'near Bahnhof', value: '', importance: 'medium' },
+      { name: 'quiet neighborhood', value: '', importance: 'medium' },
+    ])
+  })
+
+  it('skips migration when dynamicFields already present', () => {
+    const raw = {
+      softCriteria: ['old criterion'],
+      dynamicFields: [
+        { name: 'new criterion', value: 'details', importance: 'high' },
+      ],
+    }
+    const migrated = migratePreferences(raw)
+
+    // dynamicFields preserved, softCriteria NOT migrated
+    expect(migrated.dynamicFields).toEqual([
+      { name: 'new criterion', value: 'details', importance: 'high' },
+    ])
+  })
+
+  it('handles empty softCriteria array (no dynamicFields created)', () => {
+    const raw = {
+      softCriteria: [],
+    }
+    const migrated = migratePreferences(raw)
+
+    expect(migrated.dynamicFields).toEqual([])
+  })
+
+  it('filters empty strings from softCriteria during migration', () => {
+    const raw = {
+      softCriteria: ['near Bahnhof', '', '  ', 'quiet area'],
+    }
+    const migrated = migratePreferences(raw)
+
+    expect(migrated.dynamicFields).toEqual([
+      { name: 'near Bahnhof', value: '', importance: 'medium' },
+      { name: 'quiet area', value: '', importance: 'medium' },
+    ])
+  })
+
+  it('passes through data without softCriteria unchanged', () => {
+    const raw = {
+      location: 'Zurich',
+      features: ['balcony'],
+    }
+    const migrated = migratePreferences(raw)
+
+    expect(migrated.location).toBe('Zurich')
+    expect(migrated.features).toEqual(['balcony'])
+    expect(migrated.dynamicFields).toBeUndefined()
   })
 })
