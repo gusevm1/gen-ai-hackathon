@@ -2,12 +2,16 @@ import { supabase } from '@/lib/supabase';
 
 /**
  * Message types for popup <-> background communication.
+ * Covers auth actions + profile management + health checks.
  */
-export type AuthMessage =
+export type ExtMessage =
   | { action: 'signIn'; credentials: { email: string; password: string } }
   | { action: 'signOut' }
   | { action: 'getSession' }
-  | { action: 'getUser' };
+  | { action: 'getUser' }
+  | { action: 'getProfiles' }
+  | { action: 'switchProfile'; profileId: string }
+  | { action: 'healthCheck' };
 
 /**
  * Handle the onInstalled event. Exported for testability.
@@ -21,11 +25,11 @@ export async function handleInstalled(details: { reason: string }) {
 }
 
 /**
- * Handle auth-related messages from the popup.
- * Returns a promise that resolves with the auth result.
+ * Handle messages from the popup and content scripts.
+ * Returns a promise that resolves with the result.
  */
 export async function handleMessage(
-  message: AuthMessage,
+  message: ExtMessage,
 ): Promise<unknown> {
   switch (message.action) {
     case 'signIn': {
@@ -46,6 +50,30 @@ export async function handleMessage(
       const { data, error } = await supabase.auth.getUser();
       return { user: data.user, error: error ? { message: error.message } : null };
     }
+    case 'getProfiles': {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, is_default')
+        .order('created_at', { ascending: true });
+      return { profiles: data ?? [], error };
+    }
+    case 'switchProfile': {
+      const { error } = await supabase.rpc('set_active_profile', {
+        target_profile_id: message.profileId,
+      });
+      return { error };
+    }
+    case 'healthCheck': {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        return {
+          connected: !error && !!data.user,
+          email: data.user?.email ?? null,
+        };
+      } catch {
+        return { connected: false, email: null };
+      }
+    }
     default:
       return { error: { message: 'Unknown action' } };
   }
@@ -55,7 +83,7 @@ export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(handleInstalled);
 
   browser.runtime.onMessage.addListener(
-    (message: AuthMessage, _sender, sendResponse) => {
+    (message: ExtMessage, _sender, sendResponse) => {
       handleMessage(message).then(sendResponse);
       // Return true to indicate async response
       return true;
