@@ -9,3 +9,4 @@ __pycache__/
 .pnpm-store/
 .next/
 .vscode/
+package-lock.json
