@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 09-04-PLAN.md
-last_updated: "2026-03-14T17:38:12.038Z"
-last_activity: 2026-03-14 -- Phase 9 Plan 04 complete (analysis page redesign + analyses list page)
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-03-15T11:31:23.706Z"
+last_activity: "2026-03-15 -- Phase 10 Plan 01 complete (infrastructure contracts: active profile storage + background message handlers + test scaffolds)"
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
-  percent: 100
+  total_plans: 13
+  completed_plans: 11
+  percent: 96
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-13)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website.
-**Current focus:** Phase 9 -- Web Profile Management (v1.1)
+**Current focus:** Phase 10 -- Extension Profile Switcher (v1.1)
 
 ## Current Position
 
-Phase: 9 of 10 (Web Profile Management)
-Plan: 4/4 complete
-Status: Phase 9 complete. Analysis page redesigned, analyses list built. All 4 plans done.
-Last activity: 2026-03-14 -- Phase 9 Plan 04 complete (analysis page redesign + analyses list page)
+Phase: 10 of 10 (Extension Profile Switcher)
+Plan: 1/3 complete
+Status: Plan 01 complete. Active profile storage, extended background handlers, Wave 0 test scaffolds done.
+Last activity: 2026-03-15 -- Phase 10 Plan 01 complete (infrastructure contracts: active profile storage + background message handlers + test scaffolds)
 
-Progress: [##########] 100% (23/22 plans complete)
+Progress: [##########] 96% (24/25 plans complete)
 
 ## Performance Metrics
 
@@ -50,7 +50,7 @@ Progress: [##########] 100% (23/22 plans complete)
 | 8 (UI Foundation) | 2/2 | ~9min | ~4.5min |
 
 **Recent Trend:**
-- Last plan: 09-04 (~3min, 2 tasks, 6 files)
+- Last plan: 10-01 (~3min, 2 tasks, 5 files)
 - Trend: accelerating
 
 *Updated after each plan completion*
@@ -60,6 +60,7 @@ Progress: [##########] 100% (23/22 plans complete)
 | Phase 09 P02 | 3min | 2 tasks | 12 files |
 | Phase 09 P03 | 3min | 2 tasks | 11 files |
 | Phase 09 P04 | 3min | 2 tasks | 6 files |
+| Phase 10 P01 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,7 @@ Recent decisions affecting current work:
 - [09-04]: Breadcrumb navigation replaces simple back link for better wayfinding on analysis page
 - [09-04]: Profile name fetched server-side and passed as optional prop to ScoreHeader
 - [09-04]: Importance level derived from weight: >=70 critical, >=50 high, >=30 medium, <30 low
+- [10-01]: fakeBrowser onMessage listeners return values directly (no sendResponse callback) -- different from Chrome API
 
 ### Pending Todos
 
@@ -114,6 +116,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-14T15:56:09Z
-Stopped at: Completed 09-04-PLAN.md
+Last session: 2026-03-15T11:31:22.509Z
+Stopped at: Completed 10-01-PLAN.md
 Resume file: None

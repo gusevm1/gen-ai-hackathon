@@ -45,10 +45,10 @@ Requirements for Demo-Ready + Multi-Profile milestone. Each maps to roadmap phas
 
 ### Extension Polish
 
-- [ ] **EXT-09**: Extension popup shows active profile name
-- [ ] **EXT-10**: Profile switcher dropdown in extension popup
-- [ ] **EXT-11**: Session health check on FAB click with "Connected" indicator in popup
-- [ ] **EXT-12**: Stale badge indicator when active profile changes mid-session
+- [x] **EXT-09**: Extension popup shows active profile name
+- [x] **EXT-10**: Profile switcher dropdown in extension popup
+- [x] **EXT-11**: Session health check on FAB click with "Connected" indicator in popup
+- [x] **EXT-12**: Stale badge indicator when active profile changes mid-session
 - [ ] **EXT-13**: Improved badge and summary panel design
 
 ## v2 Requirements
@@ -128,10 +128,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PREF-13 | Phase 7 | Complete |
 | PREF-14 | Phase 7 | Complete |
 | PREF-15 | Phase 9 | Complete |
-| EXT-09 | Phase 10 | Pending |
-| EXT-10 | Phase 10 | Pending |
-| EXT-11 | Phase 10 | Pending |
-| EXT-12 | Phase 10 | Pending |
+| EXT-09 | Phase 10 | Complete |
+| EXT-10 | Phase 10 | Complete |
+| EXT-11 | Phase 10 | Complete |
+| EXT-12 | Phase 10 | Complete |
 | EXT-13 | Phase 10 | Pending |
 
 **Coverage:**
