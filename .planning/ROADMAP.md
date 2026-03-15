@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 7: Preferences Schema Unification** - Canonical schema superset, updated Claude prompt with structured importance
 - [ ] **Phase 8: UI Foundation** - Sidebar layout, navbar, dark mode, 21st.dev component integration
 - [ ] **Phase 9: Web Profile Management** - Profile CRUD, preferences form restructure, analysis page redesign
-- [ ] **Phase 10: Extension Profile Switcher** - Popup profile display, switcher, stale badge guard, session health
+- [x] **Phase 10: Extension Profile Switcher** - Popup profile display, switcher, stale badge guard, session health (completed 2026-03-15)
 
 ## Phase Details
 
@@ -120,7 +120,7 @@ Plans:
   3. When the active profile changes mid-session, existing score badges on the page show a visual stale indicator
   4. Clicking the FAB performs a session health check and the popup shows a "Connected" indicator when the session is valid
   5. Score badges and summary panels have an improved, polished design consistent with the web app's visual language
-**Plans:** 3/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 10-01-PLAN.md -- Active profile storage item, extended background messages (getProfiles, switchProfile, healthCheck), Wave 0 test scaffolds
@@ -144,4 +144,4 @@ Note: Phase 8 depends on Phase 5 (not 7), so it could theoretically parallel 6-7
 | 7. Preferences Schema Unification | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 8. UI Foundation | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 9. Web Profile Management | v1.1 | 4/4 | Complete | 2026-03-15 |
-| 10. Extension Profile Switcher | v1.1 | 3/3 | Complete | 2026-03-15 |
+| 10. Extension Profile Switcher | 3/3 | Complete   | 2026-03-15 | 2026-03-15 |

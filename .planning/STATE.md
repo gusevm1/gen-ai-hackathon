@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 10-03-PLAN.md
-last_updated: "2026-03-15T11:45:02Z"
-last_activity: "2026-03-15 -- Phase 10 Plan 03 complete (stale badge detection + visual polish for content script components)"
+stopped_at: Completed 10-02-PLAN.md
+last_updated: "2026-03-15T11:50:24.497Z"
+last_activity: 2026-03-15 -- Phase 10 Plan 03 complete (stale badge detection + visual polish for content script components)
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 13
   completed_plans: 13
   percent: 100
@@ -61,6 +61,7 @@ Progress: [##########] 100% (25/25 plans complete)
 | Phase 09 P03 | 3min | 2 tasks | 11 files |
 | Phase 09 P04 | 3min | 2 tasks | 6 files |
 | Phase 10 P01 | 3min | 2 tasks | 5 files |
+| Phase 10 P02 | 3min | 2 tasks | 3 files |
 | Phase 10 P03 | 12min | 2 tasks | 5 files |
 
 ## Accumulated Context
@@ -104,6 +105,8 @@ Recent decisions affecting current work:
 - [09-04]: Profile name fetched server-side and passed as optional prop to ScoreHeader
 - [09-04]: Importance level derived from weight: >=70 critical, >=50 high, >=30 medium, <30 low
 - [10-01]: fakeBrowser onMessage listeners return values directly (no sendResponse callback) -- different from Chrome API
+- [10-02]: Native <select> over Radix Select in popup to avoid portal/iframe issues
+- [10-02]: activeProfileStorage cleared on sign out to prevent stale profile data
 - [10-03]: isStaleRef + isStale state dual-track: ref for synchronous shadow root re-renders, state for React lifecycle
 - [10-03]: Re-score all listings when stale (not just unscored) to ensure all badges reflect new profile
 - [10-03]: Profile name tracked via profileNameRef updated in both mount effect and storage watcher
@@ -120,6 +123,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-15T11:45:02Z
-Stopped at: Completed 10-03-PLAN.md
+Last session: 2026-03-15T11:50:24.495Z
+Stopped at: Completed 10-02-PLAN.md
 Resume file: None
