@@ -1,11 +1,26 @@
 {
-  "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
-  }
+    },
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "./src/**/*",
+    "./types/**/*",
+    "./.wxt/wxt.d.ts",
+    "./.wxt/types/**/*"
+  ],
+  "exclude": ["./dist", "./.wxt"]
 }
