@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A Chrome extension + web app that helps users evaluate Flatfox.ch property listings against their personal preferences. Users configure criteria on a Next.js website, then the Chrome extension scores each listing on Flatfox — showing score badges with match/mismatch bullets, expandable summary panels, and linking to a full analysis page. Scoring uses Claude with image analysis for comprehensive evaluation.
+A Chrome extension + web app that helps users evaluate Flatfox.ch property listings against their personal preferences. Users manage multiple search profiles on a Next.js website (with dealbreaker/importance-based preferences), then the Chrome extension scores each listing on Flatfox — showing score badges, expandable summaries, and linking to full analysis pages. Scoring uses Claude with image analysis for comprehensive evaluation. Supports multiple profiles per user for B2B property management use cases.
 
 ## Core Value
 
@@ -14,17 +14,18 @@ Help users instantly see how well each property listing matches their specific n
 ┌──────────────────┐    ┌──────────────┐    ┌──────────────────┐    ┌──────────────┐
 │ Next.js Frontend │───▶│   Supabase   │───▶│  EC2 FastAPI     │───▶│  Claude API  │
 │ (Vercel)         │    │  Auth + Edge │    │  Backend         │    └──────────────┘
-│ - Preferences UI │    │  Functions   │    │  - Flatfox fetch │
-│ - Full analysis  │    └──────┬───────┘    │  - Image extract │    ┌──────────────┐
-└──────────────────┘           │            │  - LLM scoring   │───▶│ Flatfox API  │
-                               │            └──────────────────┘    │ /api/v1/flat/ │
-┌──────────────────┐           │                                    └──────────────┘
+│ - Profile CRUD   │    │  Functions   │    │  - Flatfox fetch │
+│ - Preferences    │    └──────┬───────┘    │  - Image extract │    ┌──────────────┐
+│ - Analysis pages │          │            │  - LLM scoring   │───▶│ Flatfox API  │
+└──────────────────┘           │            └──────────────────┘    │ /api/v1/flat/ │
+                               │                                    └──────────────┘
+┌──────────────────┐           │
 │ Chrome Extension │───────────┘
 │ (Flatfox.ch)     │
 │ - Shadow DOM     │
 │ - Score badges   │
-│ - FAB trigger    │
-│ - Summary panels │
+│ - Profile switch │
+│ - Stale detect   │
 └──────────────────┘
 ```
 
@@ -32,68 +33,57 @@ Help users instantly see how well each property listing matches their specific n
 
 ### Validated
 
-- ✓ Next.js website with preferences form (filters, soft criteria, weights) — v1.0
 - ✓ Supabase auth (email/password) for website and extension — v1.0
 - ✓ User preferences stored in Supabase PostgreSQL — v1.0
 - ✓ Chrome extension on Flatfox.ch with FAB for on-demand scoring — v1.0
 - ✓ Backend fetches listing data from Flatfox public API — v1.0
 - ✓ LLM-powered evaluation with image analysis — v1.0
 - ✓ Score badges (0-100) injected via Shadow DOM next to listings — v1.0
-- ✓ Expandable 3-5 bullet summary panel on badge click — v1.0
-- ✓ "See full analysis" link to website — v1.0
-- ✓ Full analysis page with category breakdown, weights, reasoning — v1.0
-- ✓ EC2 FastAPI backend via Supabase edge functions — v1.0
-- ✓ Honest "I don't know" for unavailable data points — v1.0
+- ✓ Expandable summary panel on badge click — v1.0
+- ✓ Full analysis page with category breakdown and reasoning — v1.0
+- ✓ Multi-profile DB schema with atomic active-profile switching — v1.1
+- ✓ Profile CRUD (create, rename, duplicate, delete) from web app — v1.1
+- ✓ Professional SaaS web UI with navbar, dark/light mode — v1.1
+- ✓ Preferences form with dealbreakers and importance chips — v1.1
+- ✓ Canonical preferences schema unified across web/extension/backend — v1.1
+- ✓ Claude prompt using structured importance levels — v1.1
+- ✓ Extension popup with profile switcher and session health — v1.1
+- ✓ Stale badge detection when active profile changes — v1.1
+- ✓ Analysis page redesigned for demo presentations — v1.1
 
 ### Active
 
-- [ ] Professional web UI with navbar, proper layout, modern design (shadcn + 21st.dev components)
-- [ ] Multi-profile support: one user can create/switch/delete multiple search profiles
-- [ ] Preferences UX rethink for better Claude prompt quality
-- [ ] Extension popup and badge design polish
-- [ ] Improved analysis page layout for demo readiness
+(No active requirements — define in next milestone via `/gsd:new-milestone`)
 
 ### Out of Scope
 
-- Other property sites beyond Flatfox — v1 is Flatfox only
-- Mobile app
+- Other property sites beyond Flatfox — v1.x is Flatfox only
+- Mobile app — web-first approach
 - Historical price tracking or investment analysis
-- Automatic scoring (user must trigger via FAB — Claude API calls are expensive)
+- Automatic scoring (user must trigger via FAB — Claude API cost control)
 - Score caching by listing ID + profile hash
-- Database optimization, logging, advanced monitoring
+- Offline mode
 
 ## Context
 
-**Shipped v1.0 MVP.** 9,600 LOC across TypeScript (extension + web) and Python (backend). Built in ~8 days during Gen AI hackathon.
+**Shipped v1.1 Demo-Ready + Multi-Profile.** 13,153 LOC across TypeScript (extension + web) and Python (backend). Built in ~10 days.
 
 - **Tech stack:** Next.js (Vercel) + FastAPI (EC2) + Supabase (auth/DB/edge) + WXT Chrome extension + Claude API
 - **Target site:** Flatfox.ch — Swiss property portal with public API
 - **Language:** DE/FR/IT — scoring matches listing language
-- **Known issues:** No score caching (re-scores on each FAB click), pre-existing TS type errors in StepFilters.tsx
+- **Pilot target:** Vera Caflisch at Bellevia Immobilien GmbH, Thalwil ZH (B2B property management)
+- **Known tech debt:** No score caching, `--no-verify-jwt` on edge function, orphaned app-sidebar.tsx and dashboard/actions.ts
 
 ## Constraints
 
 - **Frontend**: Next.js on Vercel
 - **Extension**: Chrome MV3 via WXT, Shadow DOM for style isolation
-- **Backend**: Python FastAPI on EC2 (systemd service)
+- **Backend**: Python FastAPI on EC2
 - **Auth**: Supabase (email/password)
-- **Storage**: Supabase PostgreSQL for preferences + analyses
+- **Storage**: Supabase PostgreSQL (profiles + analyses tables)
 - **LLM**: Claude API with multi-modal (text + images)
 - **Target site**: Flatfox.ch only
 - **Scoring**: On-demand via FAB (not automatic)
-
-## Current Milestone: v1.1 Demo-Ready + Multi-Profile
-
-**Goal:** Make HomeMatch professional enough to demo to Bellevia Immobilien pilot, add multi-profile support (core B2B enabler), and refine preferences UX for better AI scoring quality.
-
-**Target features:**
-- Professional web UI overhaul (navbar, layout, shadcn/21st.dev)
-- Multi-profile: one user creates/manages multiple search profiles
-- Preferences rethink: simplify inputs, improve Claude prompt quality
-- Extension design polish (popup, badges, profile switcher)
-- Analysis page redesign for demo presentations
-
-**Pilot context:** Vera Caflisch (Bewirtschaftung/Erstvermietung) at Bellevia Immobilien GmbH, Thalwil ZH. B2B angle: property managers managing multiple client searches.
 
 ## Key Decisions
 
@@ -105,10 +95,14 @@ Help users instantly see how well each property listing matches their specific n
 | On-demand scoring via FAB | Claude API cost control | ✓ Good |
 | Edge functions as proxy | Private EC2 URL + auth layer | ✓ Good |
 | Shadow DOM for badges | Style isolation from Flatfox CSS | ✓ Good |
-| Custom events for cross-root communication | Stale closure fix for Shadow DOM React roots | ✓ Good |
-| Image-enhanced scoring | Visual aspects (condition, views) improve evaluation | ✓ Good |
+| Image-enhanced scoring | Visual aspects improve evaluation | ✓ Good |
+| Clean-slate DB migration | Only test data existed, simpler than ALTER | ✓ Good |
+| Server-authoritative profile resolution | Edge function resolves active profile, never trusts extension | ✓ Good |
+| Structured importance levels over float weights | Better Claude prompt quality | ✓ Good |
+| Horizontal top navbar over sidebar | User preference after visual review | ✓ Good |
+| Native `<select>` in extension popup | Avoids portal/iframe issues with Radix | ✓ Good |
 | No score caching in v1 | Speed over optimization for hackathon | ⚠️ Revisit |
 | `--no-verify-jwt` on edge function | Gateway rejects extension JWTs; function handles auth itself | ⚠️ Revisit |
 
 ---
-*Last updated: 2026-03-13 after v1.1 milestone start*
+*Last updated: 2026-03-15 after v1.1 milestone completion*
