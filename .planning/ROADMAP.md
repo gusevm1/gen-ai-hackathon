@@ -125,7 +125,7 @@ Note: Phases 13 and 14 are independent of 11-12 and could execute in any order. 
 | 8. UI Foundation | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 9. Web Profile Management | v1.1 | 4/4 | Complete | 2026-03-15 |
 | 10. Extension Profile Switcher | v1.1 | 3/3 | Complete | 2026-03-15 |
-| 11. Dynamic Preference Schema | 2/2 | Complete   | 2026-03-15 | - |
+| 11. Dynamic Preference Schema | 2/2 | Complete    | 2026-03-15 | - |
 | 12. Chat-Based Preference Discovery | v2.0 | 0/TBD | Not started | - |
 | 13. Parallel Scoring | v2.0 | 0/TBD | Not started | - |
 | 14. UI Redesign & Extension Distribution | v2.0 | 0/TBD | Not started | - |
