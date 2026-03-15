@@ -5,6 +5,16 @@ export const importanceLevelSchema = z
   .enum(['critical', 'high', 'medium', 'low'])
   .default('medium')
 
+/** A single dynamic preference field with name, value, and importance. */
+export const dynamicFieldSchema = z.object({
+  name: z.string().min(1),
+  value: z.string().default(''),
+  importance: importanceLevelSchema,
+})
+
+/** Inferred DynamicField type. */
+export type DynamicField = z.infer<typeof dynamicFieldSchema>
+
 /** Category importance levels (replaces numeric 0-100 weights). */
 const importanceSchema = z
   .object({
@@ -46,8 +56,11 @@ export const preferencesSchema = z.object({
   availability: z.string().default('any'),
   features: z.array(z.string()).default([]),
 
-  // Soft criteria (free text tags)
+  // Soft criteria (free text tags -- legacy, migrated to dynamicFields at load time)
   softCriteria: z.array(z.string()).default([]),
+
+  // Dynamic fields with importance (replaces softCriteria)
+  dynamicFields: z.array(dynamicFieldSchema).default([]),
 
   // Category importance (replaces weights)
   importance: importanceSchema,
@@ -57,3 +70,25 @@ export const preferencesSchema = z.object({
 })
 
 export type Preferences = z.infer<typeof preferencesSchema>
+
+/**
+ * Pre-parse migration: converts legacy softCriteria strings to structured
+ * dynamicFields objects with importance='medium'. Call before preferencesSchema.parse().
+ *
+ * Only migrates when dynamicFields key is absent (avoids double migration).
+ * Filters out empty/whitespace-only strings.
+ */
+export function migratePreferences(
+  raw: Record<string, unknown>,
+): Record<string, unknown> {
+  if (
+    raw.softCriteria &&
+    Array.isArray(raw.softCriteria) &&
+    !raw.dynamicFields
+  ) {
+    raw.dynamicFields = (raw.softCriteria as string[])
+      .filter((s) => typeof s === 'string' && s.trim())
+      .map((s) => ({ name: s, value: '', importance: 'medium' as const }))
+  }
+  return raw
+}
