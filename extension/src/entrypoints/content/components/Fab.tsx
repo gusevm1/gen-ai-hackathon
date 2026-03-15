@@ -28,7 +28,7 @@ export function Fab({ onClick, isScoring, scoredCount, error }: FabProps) {
     <div className="fixed bottom-6 right-6 z-[999999] flex flex-col items-end gap-2">
       {/* Error tooltip */}
       {showError && error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2 max-w-xs shadow-lg">
+        <div className="bg-red-50 backdrop-blur-sm border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2 max-w-xs shadow-lg">
           {error}
         </div>
       )}
@@ -37,7 +37,7 @@ export function Fab({ onClick, isScoring, scoredCount, error }: FabProps) {
       <button
         onClick={onClick}
         disabled={isScoring}
-        className="relative w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+        className="relative w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-xl hover:shadow-2xl hover:ring-2 hover:ring-emerald-300/50 transition-all duration-200 flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
         aria-label="Score listings with HomeMatch"
       >
         {isScoring ? (
@@ -55,7 +55,7 @@ export function Fab({ onClick, isScoring, scoredCount, error }: FabProps) {
 
         {/* Scored count badge */}
         {scoredCount > 0 && !isScoring && (
-          <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[11px] font-bold rounded-full w-6 h-6 flex items-center justify-center">
             {scoredCount}
           </span>
         )}

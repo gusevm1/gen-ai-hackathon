@@ -4,6 +4,8 @@ interface SummaryPanelProps {
   score: ScoreResponse;
   listingId: number;
   isOpen: boolean;
+  isStale?: boolean;
+  profileName?: string;
 }
 
 const WEBSITE_URL = 'https://homematch-web.vercel.app';
@@ -13,28 +15,44 @@ const WEBSITE_URL = 'https://homematch-web.vercel.app';
  * Displays 3-5 bullet points from the ScoreResponse and a link to the full analysis page.
  * Uses Tailwind classes inside per-badge Shadow DOM (style isolation from Flatfox CSS).
  */
-export function SummaryPanel({ score, listingId, isOpen }: SummaryPanelProps) {
+export function SummaryPanel({ score, listingId, isOpen, isStale, profileName }: SummaryPanelProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-3 max-w-xs">
-      <h4 className="text-sm font-bold text-gray-900 mb-2">Match Summary</h4>
+    <div className="mt-2 bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-100 p-4 max-w-sm">
+      {/* Stale warning banner */}
+      {isStale && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-2 text-xs text-amber-700">
+          Scores may be outdated -- click the FAB to re-score with your new profile
+        </div>
+      )}
 
-      <ul className="space-y-1 mb-3">
+      <h4 className="text-sm font-semibold text-gray-900 mb-1">Match Summary</h4>
+
+      {/* Profile attribution */}
+      {profileName && (
+        <p className="text-xs text-gray-500 mb-2">Profile: {profileName}</p>
+      )}
+
+      <ul className="space-y-1.5 mb-3">
         {score.summary_bullets.map((bullet, i) => (
-          <li key={i} className="flex items-start gap-1.5 text-xs text-gray-700">
-            <span className="mt-1.5 w-1 h-1 rounded-full bg-gray-400 shrink-0" />
+          <li key={i} className="flex items-start gap-1.5 text-[13px] text-gray-700">
+            <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
             <span>{bullet}</span>
           </li>
         ))}
       </ul>
 
-      <div className="border-t border-gray-200 pt-2">
+      <div className="border-t border-gray-100 pt-2">
         <button
           onClick={() => window.open(`${WEBSITE_URL}/analysis/${listingId}`, '_blank')}
-          className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer"
+          className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 font-medium cursor-pointer transition-colors duration-150"
         >
           See full analysis
+          {/* Small right arrow icon */}
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
         </button>
       </div>
     </div>
