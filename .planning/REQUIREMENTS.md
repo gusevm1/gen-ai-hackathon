@@ -1,7 +1,7 @@
 # Requirements: HomeMatch v2.0
 
 **Defined:** 2026-03-15
-**Core Value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website.
+**Core Value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website.
 
 ## v2.0 Requirements
 
@@ -74,31 +74,31 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCHM-01 | — | Pending |
-| SCHM-02 | — | Pending |
-| SCHM-03 | — | Pending |
-| SCHM-04 | — | Pending |
-| SCHM-05 | — | Pending |
-| CHAT-01 | — | Pending |
-| CHAT-02 | — | Pending |
-| CHAT-03 | — | Pending |
-| CHAT-04 | — | Pending |
-| CHAT-05 | — | Pending |
-| CHAT-06 | — | Pending |
-| SCOR-01 | — | Pending |
-| SCOR-02 | — | Pending |
-| SCOR-03 | — | Pending |
-| SCOR-04 | — | Pending |
-| UIDX-01 | — | Pending |
-| UIDX-02 | — | Pending |
-| UIDX-03 | — | Pending |
-| UIDX-04 | — | Pending |
+| SCHM-01 | Phase 11 | Pending |
+| SCHM-02 | Phase 11 | Pending |
+| SCHM-03 | Phase 11 | Pending |
+| SCHM-04 | Phase 11 | Pending |
+| SCHM-05 | Phase 11 | Pending |
+| CHAT-01 | Phase 12 | Pending |
+| CHAT-02 | Phase 12 | Pending |
+| CHAT-03 | Phase 12 | Pending |
+| CHAT-04 | Phase 12 | Pending |
+| CHAT-05 | Phase 12 | Pending |
+| CHAT-06 | Phase 12 | Pending |
+| SCOR-01 | Phase 13 | Pending |
+| SCOR-02 | Phase 13 | Pending |
+| SCOR-03 | Phase 13 | Pending |
+| SCOR-04 | Phase 13 | Pending |
+| UIDX-01 | Phase 14 | Pending |
+| UIDX-02 | Phase 14 | Pending |
+| UIDX-03 | Phase 14 | Pending |
+| UIDX-04 | Phase 14 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19 ⚠️
+- Mapped to phases: 19
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-15*
-*Last updated: 2026-03-15 after initial definition*
+*Last updated: 2026-03-15 after roadmap creation*
