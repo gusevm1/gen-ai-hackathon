@@ -144,4 +144,4 @@ Note: Phase 8 depends on Phase 5 (not 7), so it could theoretically parallel 6-7
 | 7. Preferences Schema Unification | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 8. UI Foundation | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 9. Web Profile Management | v1.1 | 4/4 | Complete | 2026-03-15 |
-| 10. Extension Profile Switcher | 3/3 | Complete   | 2026-03-15 | 2026-03-15 |
+| 10. Extension Profile Switcher | 3/3 | Complete    | 2026-03-15 | 2026-03-15 |
