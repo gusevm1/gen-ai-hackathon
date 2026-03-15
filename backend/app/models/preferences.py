@@ -15,7 +15,7 @@ Key changes from v1.0:
 from enum import Enum
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -63,6 +63,31 @@ class Importance(BaseModel):
     condition: ImportanceLevel = ImportanceLevel.MEDIUM
 
 
+class DynamicField(BaseModel):
+    """A single dynamic preference field with name, value, and importance level.
+
+    Replaces plain-string softCriteria with structured objects that carry
+    per-field importance for weighted scoring.
+    """
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    name: str
+    value: str = ""
+    importance: ImportanceLevel = ImportanceLevel.MEDIUM
+
+    @field_validator("name")
+    @classmethod
+    def name_must_not_be_empty(cls, v: str) -> str:
+        """Reject empty or whitespace-only names."""
+        if not v or not v.strip():
+            raise ValueError("DynamicField name must not be empty")
+        return v
+
+
 class UserPreferences(BaseModel):
     """User property search preferences — canonical schema.
 
@@ -103,8 +128,11 @@ class UserPreferences(BaseModel):
     availability: str = "any"
     features: list[str] = Field(default_factory=list)
 
-    # Soft criteria (free text tags)
+    # Soft criteria (free text tags — legacy, migrated to dynamic_fields on load)
     soft_criteria: list[str] = Field(default_factory=list)
+
+    # Dynamic fields with importance (replaces soft_criteria)
+    dynamic_fields: list[DynamicField] = Field(default_factory=list)
 
     # Category importance (replaces weights)
     importance: Importance = Field(default_factory=Importance)
@@ -122,6 +150,9 @@ class UserPreferences(BaseModel):
           (do NOT numerically convert old weights — per user decision)
         - If 'selectedFeatures' present but 'features' absent: rename to 'features'
         - If 'selected_features' present but 'features' absent: rename to 'features'
+        - If 'softCriteria' present but 'dynamicFields' absent: convert each
+          soft criterion string to a DynamicField dict with importance='medium'
+        - If 'soft_criteria' (snake_case) present but no dynamic fields: same
 
         The extra="ignore" config handles leftover keys like 'weights'.
         """
@@ -145,5 +176,27 @@ class UserPreferences(BaseModel):
         # Migrate selected_features (snake_case) -> features
         if "selected_features" in data and "features" not in data:
             data["features"] = data["selected_features"]
+
+        # Migrate softCriteria -> dynamicFields (only when dynamicFields absent)
+        if "softCriteria" in data and "dynamicFields" not in data:
+            soft = data.get("softCriteria", [])
+            data["dynamicFields"] = [
+                {"name": criterion, "value": "", "importance": "medium"}
+                for criterion in soft
+                if isinstance(criterion, str) and criterion.strip()
+            ]
+
+        # Also handle snake_case soft_criteria -> dynamicFields
+        if (
+            "soft_criteria" in data
+            and "dynamic_fields" not in data
+            and "dynamicFields" not in data
+        ):
+            soft = data.get("soft_criteria", [])
+            data["dynamicFields"] = [
+                {"name": criterion, "value": "", "importance": "medium"}
+                for criterion in soft
+                if isinstance(criterion, str) and criterion.strip()
+            ]
 
         return data

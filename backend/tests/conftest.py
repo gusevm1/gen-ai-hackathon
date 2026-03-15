@@ -123,6 +123,10 @@ SAMPLE_PREFERENCES_JSON = {
     "availability": "any",
     "features": ["balcony", "parking"],
     "softCriteria": ["near Bahnhof", "quiet neighborhood"],
+    "dynamicFields": [
+        {"name": "near Bahnhof", "value": "", "importance": "high"},
+        {"name": "quiet neighborhood", "value": "no main road", "importance": "medium"},
+    ],
     "importance": {
         "location": "high",
         "price": "critical",
