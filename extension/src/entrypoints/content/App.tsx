@@ -4,6 +4,7 @@ import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import type { ScoreResponse } from '@/types/scoring';
 import { extractVisibleListingPKs, findListingCardElement } from '@/lib/flatfox';
 import { scoreListings } from '@/lib/api';
+import { activeProfileStorage } from '@/storage/active-profile';
 import { Fab } from './components/Fab';
 import { ScoreBadge } from './components/ScoreBadge';
 import { SummaryPanel } from './components/SummaryPanel';
@@ -29,11 +30,15 @@ export default function App({ ctx }: AppProps) {
   const [scores, setScores] = useState<Map<number, ScoreResponse>>(new Map());
   const [isScoring, setIsScoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isStale, setIsStale] = useState(false);
 
   // Refs to avoid stale closures in separate React roots
   const scoresRef = useRef<Map<number, ScoreResponse>>(new Map());
   const openPanelRef = useRef<number | null>(null);
   const badgeMountsRef = useRef<Map<number, BadgeMount>>(new Map());
+  const isStaleRef = useRef(false);
+  const scoredProfileIdRef = useRef<string | null>(null);
+  const profileNameRef = useRef<string | null>(null);
 
   /**
    * Render or update a badge inside its per-badge Shadow DOM root.
@@ -51,8 +56,15 @@ export default function App({ ctx }: AppProps) {
               score={score}
               listingId={pk}
               isPanelOpen={panelOpenId === pk}
+              isStale={isStaleRef.current}
             />
-            <SummaryPanel score={score} listingId={pk} isOpen={panelOpenId === pk} />
+            <SummaryPanel
+              score={score}
+              listingId={pk}
+              isOpen={panelOpenId === pk}
+              isStale={isStaleRef.current}
+              profileName={profileNameRef.current ?? undefined}
+            />
           </div>,
         );
       } else {
@@ -73,6 +85,35 @@ export default function App({ ctx }: AppProps) {
     },
     [renderBadge],
   );
+
+  /**
+   * Load the current active profile on mount.
+   */
+  useEffect(() => {
+    activeProfileStorage.getValue().then((profile) => {
+      scoredProfileIdRef.current = profile?.id ?? null;
+      profileNameRef.current = profile?.name ?? null;
+    });
+  }, []);
+
+  /**
+   * Watch for active profile changes and mark existing badges as stale.
+   */
+  useEffect(() => {
+    const unwatch = activeProfileStorage.watch((newProfile, oldProfile) => {
+      // Update profile name ref for SummaryPanel display
+      profileNameRef.current = newProfile?.name ?? null;
+
+      if (oldProfile && newProfile && oldProfile.id !== newProfile.id) {
+        // Profile changed -- mark existing badges as stale
+        isStaleRef.current = true;
+        setIsStale(true);
+        rerenderAllBadges(openPanelRef.current);
+      }
+    });
+    ctx.onInvalidated(() => unwatch());
+    return () => unwatch();
+  }, [ctx, rerenderAllBadges]);
 
   /**
    * Listen for panel toggle events dispatched from badge Shadow DOM roots.
@@ -145,12 +186,12 @@ export default function App({ ctx }: AppProps) {
 
   /**
    * Main scoring handler: triggered by clicking the FAB.
-   * Skips already-scored listings.
+   * Skips already-scored listings unless re-scoring after profile switch.
    */
   const handleScore = useCallback(async () => {
     setError(null);
 
-    // 1. Get session JWT from background script
+    // 1. Get session JWT from background script (serves as health check)
     let jwt: string;
     try {
       const response = await browser.runtime.sendMessage({ action: 'getSession' });
@@ -165,22 +206,32 @@ export default function App({ ctx }: AppProps) {
       return;
     }
 
-    // 2. Extract listing PKs from DOM, skip already scored
+    // 2. Record which profile we're scoring with
+    const activeProfile = await activeProfileStorage.getValue();
+    scoredProfileIdRef.current = activeProfile?.id ?? null;
+    profileNameRef.current = activeProfile?.name ?? null;
+
+    // 3. Extract listing PKs from DOM
     const allPks = extractVisibleListingPKs();
-    const pks = allPks.filter((pk) => !scoresRef.current.has(pk));
+
+    // If stale, re-score all listings (profile changed); otherwise skip already scored
+    const pks = isStaleRef.current
+      ? allPks
+      : allPks.filter((pk) => !scoresRef.current.has(pk));
+
     if (pks.length === 0) {
       // All visible listings already scored — nothing to do
       return;
     }
 
-    // 3. Set loading state and inject loading skeletons
+    // 4. Set loading state and inject loading skeletons
     setIsScoring(true);
 
     for (const pk of pks) {
       await injectBadge(pk);
     }
 
-    // 4. Score listings and update badges progressively
+    // 5. Score listings and update badges progressively
     try {
       await scoreListings(pks, jwt, (id, result) => {
         // Update both ref and state
@@ -194,6 +245,11 @@ export default function App({ ctx }: AppProps) {
         // Update the badge shadow root content
         renderBadge(id, result, null);
       });
+
+      // Clear stale state after successful re-score
+      isStaleRef.current = false;
+      setIsStale(false);
+      rerenderAllBadges(openPanelRef.current);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Scoring failed';
@@ -205,7 +261,7 @@ export default function App({ ctx }: AppProps) {
     } finally {
       setIsScoring(false);
     }
-  }, [injectBadge, renderBadge, cleanupBadges]);
+  }, [injectBadge, renderBadge, cleanupBadges, rerenderAllBadges]);
 
   return (
     <Fab
