@@ -49,7 +49,7 @@ Requirements for Demo-Ready + Multi-Profile milestone. Each maps to roadmap phas
 - [x] **EXT-10**: Profile switcher dropdown in extension popup
 - [x] **EXT-11**: Session health check on FAB click with "Connected" indicator in popup
 - [x] **EXT-12**: Stale badge indicator when active profile changes mid-session
-- [ ] **EXT-13**: Improved badge and summary panel design
+- [x] **EXT-13**: Improved badge and summary panel design
 
 ## v2 Requirements
 
@@ -132,7 +132,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXT-10 | Phase 10 | Complete |
 | EXT-11 | Phase 10 | Complete |
 | EXT-12 | Phase 10 | Complete |
-| EXT-13 | Phase 10 | Pending |
+| EXT-13 | Phase 10 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 22 total

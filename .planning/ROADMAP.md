@@ -3,7 +3,7 @@
 ## Milestones
 
 - :white_check_mark: **v1.0 MVP** - Phases 1-4 (shipped 2026-03-13)
-- :construction: **v1.1 Demo-Ready + Multi-Profile** - Phases 5-10 (in progress)
+- :white_check_mark: **v1.1 Demo-Ready + Multi-Profile** - Phases 5-10 (shipped 2026-03-15)
 
 ## Phases
 
@@ -73,7 +73,7 @@ Plans:
 
 Plans:
 - [x] 07-01-PLAN.md -- Define canonical Zod schema + rewrite Pydantic model with backward-compatible parsing
-- [ ] 07-02-PLAN.md -- Update Claude system/user prompts with importance levels and dealbreaker semantics
+- [x] 07-02-PLAN.md -- Update Claude system/user prompts with importance levels and dealbreaker semantics
 
 ### Phase 8: UI Foundation
 **Goal**: The web app has a professional SaaS layout shell with sidebar navigation, navbar with user identity, and dark/light mode -- ready for profile pages to be built inside it
@@ -105,10 +105,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 09-01-PLAN.md -- Profile CRUD server actions, profile summary utility, wire ProfileSwitcher to real DB data
-- [ ] 09-02-PLAN.md -- Restructure preferences form into 6 accordion sections with dealbreaker checkboxes and importance chips
-- [ ] 09-03-PLAN.md -- Profile list page with cards/dialogs, edit profile page, live summary preview
-- [ ] 09-04-PLAN.md -- Redesign analysis page and build analyses list page
+- [x] 09-01-PLAN.md -- Profile CRUD server actions, profile summary utility, wire ProfileSwitcher to real DB data
+- [x] 09-02-PLAN.md -- Restructure preferences form into 6 accordion sections with dealbreaker checkboxes and importance chips
+- [x] 09-03-PLAN.md -- Profile list page with cards/dialogs, edit profile page, live summary preview
+- [x] 09-04-PLAN.md -- Redesign analysis page and build analyses list page
 
 ### Phase 10: Extension Profile Switcher
 **Goal**: The Chrome extension displays the active profile, allows quick switching, guards against stale scores, and maintains session health for reliable demo presentations
@@ -120,12 +120,12 @@ Plans:
   3. When the active profile changes mid-session, existing score badges on the page show a visual stale indicator
   4. Clicking the FAB performs a session health check and the popup shows a "Connected" indicator when the session is valid
   5. Score badges and summary panels have an improved, polished design consistent with the web app's visual language
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans executed
 
 Plans:
-- [ ] 10-01-PLAN.md -- Active profile storage item, extended background messages (getProfiles, switchProfile, healthCheck), Wave 0 test scaffolds
-- [ ] 10-02-PLAN.md -- Popup UI: ProfileSection dropdown, ConnectionStatus indicator, Dashboard refactor
-- [ ] 10-03-PLAN.md -- Content script stale badge detection, visual polish for badges, panels, FAB
+- [x] 10-01-PLAN.md -- Active profile storage item, extended background messages (getProfiles, switchProfile, healthCheck), Wave 0 test scaffolds
+- [x] 10-02-PLAN.md -- Popup UI: ProfileSection dropdown, ConnectionStatus indicator, Dashboard refactor
+- [x] 10-03-PLAN.md -- Content script stale badge detection, visual polish for badges, panels, FAB
 
 ## Progress
 
@@ -143,5 +143,5 @@ Note: Phase 8 depends on Phase 5 (not 7), so it could theoretically parallel 6-7
 | 6. Backend + Edge Function Update | v1.1 | 1/1 | Complete | 2026-03-13 |
 | 7. Preferences Schema Unification | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 8. UI Foundation | v1.1 | 2/2 | Complete | 2026-03-13 |
-| 9. Web Profile Management | v1.1 | 0/4 | Not started | - |
-| 10. Extension Profile Switcher | 1/3 | In Progress|  | - |
+| 9. Web Profile Management | v1.1 | 4/4 | Complete | 2026-03-15 |
+| 10. Extension Profile Switcher | v1.1 | 3/3 | Complete | 2026-03-15 |
