@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { preferencesSchema } from '@/lib/schemas/preferences'
+import { preferencesSchema, migratePreferences } from '@/lib/schemas/preferences'
 import { PreferencesForm } from '@/components/preferences/preferences-form'
 import { saveProfilePreferences } from '@/app/(dashboard)/profiles/actions'
 
@@ -29,7 +29,7 @@ export default async function EditProfilePage({ params }: EditProfilePageProps) 
     redirect('/profiles')
   }
 
-  const defaults = preferencesSchema.parse(profile.preferences ?? {})
+  const defaults = preferencesSchema.parse(migratePreferences((profile.preferences ?? {}) as Record<string, unknown>))
   const id = profile.id
 
   async function handleSave(data: Parameters<typeof saveProfilePreferences>[1]) {

@@ -17,7 +17,7 @@ import { LocationTypeSection } from '@/components/preferences/location-type-sect
 import { BudgetSection } from '@/components/preferences/budget-section'
 import { SizeRoomsSection } from '@/components/preferences/size-rooms-section'
 import { FeaturesSection } from '@/components/preferences/features-section'
-import { SoftCriteriaSection } from '@/components/preferences/soft-criteria-section'
+import { DynamicFieldsSection } from '@/components/preferences/dynamic-fields-section'
 import { ImportanceSection } from '@/components/preferences/importance-section'
 
 interface PreferencesFormProps {
@@ -58,7 +58,7 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName 
         {profileId && <ProfileSummary form={form} />}
         <Accordion
           multiple
-          defaultValue={["location", "budget", "size", "features", "soft", "importance"]}
+          defaultValue={["location", "budget", "size", "features", "dynamic", "importance"]}
           className="w-full"
         >
           <AccordionItem value="location">
@@ -89,10 +89,10 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName 
             </AccordionContent>
           </AccordionItem>
 
-          <AccordionItem value="soft">
-            <AccordionTrigger>Soft Criteria</AccordionTrigger>
+          <AccordionItem value="dynamic">
+            <AccordionTrigger>Custom Criteria</AccordionTrigger>
             <AccordionContent>
-              <SoftCriteriaSection form={form} />
+              <DynamicFieldsSection form={form} />
             </AccordionContent>
           </AccordionItem>
 

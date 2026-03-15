@@ -80,6 +80,25 @@ export function generateProfileSummary(prefs: Partial<Preferences>): string {
     }
   }
 
+  // Dynamic fields (custom criteria)
+  if (prefs.dynamicFields && prefs.dynamicFields.length > 0) {
+    const count = prefs.dynamicFields.length
+    const shown = prefs.dynamicFields.slice(0, 2).map((f) => f.name).join(', ')
+    const remaining = count - 2
+    if (remaining > 0) {
+      parts.push(`${count} custom criteria: ${shown} +${remaining} more`)
+    } else {
+      parts.push(`${count} custom criteria: ${shown}`)
+    }
+
+    // Highlight critical dynamic fields specifically
+    const criticalFields = prefs.dynamicFields.filter((f) => f.importance === 'critical')
+    if (criticalFields.length > 0) {
+      const critNames = criticalFields.map((f) => f.name).join(', ')
+      parts.push(`Must-have: ${critNames}`)
+    }
+  }
+
   // Critical importance categories
   if (prefs.importance) {
     const critical = Object.entries(prefs.importance)

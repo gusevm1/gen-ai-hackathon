@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { preferencesSchema, type Preferences } from '@/lib/schemas/preferences'
+import { preferencesSchema, migratePreferences, type Preferences } from '@/lib/schemas/preferences'
 
 export async function savePreferences(data: Preferences) {
   const supabase = await createClient()
@@ -49,5 +49,5 @@ export async function loadPreferences(): Promise<Preferences | null> {
     .single()
 
   if (error || !data) return null
-  return preferencesSchema.parse(data.preferences)
+  return preferencesSchema.parse(migratePreferences((data.preferences ?? {}) as Record<string, unknown>))
 }
