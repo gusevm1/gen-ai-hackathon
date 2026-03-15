@@ -6,7 +6,7 @@ Covers: EVAL-04 (explicit "Not specified" for missing data),
 """
 
 from app.models.listing import FlatfoxListing
-from app.models.preferences import UserPreferences
+from app.models.preferences import ImportanceLevel, UserPreferences
 
 LANGUAGE_MAP = {
     "de": "German (Deutsch)",
@@ -41,7 +41,7 @@ RULES:
 - The overall score should reflect how well this property matches the user's complete profile, \
 considering category importance levels.
 - Evaluate all 5 categories: location, price, size, features, condition.
-- For the checklist, evaluate each soft criterion and desired feature individually.
+- For the checklist, evaluate each custom criterion and desired feature individually.
 - Assign a match_tier based on the overall score: excellent (80+), good (60-79), fair (40-59), poor (<40).
 
 IMAGE ANALYSIS:
@@ -133,6 +133,51 @@ def _format_dealbreakers_section(prefs: UserPreferences) -> str:
     return "\n\n**Dealbreakers (score 0 if violated):**\n" + "\n".join(lines)
 
 
+IMPORTANCE_LABELS: dict[ImportanceLevel, str] = {
+    ImportanceLevel.CRITICAL: "CRITICAL (must have)",
+    ImportanceLevel.HIGH: "HIGH (strongly preferred)",
+    ImportanceLevel.MEDIUM: "MEDIUM (nice to have)",
+    ImportanceLevel.LOW: "LOW (minor preference)",
+}
+
+
+def _format_dynamic_fields_section(prefs: UserPreferences) -> str:
+    """Format dynamic fields grouped by importance level.
+
+    Returns an empty string if dynamic_fields is empty. Otherwise, groups
+    fields by importance and renders each group with a header label.
+
+    Args:
+        prefs: User preferences with dynamic_fields list.
+
+    Returns:
+        Formatted custom criteria section, or empty string if none.
+    """
+    if not prefs.dynamic_fields:
+        return ""
+
+    # Group fields by importance level
+    groups: dict[ImportanceLevel, list[str]] = {}
+    for field in prefs.dynamic_fields:
+        label = f"{field.name}: {field.value}" if field.value else field.name
+        groups.setdefault(field.importance, []).append(label)
+
+    # Render in priority order
+    lines = ["**Custom Criteria (by importance):**"]
+    for level in [
+        ImportanceLevel.CRITICAL,
+        ImportanceLevel.HIGH,
+        ImportanceLevel.MEDIUM,
+        ImportanceLevel.LOW,
+    ]:
+        if level in groups:
+            lines.append(f"  {IMPORTANCE_LABELS[level]}:")
+            for item in groups[level]:
+                lines.append(f"  - {item}")
+
+    return "\n".join(lines)
+
+
 def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
     """Build the user prompt with listing data and preferences.
 
@@ -197,9 +242,18 @@ def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
     if prefs.living_space_dealbreaker:
         ls_str += " (DEALBREAKER)"
 
-    # Build importance and dealbreakers sections
+    # Build importance, dealbreakers, and dynamic fields sections
     importance_section = _format_importance_section(prefs)
     dealbreakers_section = _format_dealbreakers_section(prefs)
+    dynamic_fields_section = _format_dynamic_fields_section(prefs)
+
+    # Use dynamic fields when present; fall back to soft criteria for backward compat
+    if dynamic_fields_section:
+        criteria_line = ""
+        criteria_block = f"\n{dynamic_fields_section}"
+    else:
+        criteria_line = f'\n**Soft criteria:** {", ".join(prefs.soft_criteria) if prefs.soft_criteria else "None"}'
+        criteria_block = ""
 
     return f"""## User Preferences
 
@@ -210,10 +264,9 @@ def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
 **Living space:** {ls_str}
 **Floor preference:** {prefs.floor_preference}
 **Availability:** {prefs.availability}
-**Desired features:** {", ".join(prefs.features) if prefs.features else "None"}
-**Soft criteria:** {", ".join(prefs.soft_criteria) if prefs.soft_criteria else "None"}
+**Desired features:** {", ".join(prefs.features) if prefs.features else "None"}{criteria_line}
 
-{importance_section}{dealbreakers_section}
+{importance_section}{dealbreakers_section}{criteria_block}
 
 ---
 
@@ -240,7 +293,7 @@ def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
 ---
 
 Evaluate this listing against the user's preferences. Score each of the 5 categories \
-(location, price, size, features, condition), evaluate the soft criteria and desired features \
+(location, price, size, features, condition), evaluate the custom criteria and desired features \
 as a checklist, and provide an overall score with summary bullets highlighting key matches \
 and compromises."""
 
