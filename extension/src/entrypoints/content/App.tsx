@@ -58,12 +58,14 @@ export default function App({ ctx }: AppProps) {
               listingId={pk}
               isPanelOpen={panelOpenId === pk}
               isStale={isStaleRef.current}
+              staleReason={staleReasonRef.current ?? undefined}
             />
             <SummaryPanel
               score={score}
               listingId={pk}
               isOpen={panelOpenId === pk}
               isStale={isStaleRef.current}
+              staleReason={staleReasonRef.current ?? undefined}
               profileName={profileNameRef.current ?? undefined}
             />
           </div>,
@@ -108,6 +110,7 @@ export default function App({ ctx }: AppProps) {
       if (oldProfile && newProfile && oldProfile.id !== newProfile.id) {
         // Profile changed -- mark existing badges as stale
         isStaleRef.current = true;
+        staleReasonRef.current = 'profile-switch';
         setIsStale(true);
         rerenderAllBadges(openPanelRef.current);
       }
