@@ -37,6 +37,7 @@ export default function App({ ctx }: AppProps) {
   const openPanelRef = useRef<number | null>(null);
   const badgeMountsRef = useRef<Map<number, BadgeMount>>(new Map());
   const isStaleRef = useRef(false);
+  const staleReasonRef = useRef<'profile-switch' | 'preferences-changed' | null>(null);
   const scoredProfileIdRef = useRef<string | null>(null);
   const profileNameRef = useRef<string | null>(null);
 
@@ -188,7 +189,7 @@ export default function App({ ctx }: AppProps) {
    * Main scoring handler: triggered by clicking the FAB.
    * Skips already-scored listings unless re-scoring after profile switch.
    */
-  const handleScore = useCallback(async () => {
+  const handleScore = useCallback(async (forceRescore: boolean = false) => {
     setError(null);
 
     // 1. Get session JWT from background script (serves as health check)
@@ -214,8 +215,8 @@ export default function App({ ctx }: AppProps) {
     // 3. Extract listing PKs from DOM
     const allPks = extractVisibleListingPKs();
 
-    // If stale, re-score all listings (profile changed); otherwise skip already scored
-    const pks = isStaleRef.current
+    // If stale or forceRescore, re-score all listings; otherwise skip already scored
+    const pks = (isStaleRef.current || forceRescore)
       ? allPks
       : allPks.filter((pk) => !scoresRef.current.has(pk));
 
@@ -233,7 +234,14 @@ export default function App({ ctx }: AppProps) {
 
     // 5. Score listings and update badges progressively
     try {
-      await scoreListings(pks, jwt, (id, result) => {
+      await scoreListings(pks, jwt, (id, result, prefStale) => {
+        // If any result signals preference-staleness, set the stale reason
+        if (prefStale) {
+          staleReasonRef.current = 'preferences-changed';
+          isStaleRef.current = true;
+          setIsStale(true);
+        }
+
         // Update both ref and state
         scoresRef.current.set(id, result);
         setScores((prev) => {
@@ -244,10 +252,11 @@ export default function App({ ctx }: AppProps) {
 
         // Update the badge shadow root content
         renderBadge(id, result, null);
-      });
+      }, forceRescore);
 
       // Clear stale state after successful re-score
       isStaleRef.current = false;
+      staleReasonRef.current = null;
       setIsStale(false);
       rerenderAllBadges(openPanelRef.current);
     } catch (err) {
@@ -263,9 +272,14 @@ export default function App({ ctx }: AppProps) {
     }
   }, [injectBadge, renderBadge, cleanupBadges, rerenderAllBadges]);
 
+  const handleForceRescore = useCallback(() => {
+    handleScore(true);
+  }, [handleScore]);
+
   return (
     <Fab
       onClick={handleScore}
+      onLongPress={handleForceRescore}
       isScoring={isScoring}
       scoredCount={scores.size}
       error={error}
