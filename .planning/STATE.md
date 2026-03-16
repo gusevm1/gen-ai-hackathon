@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Smart Preferences & UX Polish
 status: in-progress
-stopped_at: Completed 12-01-PLAN.md
-last_updated: "2026-03-16T17:31:36Z"
-last_activity: 2026-03-16 -- Completed 12-01 (Server-side chat infrastructure)
+stopped_at: Completed 12-02-PLAN.md
+last_updated: "2026-03-16T17:38:30Z"
+last_activity: 2026-03-16 -- Completed 12-02 (Chat conversation UI)
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 5
-  completed_plans: 3
-  percent: 60
+  completed_plans: 4
+  percent: 80
 ---
 
 # Project State
@@ -26,25 +26,25 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 12 of 14 (Chat-Based Preference Discovery)
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: In Progress
-Last activity: 2026-03-16 -- Completed 12-01 (Server-side chat infrastructure)
+Last activity: 2026-03-16 -- Completed 12-02 (Chat conversation UI)
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3 (v2.0)
-- Average duration: 3.7min
-- Total execution time: 11min
+- Total plans completed: 4 (v2.0)
+- Average duration: 3.75min
+- Total execution time: 15min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 11 | 2/2 | 7min | 3.5min |
-| 12 | 1/3 | 4min | 4min |
+| 12 | 2/3 | 8min | 4min |
 
 ## Accumulated Context
 
@@ -59,6 +59,9 @@ Progress: [██████░░░░] 60%
 - (12-01) extractPreferencesFromChat added to profiles/actions.ts (not [profileId]/actions.ts) since saveProfilePreferences already lives there
 - (12-01) Used claude-haiku-4-5-20251001 for both chat and extraction per research recommendation
 - (12-01) Merge utility uses pure append strategy; replace-vs-append logic deferred to call site
+- (12-02) AI SDK v6 useChat returns sendMessage (not handleSubmit); input state managed locally
+- (12-02) Persistence extracted to lib/chat/persistence.ts for direct unit testing
+- (12-02) ChatPanel renders inline above form (not modal) for simultaneous visibility
 
 ### Blockers/Concerns
 
@@ -69,6 +72,6 @@ Progress: [██████░░░░] 60%
 
 ## Session Continuity
 
-Last session: 2026-03-16T17:31:36Z
-Stopped at: Completed 12-01-PLAN.md
+Last session: 2026-03-16T17:38:30Z
+Stopped at: Completed 12-02-PLAN.md
 Resume file: None
