@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm, type Resolver } from 'react-hook-form'
+import { useForm, type Resolver, type UseFormReturn } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { preferencesSchema, type Preferences } from '@/lib/schemas/preferences'
 import { Form } from '@/components/ui/form'
@@ -25,18 +25,21 @@ interface PreferencesFormProps {
   onSave: (data: Preferences) => Promise<void>
   profileId?: string
   profileName?: string
+  form?: UseFormReturn<Preferences>
 }
 
-export function PreferencesForm({ defaultValues, onSave, profileId, profileName }: PreferencesFormProps) {
+export function PreferencesForm({ defaultValues, onSave, profileId, profileName, form: externalForm }: PreferencesFormProps) {
   const [saveMessage, setSaveMessage] = useState<{
     type: 'success' | 'error'
     text: string
   } | null>(null)
 
-  const form = useForm<Preferences>({
+  const internalForm = useForm<Preferences>({
     resolver: zodResolver(preferencesSchema) as Resolver<Preferences>,
     defaultValues,
   })
+
+  const form = externalForm ?? internalForm
 
   async function handleSubmit(data: Preferences) {
     try {
