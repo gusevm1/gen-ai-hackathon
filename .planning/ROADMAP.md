@@ -4,6 +4,7 @@
 
 - :white_check_mark: **v1.0 MVP** — Phases 1-4 (shipped 2026-03-13)
 - :white_check_mark: **v1.1 Demo-Ready + Multi-Profile** — Phases 5-10 (shipped 2026-03-15)
+- **v2.0 Polish & History** — Phases 11-13 (in progress)
 
 ## Phases
 
@@ -29,6 +30,47 @@
 
 </details>
 
+### v2.0 Polish & History (Phases 11-13)
+
+**Milestone Goal:** Fix deferred v1.1 items -- score caching to reduce Claude API costs, duplicate profile UX, cross-profile analysis history, and JWT security hardening.
+
+- [ ] **Phase 11: Score Caching** — Cache scores by listing+profile, invalidate on preference changes, allow manual re-score
+- [ ] **Phase 12: UX Polish & History** — Duplicate profile rename modal, cross-profile analysis history page
+- [ ] **Phase 13: Security Hardening** — Enable edge function JWT verification, fix extension token flow
+
+## Phase Details
+
+### Phase 11: Score Caching
+**Goal**: Users get instant cached scores for previously-scored listings, reducing wait time and Claude API costs
+**Depends on**: Phase 10 (v1.1 complete)
+**Requirements**: CACHE-01, CACHE-02, CACHE-03
+**Success Criteria** (what must be TRUE):
+  1. Scoring a listing that was already scored for the active profile returns the cached result instantly (no Claude API call)
+  2. After saving updated preferences for a profile, re-scoring a listing produces a fresh result (not the old cached one)
+  3. User can click a "re-score" option in the extension FAB to force a fresh evaluation even when a cached score exists
+  4. Cached vs fresh scores are indistinguishable in the UI -- badges and analysis pages look identical
+**Plans**: TBD
+
+### Phase 12: UX Polish & History
+**Goal**: Users can review all past analyses across profiles and get a smoother duplicate-profile experience
+**Depends on**: Phase 11
+**Requirements**: PROF-08, HIST-01, HIST-02
+**Success Criteria** (what must be TRUE):
+  1. Clicking "Duplicate" on a profile opens a rename modal pre-filled with "[Name] (copy)" that the user can edit before confirming
+  2. An analysis history page shows all past analyses across all profiles, each labeled with its profile name
+  3. User can click any entry in the analysis history to navigate to its full analysis view
+**Plans**: TBD
+
+### Phase 13: Security Hardening
+**Goal**: Edge function verifies JWT tokens end-to-end, closing the security gap from v1.1
+**Depends on**: Phase 12
+**Requirements**: SEC-01, SEC-02
+**Success Criteria** (what must be TRUE):
+  1. Edge function is deployed without the `--no-verify-jwt` flag and rejects requests with invalid or missing tokens
+  2. Extension scoring flow works end-to-end with JWT verification enabled (user can score listings as before)
+  3. Web app analysis page requests work end-to-end with JWT verification enabled
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans | Status | Completed |
@@ -43,3 +85,6 @@
 | 8. UI Foundation | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 9. Web Profile Management | v1.1 | 4/4 | Complete | 2026-03-15 |
 | 10. Extension Profile Switcher | v1.1 | 3/3 | Complete | 2026-03-15 |
+| 11. Score Caching | v2.0 | 0/0 | Not started | - |
+| 12. UX Polish & History | v2.0 | 0/0 | Not started | - |
+| 13. Security Hardening | v2.0 | 0/0 | Not started | - |
