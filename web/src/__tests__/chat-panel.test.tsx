@@ -22,7 +22,9 @@ vi.mock('@ai-sdk/react', () => ({
 
 // Mock 'ai' module for DefaultChatTransport
 vi.mock('ai', () => ({
-  DefaultChatTransport: vi.fn().mockImplementation(() => ({})),
+  DefaultChatTransport: class MockTransport {
+    constructor(_opts?: Record<string, unknown>) {}
+  },
 }))
 
 // Mock persistence (already tested separately)

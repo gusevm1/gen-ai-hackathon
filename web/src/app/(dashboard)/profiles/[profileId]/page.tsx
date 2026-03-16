@@ -3,8 +3,8 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { preferencesSchema, migratePreferences } from '@/lib/schemas/preferences'
-import { PreferencesForm } from '@/components/preferences/preferences-form'
 import { saveProfilePreferences } from '@/app/(dashboard)/profiles/actions'
+import { ProfileEditClient } from './profile-edit-client'
 
 interface EditProfilePageProps {
   params: Promise<{ profileId: string }>
@@ -50,11 +50,11 @@ export default async function EditProfilePage({ params }: EditProfilePageProps) 
       <p className="text-muted-foreground mb-8">
         Edit preferences for this profile. These will be used to score listings on Flatfox.
       </p>
-      <PreferencesForm
-        defaultValues={defaults}
-        onSave={handleSave}
+      <ProfileEditClient
         profileId={profile.id}
         profileName={profile.name}
+        defaultValues={defaults}
+        onSave={handleSave}
       />
     </div>
   )
