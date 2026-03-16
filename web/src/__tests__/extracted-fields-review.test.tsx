@@ -44,19 +44,24 @@ describe('ExtractedFieldsReview', () => {
   })
 
   it('editing a field importance via select updates the local state', () => {
-    render(<ExtractedFieldsReview {...defaultProps} />)
+    const onAccept = vi.fn()
+    render(
+      <ExtractedFieldsReview fields={sampleFields} onAccept={onAccept} onCancel={vi.fn()} />
+    )
 
-    // Find importance select triggers -- they show the current importance label
-    const triggers = screen.getAllByRole('combobox')
-    expect(triggers.length).toBeGreaterThanOrEqual(2)
+    // Find native importance selects
+    const selects = screen.getAllByLabelText('Importance')
+    expect(selects).toHaveLength(2)
+    expect((selects[0] as HTMLSelectElement).value).toBe('high')
 
-    // Click the first trigger to open dropdown and select 'Critical'
-    fireEvent.click(triggers[0])
-    const criticalOption = screen.getByText('Critical')
-    fireEvent.click(criticalOption)
+    // Change first field importance to 'critical'
+    fireEvent.change(selects[0], { target: { value: 'critical' } })
+    expect((selects[0] as HTMLSelectElement).value).toBe('critical')
 
-    // After selecting, the trigger should show 'Critical'
-    expect(triggers[0].textContent).toContain('Critical')
+    // Verify by accepting and checking the payload
+    fireEvent.click(screen.getByText('Add to Profile'))
+    expect(onAccept).toHaveBeenCalledOnce()
+    expect(onAccept.mock.calls[0][0][0].importance).toBe('critical')
   })
 
   it('clicking delete removes the field from the list', () => {
