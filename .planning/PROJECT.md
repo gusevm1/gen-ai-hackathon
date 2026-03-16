@@ -53,7 +53,14 @@ Help users instantly see how well each property listing matches their specific n
 
 ### Active
 
-(No active requirements — define in next milestone via `/gsd:new-milestone`)
+- [ ] CACHE-01: System returns cached score when listing_id + profile_id already exists in analyses table
+- [ ] CACHE-02: Cache invalidated when user saves updated preferences for a profile
+- [ ] CACHE-03: User can force re-score from extension FAB (manual override)
+- [ ] PROF-08: Duplicate profile opens rename modal pre-filled with "[Name] (copy)"
+- [ ] HIST-01: Analysis page shows all past analyses across all profiles, labeled by profile name
+- [ ] HIST-02: User can click any past analysis to navigate to it
+- [ ] SEC-01: Edge function JWT verification enabled (remove --no-verify-jwt)
+- [ ] SEC-02: Extension auth flow passes tokens the edge function can verify
 
 ### Out of Scope
 
@@ -61,7 +68,6 @@ Help users instantly see how well each property listing matches their specific n
 - Mobile app — web-first approach
 - Historical price tracking or investment analysis
 - Automatic scoring (user must trigger via FAB — Claude API cost control)
-- Score caching by listing ID + profile hash
 - Offline mode
 
 ## Context
@@ -104,5 +110,15 @@ Help users instantly see how well each property listing matches their specific n
 | No score caching in v1 | Speed over optimization for hackathon | ⚠️ Revisit |
 | `--no-verify-jwt` on edge function | Gateway rejects extension JWTs; function handles auth itself | ⚠️ Revisit |
 
+## Current Milestone: v2.0 Polish & History
+
+**Goal:** Fix deferred v1.1 items — score caching, duplicate profile UX, cross-profile analysis history, and JWT security hardening.
+
+**Target features:**
+- Score caching via analyses table (listing_id + profile_id lookup)
+- Duplicate profile rename modal
+- Analysis history page showing all profiles' analyses
+- Edge function JWT verification fix
+
 ---
-*Last updated: 2026-03-15 after v1.1 milestone completion*
+*Last updated: 2026-03-16 after v2.0 milestone started*

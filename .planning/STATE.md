@@ -1,33 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Demo-Ready + Multi-Profile
-status: completed
-stopped_at: Milestone v1.1 complete
-last_updated: "2026-03-15"
-last_activity: 2026-03-15 -- Milestone v1.1 completed and archived
+milestone: v2.0
+milestone_name: Polish & History
+status: active
+stopped_at: null
+last_updated: "2026-03-16"
+last_activity: 2026-03-16 -- Milestone v2.0 started, requirements defined
 progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 25
-  completed_plans: 25
-  percent: 100
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-15)
+See: .planning/PROJECT.md (updated 2026-03-16)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v2.0 — Phase 11 (Score Caching)
 
 ## Current Position
 
-Milestone v1.1 shipped. All 10 phases (25 plans) complete across v1.0 and v1.1.
-
-Next step: `/gsd:new-milestone` to define v2.0 scope.
+Phase: Not started (roadmap being created)
+Plan: —
+Status: Defining roadmap
+Last activity: 2026-03-16 — Milestone v2.0 started
 
 ## Accumulated Context
 
@@ -37,12 +38,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-- No score caching (re-scores every FAB click) -- deferred to v2
-- `--no-verify-jwt` on edge function -- revisit security
-- Orphaned code: app-sidebar.tsx, dashboard/actions.ts (savePreferences/loadPreferences)
+- Orphaned code: app-sidebar.tsx, dashboard/actions.ts (savePreferences/loadPreferences) — not addressed in v2.0 scope
 
 ## Session Continuity
 
-Last session: 2026-03-15
-Stopped at: Milestone v1.1 complete
+Last session: 2026-03-16
+Stopped at: Requirements defined, creating roadmap
 Resume file: None
