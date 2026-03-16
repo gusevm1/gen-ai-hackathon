@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Polish & History
-status: planning
-stopped_at: Phase 11 context gathered
-last_updated: "2026-03-16T22:55:15.633Z"
-last_activity: 2026-03-16 -- Roadmap created
+status: executing
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-16T23:16:34.908Z"
+last_activity: 2026-03-17 -- Completed 11-01 stale column + backend upsert
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 1
+  percent: 33
 ---
 
 # Project State
@@ -26,30 +26,31 @@ See: .planning/PROJECT.md (updated 2026-03-16)
 ## Current Position
 
 Phase: 11 of 13 (Score Caching)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-16 -- Roadmap created
+Plan: 1 of 3 in current phase (11-01 complete)
+Status: Executing
+Last activity: 2026-03-17 -- Completed 11-01 stale column + backend upsert
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0 (v2.0)
-- Average duration: -
-- Total execution time: -
+- Total plans completed: 1 (v2.0)
+- Average duration: 2min
+- Total execution time: 2min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 11-score-caching | 1/3 | 2min | 2min |
 
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
+- [Phase 11]: Migration 003 not applied to prod -- Supabase CLI not authenticated locally. Must apply via SQL editor or after supabase login.
 
 ### Blockers/Concerns
 
@@ -57,6 +58,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-16T22:55:15.628Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-score-caching/11-CONTEXT.md
+Last session: 2026-03-16T23:15:05Z
+Stopped at: Completed 11-01-PLAN.md
+Resume file: .planning/phases/11-score-caching/11-01-SUMMARY.md

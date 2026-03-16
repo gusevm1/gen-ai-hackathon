@@ -9,8 +9,8 @@ Requirements for the Polish & History milestone. Each maps to a roadmap phase.
 
 ### Score Caching
 
-- [ ] **CACHE-01**: System returns cached score when listing_id + profile_id combination already exists in the analyses table (skips calling Claude)
-- [ ] **CACHE-02**: Cache is invalidated when user saves updated preferences for a profile (existing analyses for that profile are marked stale or deleted)
+- [x] **CACHE-01**: System returns cached score when listing_id + profile_id combination already exists in the analyses table (skips calling Claude)
+- [x] **CACHE-02**: Cache is invalidated when user saves updated preferences for a profile (existing analyses for that profile are marked stale or deleted)
 - [ ] **CACHE-03**: User can force a re-score from the extension FAB (manual override that ignores the cache)
 
 ### Profile Management
@@ -58,8 +58,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CACHE-01 | Phase 11 | Pending |
-| CACHE-02 | Phase 11 | Pending |
+| CACHE-01 | Phase 11 | Complete |
+| CACHE-02 | Phase 11 | Complete |
 | CACHE-03 | Phase 11 | Pending |
 | PROF-08 | Phase 12 | Pending |
 | HIST-01 | Phase 12 | Pending |
