@@ -87,6 +87,33 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
   }
 
+  // Cache check: return cached non-stale result if available (CACHE-01)
+  const forceRescore = body.force_rescore === true;
+  let prefStale = false;
+
+  if (!forceRescore) {
+    const { data: cached } = await supabase
+      .from("analyses")
+      .select("score, breakdown, summary, stale")
+      .eq("user_id", authData.user.id)
+      .eq("listing_id", String(body.listing_id))
+      .eq("profile_id", profile.id)
+      .maybeSingle();
+
+    if (cached && !cached.stale) {
+      return new Response(
+        JSON.stringify(cached.breakdown),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json", "X-HomeMatch-Cache": "hit" },
+        },
+      );
+    }
+
+    // Track if the miss was caused by a stale row (vs no row at all)
+    prefStale = cached?.stale === true;
+  }
+
   // Forward to backend with profile context
   const backendUrl = Deno.env.get("BACKEND_URL");
   if (!backendUrl) {
@@ -109,9 +136,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
     });
 
     const responseBody = await backendResponse.text();
+    const missHeaders: Record<string, string> = {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+      "X-HomeMatch-Cache": "miss",
+    };
+    if (prefStale) {
+      missHeaders["X-HomeMatch-Pref-Stale"] = "true";
+    }
     return new Response(responseBody, {
       status: backendResponse.status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: missHeaders,
     });
   } catch {
     return new Response(
