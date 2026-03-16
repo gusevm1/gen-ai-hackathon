@@ -49,7 +49,11 @@
   2. After saving updated preferences for a profile, re-scoring a listing produces a fresh result (not the old cached one)
   3. User can click a "re-score" option in the extension FAB to force a fresh evaluation even when a cached score exists
   4. Cached vs fresh scores are indistinguishable in the UI -- badges and analysis pages look identical
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 11-01-PLAN.md — DB migration (stale column) + backend upsert update
+- [ ] 11-02-PLAN.md — Edge function cache check + web stale-marking + extension API force_rescore
+- [ ] 11-03-PLAN.md — FAB long-press re-score UX + stale display styling
 
 ### Phase 12: UX Polish & History
 **Goal**: Users can review all past analyses across profiles and get a smoother duplicate-profile experience
@@ -85,6 +89,6 @@
 | 8. UI Foundation | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 9. Web Profile Management | v1.1 | 4/4 | Complete | 2026-03-15 |
 | 10. Extension Profile Switcher | v1.1 | 3/3 | Complete | 2026-03-15 |
-| 11. Score Caching | v2.0 | 0/0 | Not started | - |
+| 11. Score Caching | v2.0 | 0/3 | In progress | - |
 | 12. UX Polish & History | v2.0 | 0/0 | Not started | - |
 | 13. Security Hardening | v2.0 | 0/0 | Not started | - |
