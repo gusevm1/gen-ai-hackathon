@@ -18,10 +18,10 @@ Requirements for Smart Preferences & UX Polish milestone. Each maps to roadmap p
 ### Chat Preferences
 
 - [ ] **CHAT-01**: User can open a chat interface from their profile to discover preferences
-- [ ] **CHAT-02**: AI chat engages in multi-turn conversation to understand what user is looking for
-- [ ] **CHAT-03**: Chat extracts structured preference fields with priorities from the conversation
+- [x] **CHAT-02**: AI chat engages in multi-turn conversation to understand what user is looking for
+- [x] **CHAT-03**: Chat extracts structured preference fields with priorities from the conversation
 - [ ] **CHAT-04**: User can view, edit, add, and delete AI-generated preference fields before saving
-- [ ] **CHAT-05**: Chat-generated fields saved via JSONB merge preserving standard fields (location, budget, rooms)
+- [x] **CHAT-05**: Chat-generated fields saved via JSONB merge preserving standard fields (location, budget, rooms)
 - [ ] **CHAT-06**: Chat conversation persists in sessionStorage across page navigation within session
 
 ### Parallel Scoring
@@ -80,10 +80,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCHM-04 | Phase 11 | Complete |
 | SCHM-05 | Phase 11 | Complete |
 | CHAT-01 | Phase 12 | Pending |
-| CHAT-02 | Phase 12 | Pending |
-| CHAT-03 | Phase 12 | Pending |
+| CHAT-02 | Phase 12 | Complete |
+| CHAT-03 | Phase 12 | Complete |
 | CHAT-04 | Phase 12 | Pending |
-| CHAT-05 | Phase 12 | Pending |
+| CHAT-05 | Phase 12 | Complete |
 | CHAT-06 | Phase 12 | Pending |
 | SCOR-01 | Phase 13 | Pending |
 | SCOR-02 | Phase 13 | Pending |
