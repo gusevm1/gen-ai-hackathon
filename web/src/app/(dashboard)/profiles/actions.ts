@@ -174,6 +174,12 @@ export async function saveProfilePreferences(profileId: string, data: Preference
 
   if (error) throw new Error(error.message)
 
+  // Mark all cached analyses for this profile as stale (CACHE-02)
+  await supabase
+    .from('analyses')
+    .update({ stale: true })
+    .eq('profile_id', profileId)
+
   revalidatePath('/profiles')
   revalidatePath('/', 'layout')
 }
