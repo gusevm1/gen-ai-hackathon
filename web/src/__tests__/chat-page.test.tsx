@@ -100,6 +100,49 @@ describe("ChatPage", () => {
     expect(avatars).toBeDefined()
   })
 
+  it("shows summary card when AI signals ready_to_summarize", async () => {
+    render(<ChatPage />)
+
+    // Enter chatting phase
+    const textarea = screen.getByPlaceholderText(/Describe your ideal property/i)
+    fireEvent.change(textarea, { target: { value: "A 3-room flat in Zurich, max 2500 CHF" } })
+    fireEvent.click(screen.getByText("Start Creating Profile"))
+
+    await waitFor(() => {
+      expect(screen.getByText(/What should we call this profile/i)).toBeDefined()
+    })
+
+    const nameInput = screen.getByRole("textbox")
+    fireEvent.change(nameInput, { target: { value: "Zurich Flat" } })
+
+    // Mock the API to return ready_to_summarize
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: "Let me summarize what you're looking for.",
+          ready_to_summarize: true,
+          extracted_preferences: {
+            location: "Zurich",
+            offerType: "RENT",
+            objectCategory: "APARTMENT",
+            budgetMax: 2500,
+            roomsMin: 3,
+          },
+        }),
+      })
+
+    fireEvent.click(screen.getByText("Start Conversation"))
+
+    await waitFor(() => {
+      expect(screen.getByText("Your Preference Summary")).toBeDefined()
+    })
+
+    // Verify the summary card shows
+    expect(screen.getByText("Confirm & Create Profile")).toBeDefined()
+    expect(screen.getByText(/Profile: Zurich Flat/)).toBeDefined()
+  })
+
   it("user can send follow-up messages", async () => {
     render(<ChatPage />)
 

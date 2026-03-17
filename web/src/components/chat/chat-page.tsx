@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ChatInput } from "./chat-input"
 import { ProfileNamePrompt } from "./profile-name-prompt"
 import { AIAvatar } from "./ai-avatar"
 import { TypingIndicator } from "./typing-indicator"
+import { PreferenceSummaryCard } from "./preference-summary-card"
 
-type ConversationPhase = 'idle' | 'naming' | 'chatting'
+type ConversationPhase = 'idle' | 'naming' | 'chatting' | 'summarizing'
 
 interface Message {
   id: string
@@ -24,7 +26,9 @@ export function ChatPage() {
   const [profileName, setProfileName] = useState('')
   const [pendingDescription, setPendingDescription] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [extractedPreferences, setExtractedPreferences] = useState<Record<string, unknown> | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -54,10 +58,9 @@ export function ChatPage() {
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, assistantMessage])
-      // Store readiness signal for Phase 16 (summary view)
       if (data.ready_to_summarize && data.extracted_preferences) {
-        console.log('[HomeMatch] Preferences ready:', data.extracted_preferences)
-        // Phase 16 will add: transition to summary card view
+        setExtractedPreferences(data.extracted_preferences)
+        setPhase('summarizing')
       }
     } catch (err) {
       // Show error as an assistant message so user sees it in the thread
@@ -102,6 +105,15 @@ export function ChatPage() {
     triggerAIResponse(content)
   }
 
+  const handleProfileCreated = (profileId: string) => {
+    router.push(`/profiles/${profileId}`)
+  }
+
+  const handleContinueChatting = () => {
+    setPhase('chatting')
+    setExtractedPreferences(null)
+  }
+
   return (
     <div
       className={cn(
@@ -110,7 +122,7 @@ export function ChatPage() {
         phase === 'idle' ? "justify-center" : "justify-end"
       )}
     >
-      {phase === 'chatting' && (
+      {(phase === 'chatting' || phase === 'summarizing') && (
         <div className="mb-2 text-sm text-muted-foreground">
           Creating profile: <span className="font-medium text-foreground">{profileName}</span>
         </div>
@@ -124,7 +136,7 @@ export function ChatPage() {
         <ProfileNamePrompt onSubmit={handleNameSubmit} />
       )}
 
-      {phase === 'chatting' && (
+      {(phase === 'chatting' || phase === 'summarizing') && (
         <>
           <div className="flex-1 overflow-y-auto space-y-6 pb-4">
             {messages.map((message) =>
@@ -155,9 +167,17 @@ export function ChatPage() {
                 <TypingIndicator />
               </div>
             )}
+            {phase === 'summarizing' && extractedPreferences && (
+              <PreferenceSummaryCard
+                extractedPreferences={extractedPreferences}
+                profileName={profileName}
+                onProfileCreated={handleProfileCreated}
+                onContinueChatting={handleContinueChatting}
+              />
+            )}
             <div ref={bottomRef} />
           </div>
-          <ChatInput onSend={handleSendMessage} disabled={isTyping} showStartButton={false} />
+          <ChatInput onSend={handleSendMessage} disabled={isTyping || phase === 'summarizing'} showStartButton={false} />
         </>
       )}
     </div>
