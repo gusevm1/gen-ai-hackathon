@@ -9,17 +9,27 @@ const EDGE_FUNCTION_URL =
 const SUPABASE_ANON_KEY = 'sb_publishable_SP7baaxxxHimQk_4ESpB3g_Q8--KBPY';
 
 /**
+ * Wraps a ScoreResponse with cache metadata from the edge function.
+ */
+export interface ScoreResult {
+  data: ScoreResponse;
+  prefStale: boolean;
+}
+
+/**
  * Score a single listing via the edge function.
  *
  * @param listingId - Flatfox listing PK
  * @param jwt - Supabase JWT access token
- * @returns Parsed ScoreResponse
+ * @param forceRescore - Bypass cache and force a fresh score
+ * @returns ScoreResult with parsed ScoreResponse and prefStale flag
  * @throws Error on non-200 response
  */
 export async function scoreListing(
   listingId: number,
   jwt: string,
-): Promise<ScoreResponse> {
+  forceRescore: boolean = false,
+): Promise<ScoreResult> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: 'POST',
     headers: {
@@ -27,7 +37,7 @@ export async function scoreListing(
       apikey: SUPABASE_ANON_KEY,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ listing_id: listingId }),
+    body: JSON.stringify({ listing_id: listingId, force_rescore: forceRescore }),
   });
 
   if (!res.ok) {
@@ -37,7 +47,9 @@ export async function scoreListing(
     );
   }
 
-  return (await res.json()) as ScoreResponse;
+  const prefStale = res.headers.get('X-HomeMatch-Pref-Stale') === 'true';
+  const data = (await res.json()) as ScoreResponse;
+  return { data, prefStale };
 }
 
 /**
@@ -48,19 +60,21 @@ export async function scoreListing(
  * @param listingIds - Array of Flatfox listing PKs
  * @param jwt - Supabase JWT access token
  * @param onResult - Optional callback invoked after each listing is scored
+ * @param forceRescore - Bypass cache and force fresh scores
  * @returns Map of listingId to ScoreResponse
  */
 export async function scoreListings(
   listingIds: number[],
   jwt: string,
-  onResult?: (id: number, result: ScoreResponse) => void,
+  onResult?: (id: number, result: ScoreResponse, prefStale: boolean) => void,
+  forceRescore: boolean = false,
 ): Promise<Map<number, ScoreResponse>> {
   const results = new Map<number, ScoreResponse>();
 
   for (const id of listingIds) {
-    const result = await scoreListing(id, jwt);
-    results.set(id, result);
-    onResult?.(id, result);
+    const { data, prefStale } = await scoreListing(id, jwt, forceRescore);
+    results.set(id, data);
+    onResult?.(id, data, prefStale);
   }
 
   return results;

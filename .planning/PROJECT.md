@@ -50,17 +50,39 @@ Help users instantly see how well each property listing matches their specific n
 - ✓ Extension popup with profile switcher and session health — v1.1
 - ✓ Stale badge detection when active profile changes — v1.1
 - ✓ Analysis page redesigned for demo presentations — v1.1
+- ✓ Score caching by listing+profile (CACHE-01, CACHE-02, CACHE-03) — v2.0 Phase 11
+- ✓ FAB re-score UX: long-press, stale visual states, brand teal styling — v2.0 Phase 11
 
 ### Active
 
-<!-- v2.0 Smart Preferences & UX Polish -->
-- [ ] Chat-based preference discovery that generates structured fields with priorities
-- [ ] User can view and edit AI-generated preference fields before saving
-- [ ] Basic fields (location, price, rooms) remain as standard form inputs
-- [ ] Custom/soft criteria replaced with dynamic AI-generated fields
-- [ ] UI rehaul with Flatfox-esque color scheme and polished UX
-- [ ] Parallel scoring — single FAB click scores all visible listings at once
-- [ ] Chrome extension download/install section on website
+- [ ] PROF-08: Duplicate profile opens rename modal pre-filled with "[Name] (copy)"
+- [ ] HIST-01: Analysis page shows all past analyses across all profiles, labeled by profile name
+- [ ] HIST-02: User can click any past analysis to navigate to it
+- [ ] SEC-01: Edge function JWT verification enabled (remove --no-verify-jwt)
+- [ ] SEC-02: Extension auth flow passes tokens the edge function can verify
+- [ ] NAV-01: "AI-Powered Search" nav item in top navbar using pinkish-red accent color
+- [ ] NAV-02: Nav order: HomeMatch Logo | AI-Powered Search | Profiles | Analysis | Settings
+- [ ] CHAT-01: Chat page with minimal centered layout and large text input as primary element
+- [ ] CHAT-02: Input placeholder guides user to describe location, budget, size, rooms, lifestyle, amenities
+- [ ] CHAT-03: First message shows "Start Creating Profile" button instead of send arrow
+- [ ] CHAT-04: Pressing "Start Creating Profile" prompts user to enter a profile name before conversation begins
+- [ ] CHAT-05: After naming, conversation starts and initial description is sent to AI
+- [ ] CHAT-06: AI responses appear in scrollable thread with visual distinction between user and assistant
+- [ ] CHAT-07: User can send follow-up messages throughout the conversation
+- [ ] CHAT-08: Conversation is ephemeral — not persisted across page refreshes
+- [ ] CHAT-09: AI assistant messages display circular avatar matching the HomeMatch extension FAB icon
+- [ ] AI-01: New FastAPI endpoint on EC2 for multi-turn conversation, calls Claude via ANTHROPIC_API_KEY
+- [ ] AI-02: Claude extracts structured preferences from natural language (location, budget, type, rooms, size, lifestyle, amenities, importance levels)
+- [ ] AI-03: Claude asks follow-up questions when key preference fields are missing or unclear
+- [ ] AI-04: Claude infers importance levels from language cues (e.g. "must have" vs "would be nice")
+- [ ] AI-05: Claude signals readiness to summarize once sufficient preferences are extracted
+- [ ] SUMM-01: Structured preference summary card shown in chat — not raw JSON
+- [ ] SUMM-02: Summary mirrors existing HomeMatch preference schema (same fields as manual profile form)
+- [ ] SUMM-03: User can edit any summary field inline before confirming
+- [ ] SUMM-04: User confirms summary to trigger profile creation
+- [ ] PROF-09: Confirmed summary creates a standard HomeMatch profile via existing profile creation API
+- [ ] PROF-10: Created profile is identical in structure to manually-created profiles and works with existing scoring system
+- [ ] PROF-11: User is navigated to the new profile's page after creation
 
 ### Out of Scope
 
@@ -68,7 +90,6 @@ Help users instantly see how well each property listing matches their specific n
 - Mobile app — web-first approach
 - Historical price tracking or investment analysis
 - Automatic scoring (user must trigger via FAB — Claude API cost control)
-- Score caching by listing ID + profile hash
 - Offline mode
 
 ## Current Milestone: v2.0 Smart Preferences & UX Polish
@@ -122,5 +143,21 @@ Help users instantly see how well each property listing matches their specific n
 | No score caching in v1 | Speed over optimization for hackathon | ⚠️ Revisit |
 | `--no-verify-jwt` on edge function | Gateway rejects extension JWTs; function handles auth itself | ⚠️ Revisit |
 
+## Current Milestone: v3.0 AI-Powered Conversational Profile Creation
+
+**Goal:** Introduce a conversational AI interface that lets users describe their dream property in natural language and have the system extract and create a structured profile — making profile creation feel like talking to a property advisor.
+
+**Target features:**
+- "AI-Powered Search" nav section with chat interface (ChatGPT-style)
+- Multi-turn conversation with Claude via EC2 FastAPI (ANTHROPIC_API_KEY)
+- Structured preference extraction from natural language with importance inference
+- Inline-editable preference summary card before profile creation
+- Confirmed summary creates a standard HomeMatch profile (no changes to scoring pipeline)
+
+**In-progress from v2.0 (phases 12-13 still pending):**
+- Duplicate profile rename modal (PROF-08)
+- Cross-profile analysis history page (HIST-01, HIST-02)
+- Edge function JWT hardening (SEC-01, SEC-02)
+
 ---
-*Last updated: 2026-03-15 after v2.0 milestone start*
+*Last updated: 2026-03-17 after v3.0 milestone started*

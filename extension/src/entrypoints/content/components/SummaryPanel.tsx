@@ -5,6 +5,7 @@ interface SummaryPanelProps {
   listingId: number;
   isOpen: boolean;
   isStale?: boolean;
+  staleReason?: 'profile-switch' | 'preferences-changed';
   profileName?: string;
 }
 
@@ -14,14 +15,24 @@ const WEBSITE_URL = 'https://homematch-web.vercel.app';
  * Expandable summary panel shown below a score badge when clicked.
  * Displays 3-5 bullet points from the ScoreResponse and a link to the full analysis page.
  * Uses Tailwind classes inside per-badge Shadow DOM (style isolation from Flatfox CSS).
+ *
+ * Shows distinct stale warnings:
+ * - preferences-changed: grey banner suggesting long-press to re-score
+ * - profile-switch: amber banner suggesting click to re-score
  */
-export function SummaryPanel({ score, listingId, isOpen, isStale, profileName }: SummaryPanelProps) {
+export function SummaryPanel({ score, listingId, isOpen, isStale, staleReason, profileName }: SummaryPanelProps) {
   if (!isOpen) return null;
 
   return (
     <div className="mt-2 bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-100 p-4 max-w-sm">
-      {/* Stale warning banner */}
-      {isStale && (
+      {/* Preference-stale warning banner */}
+      {isStale && staleReason === 'preferences-changed' && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 mb-2 text-xs text-gray-600">
+          Preferences changed -- hold the FAB to re-score
+        </div>
+      )}
+      {/* Profile-switch stale warning banner */}
+      {isStale && staleReason === 'profile-switch' && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-2 text-xs text-amber-700">
           Scores may be outdated -- click the FAB to re-score with your new profile
         </div>

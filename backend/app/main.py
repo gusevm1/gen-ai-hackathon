@@ -12,7 +12,8 @@ from fastapi import FastAPI
 load_dotenv()
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import listings, scoring
+from app.routers import chat, listings, scoring
+from app.services.conversation import conversation_service
 from app.services.flatfox import flatfox_client
 
 
@@ -21,8 +22,9 @@ async def lifespan(app: FastAPI):
     """Manage application lifecycle - clean up httpx client on shutdown."""
     # Startup: nothing needed (lazy init)
     yield
-    # Shutdown: close httpx client
+    # Shutdown: close httpx clients
     await flatfox_client.close()
+    await conversation_service.close()
 
 
 app = FastAPI(title="HomeMatch API", version="0.3.0", lifespan=lifespan)
@@ -37,6 +39,7 @@ app.add_middleware(
 
 app.include_router(listings.router)
 app.include_router(scoring.router)
+app.include_router(chat.router)
 
 
 @app.get("/health")

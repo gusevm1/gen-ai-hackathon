@@ -1,16 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.0
-milestone_name: Smart Preferences & UX Polish
+milestone_name: Polish & History
 status: completed
-stopped_at: Completed 12-03-PLAN.md
-last_updated: "2026-03-16T23:08:46.409Z"
-last_activity: 2026-03-17 -- Completed Phase 12 (Chat-Based Preference Discovery)
+last_updated: "2026-03-17T08:15:47.718Z"
+last_activity: 2026-03-17 -- Completed 16-02-PLAN.md (human-verify approved)
 progress:
-  total_phases: 4
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_phases: 6
+  completed_phases: 4
+  total_plans: 10
+  completed_plans: 10
   percent: 100
 ---
 
@@ -18,33 +17,19 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-15)
+See: .planning/PROJECT.md (updated 2026-03-17)
 
-**Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website.
-**Current focus:** Phase 13 - Parallel Scoring
+**Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
+**Current focus:** Milestone v3.0 -- Phase 16 complete
 
 ## Current Position
 
-Phase: 12 of 14 (Chat-Based Preference Discovery) -- COMPLETE
-Plan: 3 of 3 complete
-Status: Phase 12 Complete, ready for Phase 13
-Last activity: 2026-03-17 -- Completed Phase 12 (Chat-Based Preference Discovery)
+Phase: 16 of 16 (Summary & Profile Creation)
+Plan: 2 of 2 in current phase (Plan 02 complete, human-verified)
+Status: Phase 16 complete -- all plans and checkpoints done
+Last activity: 2026-03-17 -- Completed 16-02-PLAN.md (human-verify approved)
 
 Progress: [██████████] 100%
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 5 (v2.0)
-- Average duration: 4min
-- Total execution time: 20min
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 11 | 2/2 | 7min | 3.5min |
-| 12 | 3/3 | 13min | 4.3min |
 
 ## Accumulated Context
 
@@ -66,15 +51,24 @@ Progress: [██████████] 100%
 - [Phase 12]: PreferencesForm accepts optional external form prop (Option A) for backward compatibility
 - [Phase 12]: ExtractedFieldsReview swaps chat view (replaces messages+input) rather than overlaying
 
+- [v2.0 Phase 11]: Migration 003 not applied to prod -- Supabase CLI not authenticated locally. Must apply via SQL editor or after supabase login.
+- [v3.0]: Conversational AI backend runs on EC2 FastAPI, calls Claude via ANTHROPIC_API_KEY
+- [v3.0]: Chat conversations are ephemeral (not persisted to DB)
+- [v3.0]: Post-conversation summary uses inline editing (not redirect to existing form)
+- [v3.0]: v2.0 phases 12-13 (UX polish, JWT hardening) remain pending and will be addressed separately
+- [v3.0 Phase 14]: Accent nav items use always-on text-primary class with conditional bg-primary/10 for active state
+- [v3.0 Phase 14]: Chat state is fully ephemeral using React useState -- no DB writes, no Supabase imports
+- [v3.0 Phase 14]: Mock AI response with 1.5s delay in chat-page.tsx for UI testing without backend
+- [Phase 14]: Fixed chat-page tests: placeholder queries, scrollIntoView mock, Enter key submission
+- [Phase 15]: Used regex sentinel tag <preferences_ready> for structured extraction from conversational responses
+- [Phase 15]: Added from __future__ import annotations to claude.py for Python 3.9 compat
+- [Phase 15]: Error messages shown inline as assistant messages for conversational UX continuity
+- [Phase 16]: Mapper delegates entirely to preferencesSchema.parse() since backend already provides camelCase keys
+- [Phase 16]: Test file placed in src/__tests__/ to match vitest include pattern instead of src/lib/__tests__/
+- [Phase 16]: Summary card renders inside chat thread scroll area, not as overlay
+- [Phase 16]: Chat input disabled during summarizing phase to maintain focus on summary card
+
 ### Blockers/Concerns
 
-- No score caching (re-scores every FAB click) -- deferred beyond v2.0
-- `--no-verify-jwt` on edge function -- revisit security
-- Orphaned code: app-sidebar.tsx, dashboard/actions.ts (savePreferences/loadPreferences)
-- Phase 12 research and execution complete; chat design uses multi-turn with extraction
-
-## Session Continuity
-
-Last session: 2026-03-16T23:02:49.223Z
-Stopped at: Completed 12-03-PLAN.md
-Resume file: None
+- Orphaned code: app-sidebar.tsx, dashboard/actions.ts -- not addressed in current scope
+- Supabase CLI auth needed to apply DB migrations (use SQL editor as workaround)

@@ -6,6 +6,8 @@ Follows the singleton pattern established by FlatfoxClient.
 Covers: EVAL-01 (Claude evaluates listing against preferences).
 """
 
+from __future__ import annotations
+
 import os
 
 from anthropic import AsyncAnthropic

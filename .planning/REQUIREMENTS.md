@@ -1,72 +1,102 @@
-# Requirements: HomeMatch v2.0
+# Requirements: HomeMatch v3.0
 
-**Defined:** 2026-03-15
-**Core Value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website.
+**Defined:** 2026-03-17
+**Core Value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website they're already on.
 
-## v2.0 Requirements
+## v2.0 Requirements (in progress — phases 12-13 pending)
 
-Requirements for Smart Preferences & UX Polish milestone. Each maps to roadmap phases.
+### Score Caching
 
-### Preference Schema
+- [x] **CACHE-01**: System returns cached score when listing_id + profile_id combination already exists in the analyses table
+- [x] **CACHE-02**: Cache is invalidated when user saves updated preferences for a profile
+- [x] **CACHE-03**: User can force a re-score from the extension FAB (manual override)
 
-- [x] **SCHM-01**: User preferences support dynamic AI-generated fields with importance levels (critical/high/medium/low) replacing softCriteria
-- [x] **SCHM-02**: Zod schema (web) includes DynamicField type with name, value, and importance
-- [x] **SCHM-03**: Pydantic model (backend) includes dynamic_fields with proper validation (not silently dropped)
-- [x] **SCHM-04**: Claude scoring prompt renders dynamic fields as weighted custom criteria section
-- [x] **SCHM-05**: Existing softCriteria data migrates to dynamicFields format via backward-compat migration
+### Profile Management
 
-### Chat Preferences
+- [ ] **PROF-08**: Duplicate profile action opens a rename modal pre-filled with "[Name] (copy)"; user can edit before creating
 
-- [x] **CHAT-01**: User can open a chat interface from their profile to discover preferences
-- [x] **CHAT-02**: AI chat engages in multi-turn conversation to understand what user is looking for
-- [x] **CHAT-03**: Chat extracts structured preference fields with priorities from the conversation
-- [x] **CHAT-04**: User can view, edit, add, and delete AI-generated preference fields before saving
-- [x] **CHAT-05**: Chat-generated fields saved via JSONB merge preserving standard fields (location, budget, rooms)
-- [x] **CHAT-06**: Chat conversation persists in sessionStorage across page navigation within session
+### Analysis History
 
-### Parallel Scoring
+- [ ] **HIST-01**: Analysis page shows all past analyses across all profiles, with each entry labeled by its profile name
+- [ ] **HIST-02**: User can click any past analysis to navigate to its full analysis view
 
-- [ ] **SCOR-01**: User can score all visible Flatfox listings with a single FAB click
-- [ ] **SCOR-02**: Extension uses concurrency-pooled parallel requests (not unbounded) for batch scoring
-- [ ] **SCOR-03**: Backend limits concurrent Claude API and Flatfox fetch calls with asyncio semaphores
-- [ ] **SCOR-04**: FAB shows progress counter ("3 of 12 scored") during batch scoring
+### Security
 
-### UI & Distribution
+- [ ] **SEC-01**: Edge function JWT verification is enabled (remove `--no-verify-jwt` flag)
+- [ ] **SEC-02**: Extension auth flow passes tokens that the edge function can verify end-to-end
 
-- [ ] **UIDX-01**: Web app uses Flatfox-inspired teal/green color palette across all pages
-- [ ] **UIDX-02**: Web app UI polished for professional SaaS appearance
-- [ ] **UIDX-03**: Website has extension install page with download link and setup instructions
-- [ ] **UIDX-04**: Chrome extension submitted to Chrome Web Store as Unlisted listing
+## v3.0 Requirements
+
+Requirements for the AI-Powered Conversational Profile Creation milestone. Each maps to a roadmap phase.
+
+### Navigation (NAV)
+
+- [x] **NAV-01**: "AI-Powered Search" nav item appears in the top navbar using the existing pinkish-red accent color to visually distinguish it as a key feature
+- [x] **NAV-02**: Navigation order is: HomeMatch Logo | AI-Powered Search | Profiles | Analysis | Settings
+
+### Chat Interface (CHAT)
+
+- [x] **CHAT-01**: "AI-Powered Search" page displays a minimal, centered layout with a large text input as the primary element
+- [x] **CHAT-02**: Input placeholder guides the user to describe location, budget, size, rooms, lifestyle preferences, and nearby amenities (train, schools, supermarkets, cafés, etc.)
+- [x] **CHAT-03**: On the first (pre-conversation) message, a large "Start Creating Profile" button is shown instead of the standard send arrow
+- [x] **CHAT-04**: Pressing "Start Creating Profile" prompts the user to enter a profile name before the conversation begins
+- [x] **CHAT-05**: After the user enters a name and continues, the conversation starts and the initial description is sent to the AI as the first message
+- [x] **CHAT-06**: AI responses appear in a scrollable chat thread with clear visual distinction between user and assistant messages
+- [x] **CHAT-07**: User can send follow-up messages throughout the conversation
+- [x] **CHAT-08**: Conversation is ephemeral — not persisted to the database; starting a new session starts fresh
+- [x] **CHAT-09**: AI assistant messages display a circular avatar matching the HomeMatch extension FAB icon (same logo, same brand colors)
+
+### AI Backend (AI)
+
+- [x] **AI-01**: New FastAPI endpoint on EC2 handles multi-turn conversation state and calls Claude via the `ANTHROPIC_API_KEY` environment variable
+- [x] **AI-02**: Claude extracts structured preferences from natural language: location, budget, property type, rooms, size, lifestyle preferences, nearby amenities, and importance levels
+- [x] **AI-03**: Claude asks targeted follow-up questions when key preference fields are missing or unclear
+- [x] **AI-04**: Claude infers importance levels from language cues (e.g. "absolutely must" → dealbreaker, "would be nice" → low importance)
+- [x] **AI-05**: Claude signals when it has sufficient information to generate a preference summary
+
+### Summary & Editing (SUMM)
+
+- [x] **SUMM-01**: When AI is ready, a structured preference summary card is displayed in the chat — not raw JSON
+- [x] **SUMM-02**: Summary mirrors the existing HomeMatch preference schema (same fields as the manual profile form: location, budget, type, rooms, size, preferences, amenities, importance levels)
+- [x] **SUMM-03**: User can edit any field in the summary inline before confirming
+- [x] **SUMM-04**: User confirms the summary (or edits and then confirms) to trigger profile creation
+
+### Profile Creation (PROF)
+
+- [x] **PROF-09**: Confirmed summary creates a standard HomeMatch profile via the existing profile creation API
+- [x] **PROF-10**: Created profile is structurally identical to manually-created profiles and works with the existing scoring pipeline without modification
+- [x] **PROF-11**: After profile creation, user is navigated to the new profile's detail page
 
 ## Future Requirements
 
-Deferred to v2.1+. Tracked but not in current roadmap.
+Deferred to future releases.
 
-### Chat Enhancements
+### Organization / B2B
 
-- **CHAT-07**: Chat conversation history persisted in Supabase across sessions
-- **CHAT-08**: Chat auto-suggests standard fields (budget, rooms, location) during conversation
+- **ORG-01**: Team/organization model with role-based access control
+- **ORG-02**: Profile templates for common property search patterns (broker onboarding)
+- **ORG-03**: Shared profiles within an organization
 
-### UI Enhancements
+### Intelligence
 
-- **UIDX-05**: Full Flatfox UI redesign beyond color palette (layout, typography, spacing overhaul)
-- **UIDX-06**: Chrome Web Store public listing
+- **INTEL-01**: Market comparison: how a listing compares to similar active listings
+- **INTEL-02**: New listing notifications when matches appear
 
-### Scoring Enhancements
+### AI Enhancements
 
-- **SCOR-05**: Score caching by listing ID + profile hash to avoid re-scoring
+- **AIENH-01**: Persist conversation history so users can resume in-progress sessions
+- **AIENH-02**: Re-enter conversation to refine an existing AI-created profile
+- **AIENH-03**: Streaming responses for real-time AI typing effect
 
 ## Out of Scope
 
-Explicitly excluded. Documented to prevent scope creep.
-
 | Feature | Reason |
 |---------|--------|
-| Chat in Chrome extension popup | Extension is for scoring, not setup; popup too small for chat UI |
-| Auto-scoring without FAB click | API cost risk; FAB is the intentional user trigger |
-| Backend batch endpoint | Client-side concurrency with existing single-listing endpoint preserves progressive badge rendering and is simpler |
-| Persistent chat history in Supabase | Chat is ephemeral for v2.0; only extracted dynamicFields are persisted |
-| Other property sites beyond Flatfox | v2.x is Flatfox only |
+| Other property sites | v3.x is Flatfox only |
+| Mobile app | Web-first approach |
+| Automatic scoring | User must trigger via FAB — Claude API cost control |
+| Conversation persistence | Ephemeral sessions chosen for v3.0 simplicity |
+| Streaming AI responses | Deferred to future; polling or full-response is sufficient for v3.0 |
 
 ## Traceability
 
@@ -74,31 +104,40 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCHM-01 | Phase 11 | Complete |
-| SCHM-02 | Phase 11 | Complete |
-| SCHM-03 | Phase 11 | Complete |
-| SCHM-04 | Phase 11 | Complete |
-| SCHM-05 | Phase 11 | Complete |
-| CHAT-01 | Phase 12 | Complete |
-| CHAT-02 | Phase 12 | Complete |
-| CHAT-03 | Phase 12 | Complete |
-| CHAT-04 | Phase 12 | Complete |
-| CHAT-05 | Phase 12 | Complete |
-| CHAT-06 | Phase 12 | Complete |
-| SCOR-01 | Phase 13 | Pending |
-| SCOR-02 | Phase 13 | Pending |
-| SCOR-03 | Phase 13 | Pending |
-| SCOR-04 | Phase 13 | Pending |
-| UIDX-01 | Phase 14 | Pending |
-| UIDX-02 | Phase 14 | Pending |
-| UIDX-03 | Phase 14 | Pending |
-| UIDX-04 | Phase 14 | Pending |
+| PROF-08 | Phase 12 | Pending |
+| HIST-01 | Phase 12 | Pending |
+| HIST-02 | Phase 12 | Pending |
+| SEC-01 | Phase 13 | Pending |
+| SEC-02 | Phase 13 | Pending |
+| NAV-01 | Phase 14 | Complete |
+| NAV-02 | Phase 14 | Complete |
+| CHAT-01 | Phase 14 | Complete |
+| CHAT-02 | Phase 14 | Complete |
+| CHAT-03 | Phase 14 | Complete |
+| CHAT-04 | Phase 14 | Complete |
+| CHAT-05 | Phase 14 | Complete |
+| CHAT-06 | Phase 14 | Complete |
+| CHAT-07 | Phase 14 | Complete |
+| CHAT-08 | Phase 14 | Complete |
+| CHAT-09 | Phase 14 | Complete |
+| AI-01 | Phase 15 | Complete |
+| AI-02 | Phase 15 | Complete |
+| AI-03 | Phase 15 | Complete |
+| AI-04 | Phase 15 | Complete |
+| AI-05 | Phase 15 | Complete |
+| SUMM-01 | Phase 16 | Complete |
+| SUMM-02 | Phase 16 | Complete |
+| SUMM-03 | Phase 16 | Complete |
+| SUMM-04 | Phase 16 | Complete |
+| PROF-09 | Phase 16 | Complete |
+| PROF-10 | Phase 16 | Complete |
+| PROF-11 | Phase 16 | Complete |
 
 **Coverage:**
-- v2.0 requirements: 19 total
-- Mapped to phases: 19
-- Unmapped: 0
+- v3.0 requirements: 20 total
+- Mapped to phases: 20
+- Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-03-15*
-*Last updated: 2026-03-15 after roadmap creation*
+*Requirements defined: 2026-03-17*
+*Last updated: 2026-03-17 after initial definition*

@@ -6,6 +6,7 @@ interface ScoreBadgeProps {
   listingId: number;
   isPanelOpen: boolean;
   isStale?: boolean;
+  staleReason?: 'profile-switch' | 'preferences-changed';
 }
 
 /**
@@ -13,11 +14,14 @@ interface ScoreBadgeProps {
  * Dispatches a custom DOM event on click so the App component
  * (in a separate React root) can toggle the summary panel.
  *
- * When isStale is true (active profile changed since scoring),
- * shows an amber "!" indicator and reduced opacity.
+ * Stale styling varies by reason:
+ * - profile-switch: amber ring with "!" indicator
+ * - preferences-changed: greyed-out with warning icon
  */
-export function ScoreBadge({ score, listingId, isPanelOpen, isStale }: ScoreBadgeProps) {
+export function ScoreBadge({ score, listingId, isPanelOpen, isStale, staleReason }: ScoreBadgeProps) {
   const tierColor = TIER_COLORS[score.match_tier];
+  const isPrefStale = isStale && staleReason === 'preferences-changed';
+  const isProfileStale = isStale && staleReason === 'profile-switch';
 
   const handleClick = () => {
     document.dispatchEvent(
@@ -29,15 +33,22 @@ export function ScoreBadge({ score, listingId, isPanelOpen, isStale }: ScoreBadg
     <button
       onClick={handleClick}
       className={`relative inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 shadow-md cursor-pointer transition-all duration-200 bg-white/95 backdrop-blur-sm border ${
-        isStale
+        isPrefStale
+          ? 'opacity-50 grayscale border-gray-300'
+          : isProfileStale
           ? 'opacity-60 ring-2 ring-amber-400/70 border-amber-200'
           : 'hover:shadow-lg border-gray-100'
       }`}
       aria-expanded={isPanelOpen}
-      aria-label={`Score: ${score.overall_score}, ${score.match_tier} match${isStale ? ' (outdated)' : ''}`}
+      aria-label={`Score: ${score.overall_score}, ${score.match_tier} match${isPrefStale ? ' (preferences changed)' : isProfileStale ? ' (outdated)' : ''}`}
     >
-      {/* Stale indicator */}
-      {isStale && (
+      {/* Stale indicator -- different for each reason */}
+      {isPrefStale && (
+        <span className="absolute -top-2 -right-2 bg-gray-100 text-gray-600 text-[9px] font-bold rounded-full px-1.5 py-0.5 border border-gray-300 shadow-sm">
+          &#x26A0;
+        </span>
+      )}
+      {isProfileStale && (
         <span className="absolute -top-2 -right-2 bg-amber-100 text-amber-700 text-[9px] font-bold rounded-full px-1.5 py-0.5 border border-amber-300 shadow-sm">
           !
         </span>

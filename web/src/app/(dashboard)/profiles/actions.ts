@@ -45,6 +45,46 @@ export async function createProfile(name: string) {
   return data.id as string
 }
 
+export async function createProfileWithPreferences(name: string, preferences: Preferences) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const trimmedName = name.trim()
+  if (trimmedName.length < 1 || trimmedName.length > 100) {
+    throw new Error('Profile name must be between 1 and 100 characters')
+  }
+
+  // Check how many profiles the user already has
+  const { count } = await supabase
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
+  const isFirst = (count ?? 0) === 0
+
+  // Validate preferences through Zod schema (fills any missing defaults)
+  const validated = preferencesSchema.parse(preferences)
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .insert({
+      user_id: user.id,
+      name: trimmedName,
+      preferences: validated,
+      is_default: isFirst,
+    })
+    .select('id')
+    .single()
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/profiles')
+  revalidatePath('/', 'layout')
+
+  return data.id as string
+}
+
 export async function renameProfile(profileId: string, newName: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -176,6 +216,12 @@ export async function saveProfilePreferences(profileId: string, data: Preference
     .eq('id', profileId)
 
   if (error) throw new Error(error.message)
+
+  // Mark all cached analyses for this profile as stale (CACHE-02)
+  await supabase
+    .from('analyses')
+    .update({ stale: true })
+    .eq('profile_id', profileId)
 
   revalidatePath('/profiles')
   revalidatePath('/', 'layout')

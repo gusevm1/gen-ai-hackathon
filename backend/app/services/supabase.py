@@ -56,6 +56,7 @@ class SupabaseService:
                 "score": score_data["overall_score"],
                 "breakdown": score_data,
                 "summary": "\n".join(score_data.get("summary_bullets", [])),
+                "stale": False,
             },
             on_conflict="user_id,listing_id,profile_id",
         ).execute()
