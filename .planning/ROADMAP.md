@@ -125,7 +125,10 @@ Plans:
   3. Clicking confirm creates a standard HomeMatch profile via the existing profile creation API -- the created profile is structurally identical to manually-created profiles
   4. After profile creation, user is automatically navigated to the new profile's detail page
   5. The AI-created profile works with the existing scoring pipeline (extension can score listings against it without any modification)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 16-01-PLAN.md — Preferences mapper utility + createProfileWithPreferences server action
+- [ ] 16-02-PLAN.md — Summary card component, chat-page integration, e2e verification
 
 ## Progress
 
@@ -145,5 +148,5 @@ Plans:
 | 12. UX Polish & History | v2.0 | 0/0 | Not started | - |
 | 13. Security Hardening | v2.0 | 0/0 | Not started | - |
 | 14. Chat UI & Navigation | v3.0 | 3/3 | Complete | 2026-03-17 |
-| 15. AI Conversation Backend | v3.0 | Complete    | 2026-03-17 | 2026-03-17 |
-| 16. Summary & Profile Creation | v3.0 | 0/0 | Not started | - |
+| 15. AI Conversation Backend | v3.0 | 2/2 | Complete | 2026-03-17 |
+| 16. Summary & Profile Creation | v3.0 | 0/2 | Planned | - |
