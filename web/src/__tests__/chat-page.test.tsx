@@ -40,7 +40,7 @@ describe("ChatPage", () => {
     render(<ChatPage />)
 
     expect(
-      screen.getByPlaceholderText(/Describe your ideal property/i)
+      screen.getByPlaceholderText(/Dream big/i)
     ).toBeDefined()
   })
 
@@ -54,7 +54,7 @@ describe("ChatPage", () => {
     render(<ChatPage />)
 
     // Must type something first -- button is disabled when textarea is empty
-    const textarea = screen.getByPlaceholderText(/Describe your ideal property/i)
+    const textarea = screen.getByPlaceholderText(/Dream big/i)
     fireEvent.change(textarea, { target: { value: "A nice 3-room flat in Zurich" } })
     fireEvent.click(screen.getByText("Start Creating Profile"))
 
@@ -69,7 +69,7 @@ describe("ChatPage", () => {
     render(<ChatPage />)
 
     // Fill in description and proceed
-    const textarea = screen.getByPlaceholderText(/Describe your ideal property/i)
+    const textarea = screen.getByPlaceholderText(/Dream big/i)
     fireEvent.change(textarea, { target: { value: "A nice 3-room flat in Zurich" } })
     fireEvent.click(screen.getByText("Start Creating Profile"))
 
@@ -104,7 +104,7 @@ describe("ChatPage", () => {
     render(<ChatPage />)
 
     // Enter chatting phase
-    const textarea = screen.getByPlaceholderText(/Describe your ideal property/i)
+    const textarea = screen.getByPlaceholderText(/Dream big/i)
     fireEvent.change(textarea, { target: { value: "A 3-room flat in Zurich, max 2500 CHF" } })
     fireEvent.click(screen.getByText("Start Creating Profile"))
 
@@ -147,7 +147,7 @@ describe("ChatPage", () => {
     render(<ChatPage />)
 
     // Fill in description and proceed
-    const textarea = screen.getByPlaceholderText(/Describe your ideal property/i)
+    const textarea = screen.getByPlaceholderText(/Dream big/i)
     fireEvent.change(textarea, { target: { value: "A nice 3-room flat in Zurich" } })
     fireEvent.click(screen.getByText("Start Creating Profile"))
 

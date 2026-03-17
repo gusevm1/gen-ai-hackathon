@@ -73,7 +73,7 @@ describe('ChatPanel', () => {
 
     // ChatMessages shows empty state
     expect(screen.getByText('Start chatting to discover your preferences')).toBeDefined()
-    // ChatInput shows input
-    expect(screen.getByPlaceholderText('Ask about your ideal home...')).toBeDefined()
+    // ChatInput shows textarea
+    expect(screen.getByPlaceholderText(/Dream big/i)).toBeDefined()
   })
 })

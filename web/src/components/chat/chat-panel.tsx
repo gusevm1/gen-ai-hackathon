@@ -19,7 +19,6 @@ interface ChatPanelProps {
 
 export function ChatPanel({ profileId, onFieldsExtracted }: ChatPanelProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [input, setInput] = useState('')
   const [extractedFields, setExtractedFields] = useState<DynamicField[] | null>(null)
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractionError, setExtractionError] = useState<string | null>(null)
@@ -52,22 +51,12 @@ export function ChatPanel({ profileId, onFieldsExtracted }: ChatPanelProps) {
     saveMessages(profileId, messages)
   }, [profileId, messages])
 
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setInput(e.target.value)
-    },
-    []
-  )
-
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      const text = input.trim()
-      if (!text || isLoading) return
+  const handleSend = useCallback(
+    (text: string) => {
+      if (isLoading) return
       sendMessage({ text })
-      setInput('')
     },
-    [input, isLoading, sendMessage]
+    [isLoading, sendMessage]
   )
 
   const handleExtract = useCallback(async () => {
@@ -170,10 +159,8 @@ export function ChatPanel({ profileId, onFieldsExtracted }: ChatPanelProps) {
             )}
           </div>
           <ChatInput
-            input={input}
-            onInputChange={handleInputChange}
-            onSubmit={handleSubmit}
-            isLoading={isLoading}
+            onSend={handleSend}
+            disabled={isLoading}
           />
         </>
       )}
