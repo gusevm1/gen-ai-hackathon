@@ -45,7 +45,7 @@
 
 - [x] **Phase 14: Chat UI & Navigation** — Nav item, chat page layout, input UX, profile name prompt, message thread, AI avatar (completed 2026-03-17)
 - [x] **Phase 15: AI Conversation Backend** — New EC2 endpoint, multi-turn Claude integration, preference extraction, follow-up questions, summary signal (completed 2026-03-17)
-- [ ] **Phase 16: Summary & Profile Creation** — Structured summary card, inline editing, confirm-to-create via existing API, redirect to profile
+- [x] **Phase 16: Summary & Profile Creation** — Structured summary card, inline editing, confirm-to-create via existing API, redirect to profile (completed 2026-03-17)
 
 ## Phase Details
 
@@ -125,7 +125,7 @@ Plans:
   3. Clicking confirm creates a standard HomeMatch profile via the existing profile creation API -- the created profile is structurally identical to manually-created profiles
   4. After profile creation, user is automatically navigated to the new profile's detail page
   5. The AI-created profile works with the existing scoring pipeline (extension can score listings against it without any modification)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 16-01-PLAN.md — Preferences mapper utility + createProfileWithPreferences server action
 - [ ] 16-02-PLAN.md — Summary card component, chat-page integration, e2e verification
@@ -149,4 +149,4 @@ Plans:
 | 13. Security Hardening | v2.0 | 0/0 | Not started | - |
 | 14. Chat UI & Navigation | v3.0 | 3/3 | Complete | 2026-03-17 |
 | 15. AI Conversation Backend | v3.0 | 2/2 | Complete | 2026-03-17 |
-| 16. Summary & Profile Creation | 1/2 | In Progress|  | - |
+| 16. Summary & Profile Creation | 2/2 | Complete   | 2026-03-17 | - |

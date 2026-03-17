@@ -56,16 +56,16 @@ Requirements for the AI-Powered Conversational Profile Creation milestone. Each 
 
 ### Summary & Editing (SUMM)
 
-- [ ] **SUMM-01**: When AI is ready, a structured preference summary card is displayed in the chat — not raw JSON
+- [x] **SUMM-01**: When AI is ready, a structured preference summary card is displayed in the chat — not raw JSON
 - [x] **SUMM-02**: Summary mirrors the existing HomeMatch preference schema (same fields as the manual profile form: location, budget, type, rooms, size, preferences, amenities, importance levels)
-- [ ] **SUMM-03**: User can edit any field in the summary inline before confirming
-- [ ] **SUMM-04**: User confirms the summary (or edits and then confirms) to trigger profile creation
+- [x] **SUMM-03**: User can edit any field in the summary inline before confirming
+- [x] **SUMM-04**: User confirms the summary (or edits and then confirms) to trigger profile creation
 
 ### Profile Creation (PROF)
 
 - [x] **PROF-09**: Confirmed summary creates a standard HomeMatch profile via the existing profile creation API
 - [x] **PROF-10**: Created profile is structurally identical to manually-created profiles and works with the existing scoring pipeline without modification
-- [ ] **PROF-11**: After profile creation, user is navigated to the new profile's detail page
+- [x] **PROF-11**: After profile creation, user is navigated to the new profile's detail page
 
 ## Future Requirements
 
@@ -125,13 +125,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AI-03 | Phase 15 | Complete |
 | AI-04 | Phase 15 | Complete |
 | AI-05 | Phase 15 | Complete |
-| SUMM-01 | Phase 16 | Pending |
+| SUMM-01 | Phase 16 | Complete |
 | SUMM-02 | Phase 16 | Complete |
-| SUMM-03 | Phase 16 | Pending |
-| SUMM-04 | Phase 16 | Pending |
+| SUMM-03 | Phase 16 | Complete |
+| SUMM-04 | Phase 16 | Complete |
 | PROF-09 | Phase 16 | Complete |
 | PROF-10 | Phase 16 | Complete |
-| PROF-11 | Phase 16 | Pending |
+| PROF-11 | Phase 16 | Complete |
 
 **Coverage:**
 - v3.0 requirements: 20 total

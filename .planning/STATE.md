@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Polish & History
 status: executing
-last_updated: "2026-03-17T07:25:11.379Z"
-last_activity: 2026-03-17 -- Completed 16-01-PLAN.md
+last_updated: "2026-03-17T07:30:51.319Z"
+last_activity: 2026-03-17 -- Completed 16-02-PLAN.md (awaiting human-verify checkpoint)
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 10
-  completed_plans: 9
-  percent: 90
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 16 of 16 (Summary & Profile Creation)
-Plan: 1 of 2 in current phase (Plan 01 complete)
-Status: Phase 16 in progress
-Last activity: 2026-03-17 -- Completed 16-01-PLAN.md
+Plan: 2 of 2 in current phase (Plan 02 complete, awaiting human-verify)
+Status: Phase 16 complete (pending human verification)
+Last activity: 2026-03-17 -- Completed 16-02-PLAN.md
 
-Progress: [█████████░] 90%
+Progress: [██████████] 100%
 
 ## Accumulated Context
 
@@ -51,6 +51,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 15]: Error messages shown inline as assistant messages for conversational UX continuity
 - [Phase 16]: Mapper delegates entirely to preferencesSchema.parse() since backend already provides camelCase keys
 - [Phase 16]: Test file placed in src/__tests__/ to match vitest include pattern instead of src/lib/__tests__/
+- [Phase 16]: Summary card renders inside chat thread scroll area, not as overlay
+- [Phase 16]: Chat input disabled during summarizing phase to maintain focus on summary card
 
 ### Blockers/Concerns
 
