@@ -19,7 +19,7 @@ export default async function ProfilesPage() {
     <div className="container max-w-4xl mx-auto py-8 px-4">
       <h1 className="text-2xl font-bold mb-2">Profiles</h1>
       <p className="text-muted-foreground mb-6">
-        Manage your search profiles. Each profile has its own preference for scoring listings.
+        Manage your search profiles. Each profile has its own customizations for scoring listings.
       </p>
       <ProfileList profiles={profiles ?? []} />
     </div>
