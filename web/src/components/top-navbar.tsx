@@ -2,13 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { User, BarChart3, Settings, Sparkles } from "lucide-react"
+import { User, BarChart3, Settings, Sparkles, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { title: "AI-Powered Search", url: "/ai-search", icon: Sparkles, accent: true },
   { title: "Profiles", url: "/profiles", icon: User },
   { title: "Analyses", url: "/analyses", icon: BarChart3 },
+  { title: "Download", url: "/download", icon: Download },
   { title: "Settings", url: "/settings", icon: Settings },
 ]
 

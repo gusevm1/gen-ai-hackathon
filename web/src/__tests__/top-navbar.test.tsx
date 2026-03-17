@@ -31,6 +31,7 @@ describe("TopNavbar", () => {
       "AI-Powered Search",
       "Profiles",
       "Analyses",
+      "Download",
       "Settings",
     ])
   })
