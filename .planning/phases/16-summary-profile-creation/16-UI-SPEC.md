@@ -50,7 +50,7 @@ Exceptions: none
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px | 400 (regular) | 1.5 |
-| Label | 12px | 500 (medium) | 1.4 |
+| Label | 12px | 400 (regular) | 1.4 |
 | Heading | 18px | 600 (semibold) | 1.2 |
 | Display | 20px | 600 (semibold) | 1.2 |
 
@@ -58,7 +58,7 @@ Usage in this phase:
 - **Display (20px/600):** "Your Preference Summary" card title
 - **Heading (18px/600):** Section headings within summary card (Location & Type, Budget & Size, Preferences & Amenities, Importance Levels)
 - **Body (14px/400):** Field values, editable text content, error messages
-- **Label (12px/500):** Field labels (e.g., "Location", "Budget Range", "Rooms"), "Hard limit" checkbox labels, profile name subtitle
+- **Label (12px/400):** Field labels (e.g., "Location", "Budget Range", "Rooms"), "Hard limit" checkbox labels, profile name subtitle -- the smaller 12px size provides sufficient visual distinction from Body (14px) without requiring a separate weight
 
 ---
 
