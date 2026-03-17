@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Polish & History
 status: executing
-stopped_at: Completed 11-02-PLAN.md
-last_updated: "2026-03-16T23:20:00Z"
-last_activity: 2026-03-17 -- Completed 11-02 cache logic + stale marking + extension API
+stopped_at: Completed 11-03-PLAN.md (Phase 11 complete)
+last_updated: "2026-03-17T06:15:00Z"
+last_activity: 2026-03-17 -- Completed 11-03 re-score UX (FAB long-press, stale visual states)
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 67
+  completed_plans: 3
+  percent: 100
 ---
 
 # Project State
@@ -26,24 +26,24 @@ See: .planning/PROJECT.md (updated 2026-03-16)
 ## Current Position
 
 Phase: 11 of 13 (Score Caching)
-Plan: 2 of 3 in current phase (11-02 complete)
-Status: Executing
-Last activity: 2026-03-17 -- Completed 11-02 cache logic + stale marking + extension API
+Plan: 3 of 3 in current phase (11-03 complete -- Phase 11 done)
+Status: Phase Complete
+Last activity: 2026-03-17 -- Completed 11-03 re-score UX (FAB long-press, stale visual states)
 
-Progress: [███████░░░] 67%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2 (v2.0)
-- Average duration: 2min
-- Total execution time: 4min
+- Total plans completed: 3 (v2.0)
+- Average duration: 4min
+- Total execution time: 12min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 11-score-caching | 2/3 | 4min | 2min |
+| 11-score-caching | 3/3 | 12min | 4min |
 
 ## Accumulated Context
 
@@ -53,6 +53,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 11]: Migration 003 not applied to prod -- Supabase CLI not authenticated locally. Must apply via SQL editor or after supabase login.
 - [Phase 11-02]: Cache query fetches both stale and non-stale rows to distinguish miss reasons and signal via X-HomeMatch-Pref-Stale header
 - [Phase 11-02]: Edge function deployment pending -- same CLI auth blocker as 11-01
+- [Phase 11-03]: FAB restyled with brand teal, house icon, black dial, hover tooltip for discoverability
+- [Phase 11-03]: Preference-stale uses greyed-out (opacity-50 grayscale) vs profile-switch amber ring
 
 ### Blockers/Concerns
 
@@ -60,6 +62,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-16T23:17:35Z
-Stopped at: Completed 11-02-PLAN.md
-Resume file: .planning/phases/11-score-caching/11-02-SUMMARY.md
+Last session: 2026-03-17T06:15:00Z
+Stopped at: Completed 11-03-PLAN.md (Phase 11 complete)
+Resume file: .planning/phases/11-score-caching/11-03-SUMMARY.md

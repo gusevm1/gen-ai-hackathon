@@ -34,7 +34,7 @@
 
 **Milestone Goal:** Fix deferred v1.1 items -- score caching to reduce Claude API costs, duplicate profile UX, cross-profile analysis history, and JWT security hardening.
 
-- [ ] **Phase 11: Score Caching** — Cache scores by listing+profile, invalidate on preference changes, allow manual re-score
+- [x] **Phase 11: Score Caching** — Cache scores by listing+profile, invalidate on preference changes, allow manual re-score (completed 2026-03-17)
 - [ ] **Phase 12: UX Polish & History** — Duplicate profile rename modal, cross-profile analysis history page
 - [ ] **Phase 13: Security Hardening** — Enable edge function JWT verification, fix extension token flow
 
@@ -49,7 +49,7 @@
   2. After saving updated preferences for a profile, re-scoring a listing produces a fresh result (not the old cached one)
   3. User can click a "re-score" option in the extension FAB to force a fresh evaluation even when a cached score exists
   4. Cached vs fresh scores are indistinguishable in the UI -- badges and analysis pages look identical
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 11-01-PLAN.md — DB migration (stale column) + backend upsert update
 - [ ] 11-02-PLAN.md — Edge function cache check + web stale-marking + extension API force_rescore
@@ -89,6 +89,6 @@ Plans:
 | 8. UI Foundation | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 9. Web Profile Management | v1.1 | 4/4 | Complete | 2026-03-15 |
 | 10. Extension Profile Switcher | v1.1 | 3/3 | Complete | 2026-03-15 |
-| 11. Score Caching | 2/3 | In Progress|  | - |
+| 11. Score Caching | 3/3 | Complete   | 2026-03-17 | - |
 | 12. UX Polish & History | v2.0 | 0/0 | Not started | - |
 | 13. Security Hardening | v2.0 | 0/0 | Not started | - |
