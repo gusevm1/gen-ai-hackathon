@@ -10,3 +10,4 @@ __pycache__/
 .next/
 .vscode/
 package-lock.json
+backend/venv/
