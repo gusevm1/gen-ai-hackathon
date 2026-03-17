@@ -96,38 +96,37 @@ def _mock_response(html: str, status_code: int = 200) -> httpx.Response:
 
 
 @pytest.mark.asyncio
-async def test_get_listing_image_urls_extracts_images():
-    """Test 1: get_listing_image_urls returns list of URLs from og:image and img srcset."""
+async def test_get_listing_page_data_extracts_images():
+    """Test 1: get_listing_page_data returns PageData with image URLs."""
     client = FlatfoxClient()
     mock_resp = _mock_response(LISTING_HTML_WITH_IMAGES)
 
     with patch("httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_resp):
-        urls = await client.get_listing_image_urls("test-slug", 123)
+        page_data = await client.get_listing_page_data("test-slug", 123)
 
+    urls = page_data.image_urls
     assert isinstance(urls, list)
     assert len(urls) > 0
-    # Should contain the og:image URL
     assert any("abc123" in url for url in urls)
-    # Should contain srcset URLs (highest resolution variants)
     assert any("img001" in url for url in urls)
     assert any("img002" in url for url in urls)
 
 
 @pytest.mark.asyncio
-async def test_get_listing_image_urls_empty_when_no_images():
-    """Test 2: get_listing_image_urls returns empty list when HTML has no images."""
+async def test_get_listing_page_data_empty_when_no_images():
+    """Test 2: get_listing_page_data returns empty images when HTML has none."""
     client = FlatfoxClient()
     mock_resp = _mock_response(LISTING_HTML_NO_IMAGES)
 
     with patch("httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_resp):
-        urls = await client.get_listing_image_urls("test-slug", 456)
+        page_data = await client.get_listing_page_data("test-slug", 456)
 
-    assert urls == []
+    assert page_data.image_urls == []
 
 
 @pytest.mark.asyncio
-async def test_get_listing_image_urls_empty_on_http_error():
-    """Test 3: get_listing_image_urls returns empty list on HTTP error (graceful fallback)."""
+async def test_get_listing_page_data_empty_on_http_error():
+    """Test 3: get_listing_page_data returns empty PageData on HTTP error."""
     client = FlatfoxClient()
 
     with patch(
@@ -139,14 +138,14 @@ async def test_get_listing_image_urls_empty_on_http_error():
             response=httpx.Response(404),
         ),
     ):
-        urls = await client.get_listing_image_urls("test-slug", 999)
+        page_data = await client.get_listing_page_data("test-slug", 999)
 
-    assert urls == []
+    assert page_data.image_urls == []
 
 
 @pytest.mark.asyncio
-async def test_get_listing_image_urls_empty_on_network_error():
-    """get_listing_image_urls returns empty list on network error."""
+async def test_get_listing_page_data_empty_on_network_error():
+    """get_listing_page_data returns empty PageData on network error."""
     client = FlatfoxClient()
 
     with patch(
@@ -154,36 +153,34 @@ async def test_get_listing_image_urls_empty_on_network_error():
         new_callable=AsyncMock,
         side_effect=httpx.ConnectError("Connection refused"),
     ):
-        urls = await client.get_listing_image_urls("test-slug", 999)
+        page_data = await client.get_listing_page_data("test-slug", 999)
 
-    assert urls == []
+    assert page_data.image_urls == []
 
 
 @pytest.mark.asyncio
-async def test_get_listing_image_urls_deduplicates():
-    """Test 4a: URLs are deduplicated (same image in og:image and srcset)."""
+async def test_get_listing_page_data_deduplicates():
+    """Test 4a: Image URLs are deduplicated."""
     client = FlatfoxClient()
     mock_resp = _mock_response(LISTING_HTML_DUPLICATE_IMAGES)
 
     with patch("httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_resp):
-        urls = await client.get_listing_image_urls("test-slug", 789)
+        page_data = await client.get_listing_page_data("test-slug", 789)
 
-    # same_img appears in both og:image and srcset -- should be deduplicated
+    urls = page_data.image_urls
     same_img_count = sum(1 for url in urls if "same_img" in url)
     assert same_img_count == 1
-    # other_img should still be present
     assert any("other_img" in url for url in urls)
     assert len(urls) == 2
 
 
 @pytest.mark.asyncio
-async def test_get_listing_image_urls_limited_to_5():
-    """Test 4b: URLs are limited to max 5 images (token cost control)."""
+async def test_get_listing_page_data_limited_to_5():
+    """Test 4b: Image URLs are limited to max 5 (token cost control)."""
     client = FlatfoxClient()
     mock_resp = _mock_response(LISTING_HTML_MANY_IMAGES)
 
     with patch("httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_resp):
-        urls = await client.get_listing_image_urls("test-slug", 101)
+        page_data = await client.get_listing_page_data("test-slug", 101)
 
-    # 1 og:image + 7 srcset images = 8 total, but should be limited to 5
-    assert len(urls) <= 5
+    assert len(page_data.image_urls) <= 5

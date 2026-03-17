@@ -203,10 +203,13 @@ def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
 
     # Format price display
     if listing.rent_gross:
-        price_str = (
-            f"CHF {listing.rent_gross:,}/month "
-            f"(net: {listing.rent_net}, charges: {listing.rent_charges})"
-        )
+        breakdown_parts = []
+        if listing.rent_net is not None:
+            breakdown_parts.append(f"net: CHF {listing.rent_net:,}")
+        if listing.rent_charges is not None:
+            breakdown_parts.append(f"charges: CHF {listing.rent_charges:,}")
+        breakdown = f" ({', '.join(breakdown_parts)})" if breakdown_parts else ""
+        price_str = f"CHF {listing.rent_gross:,}/month{breakdown}"
     elif listing.price_display:
         price_str = f"CHF {listing.price_display:,}"
     else:

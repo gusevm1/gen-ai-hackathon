@@ -15,6 +15,7 @@ from httpx import ASGITransport, AsyncClient
 from app.main import app
 from app.models.listing import FlatfoxListing
 from app.models.scoring import ScoreResponse
+from app.services.flatfox import PageData, WebPrices
 
 from tests.conftest import SAMPLE_LISTING_JSON, SAMPLE_PREFERENCES_JSON, SAMPLE_SCORE_RESPONSE
 
@@ -24,11 +25,11 @@ from tests.conftest import SAMPLE_LISTING_JSON, SAMPLE_PREFERENCES_JSON, SAMPLE_
 
 @pytest.fixture
 def mock_flatfox():
-    """Mock flatfox_client.get_listing and get_listing_image_urls."""
+    """Mock flatfox_client.get_listing and get_listing_page_data."""
     listing = FlatfoxListing.model_validate(SAMPLE_LISTING_JSON)
     with patch("app.routers.scoring.flatfox_client") as mock:
         mock.get_listing = AsyncMock(return_value=listing)
-        mock.get_listing_image_urls = AsyncMock(return_value=[])
+        mock.get_listing_page_data = AsyncMock(return_value=PageData())
         yield mock
 
 

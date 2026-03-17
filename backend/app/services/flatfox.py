@@ -7,12 +7,17 @@ responses into Pydantic models.
 Endpoint: GET /api/v1/public-listing/{pk}/
 No authentication required.
 
-Also provides image URL extraction from listing detail HTML pages
-for the image-enhanced scoring pipeline.
+Also provides image URL extraction and price scraping from listing
+detail HTML pages. The Flatfox public API can return stale/incorrect
+prices that differ from what the website displays, so we scrape the
+actual displayed price from the HTML and override API values.
 """
 
+import html as html_mod
+import json
 import logging
 import re
+from dataclasses import dataclass, field
 
 import httpx
 
@@ -25,6 +30,21 @@ logger = logging.getLogger(__name__)
 MAX_LISTING_IMAGES = 5
 
 FLATFOX_BASE_URL = "https://flatfox.ch/api/v1"
+
+
+@dataclass
+class WebPrices:
+    """Prices scraped from Flatfox listing HTML page."""
+    rent_gross: int | None = None
+    rent_net: int | None = None
+    rent_charges: int | None = None
+
+
+@dataclass
+class PageData:
+    """Combined data extracted from a Flatfox listing HTML page."""
+    image_urls: list[str] = field(default_factory=list)
+    web_prices: WebPrices = field(default_factory=WebPrices)
 
 
 class FlatfoxClient:
@@ -61,41 +81,44 @@ class FlatfoxClient:
         response.raise_for_status()
         return FlatfoxListing.model_validate(response.json())
 
-    async def get_listing_image_urls(self, slug: str, pk: int) -> list[str]:
-        """Extract image URLs from a Flatfox listing detail HTML page.
+    async def get_listing_page_data(self, slug: str, pk: int) -> "PageData":
+        """Fetch listing detail HTML and extract images + displayed prices.
 
-        Fetches the listing detail page and parses image URLs from:
-        1. <meta property="og:image"> tags (main listing image)
-        2. <img> tags with src/srcset containing /thumb/ or /media/ paths
-
-        For srcset, selects the highest resolution variant. Deduplicates URLs
-        and limits to MAX_LISTING_IMAGES to control Claude token costs.
+        The Flatfox public API can return stale prices that differ from
+        what the website actually displays. This method scrapes the real
+        displayed price from the HTML page and returns it alongside images.
 
         Args:
             slug: The listing URL slug (e.g., "platanenweg-7-4914-roggwil-be").
             pk: The listing primary key.
 
         Returns:
-            List of image URLs (empty list on any error -- graceful fallback).
+            PageData with image URLs and scraped web prices.
         """
         try:
-            # Use a separate httpx client for HTML page (not the API client
-            # which has base_url set to the API path and JSON Accept header)
             async with httpx.AsyncClient(timeout=15.0) as html_client:
                 url = f"https://flatfox.ch/en/flat/{slug}/{pk}/"
                 response = await html_client.get(url)
                 response.raise_for_status()
-                html = response.text
+                page_html = response.text
 
-            return self._parse_image_urls(html)
+            images = self._parse_image_urls(page_html)
+            prices = self._parse_web_prices(page_html)
+
+            if prices.rent_gross is not None:
+                logger.info(
+                    "Listing %d: web price CHF %d (scraped from HTML)",
+                    pk, prices.rent_gross,
+                )
+
+            return PageData(image_urls=images, web_prices=prices)
 
         except Exception:
             logger.debug(
-                "Could not fetch images for listing %s/%d -- falling back to text-only",
-                slug,
-                pk,
+                "Could not fetch page data for listing %s/%d -- falling back",
+                slug, pk,
             )
-            return []
+            return PageData()
 
     @staticmethod
     def _parse_image_urls(html: str) -> list[str]:
@@ -155,6 +178,53 @@ class FlatfoxClient:
 
         # Limit to MAX_LISTING_IMAGES
         return urls[:MAX_LISTING_IMAGES]
+
+    @staticmethod
+    def _parse_web_prices(page_html: str) -> WebPrices:
+        """Extract displayed prices from Flatfox listing HTML.
+
+        Uses two sources:
+        1. data-ad-slot-keywords JSON (has reliable price_display)
+        2. CHF text patterns for rent breakdown (gross/net/charges)
+        """
+        prices = WebPrices()
+
+        # 1. Extract price_display from embedded ad-slot JSON
+        ad_match = re.search(r'data-ad-slot-keywords="([^"]*)"', page_html)
+        if ad_match:
+            try:
+                ad_data = json.loads(html_mod.unescape(ad_match.group(1)))
+                pd = ad_data.get("price_display")
+                if isinstance(pd, (int, float)) and pd > 0:
+                    prices.rent_gross = int(pd)
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        # 2. Extract breakdown from "CHF X'XXX per month" text patterns
+        chf_pattern = re.compile(
+            r"CHF\s*([\d',.]+)\s*(?:incl\.\s*utilities\s*)?per\s*month"
+        )
+        parsed: list[int] = []
+        seen: set[int] = set()
+        for m in chf_pattern.finditer(page_html):
+            cleaned = m.group(1).replace("'", "").replace(",", "").strip()
+            try:
+                val = int(cleaned)
+                if val > 0 and val not in seen:
+                    seen.add(val)
+                    parsed.append(val)
+            except ValueError:
+                pass
+
+        # Assign breakdown: first=gross, second=net, third=charges
+        if len(parsed) >= 3:
+            prices.rent_gross = prices.rent_gross or parsed[0]
+            prices.rent_net = parsed[1]
+            prices.rent_charges = parsed[2]
+        elif len(parsed) >= 1:
+            prices.rent_gross = prices.rent_gross or parsed[0]
+
+        return prices
 
     async def close(self) -> None:
         """Close the httpx client and release connections."""
