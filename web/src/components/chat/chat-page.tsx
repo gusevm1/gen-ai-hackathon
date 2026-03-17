@@ -30,7 +30,7 @@ export function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
 
-  const triggerAIResponse = async (userMessage: string) => {
+  const triggerAIResponse = async (userMessage: string, nameOverride?: string) => {
     setIsTyping(true)
     try {
       const allMessages = [...messages, { role: 'user' as const, content: userMessage }]
@@ -39,7 +39,7 @@ export function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: allMessages.map(m => ({ role: m.role, content: m.content })),
-          profile_name: profileName,
+          profile_name: nameOverride ?? profileName,
         }),
       })
       if (!res.ok) {
@@ -88,7 +88,7 @@ export function ChatPage() {
       timestamp: new Date(),
     }
     setMessages([firstMessage])
-    triggerAIResponse(pendingDescription)
+    triggerAIResponse(pendingDescription, name)
   }
 
   const handleSendMessage = (content: string) => {
