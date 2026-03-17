@@ -41,6 +41,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         message, ready, prefs = await conversation_service.chat(
             [m.model_dump() for m in request.messages],
             request.profile_name,
+            request.language,
         )
     except Exception as e:
         logger.exception("Chat failed")

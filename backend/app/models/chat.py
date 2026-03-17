@@ -13,6 +13,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(default_factory=list)
     profile_name: str = Field(default="", max_length=100)
+    language: str = Field(default="en", pattern="^(en|de)$")
 
 
 class ChatResponse(BaseModel):

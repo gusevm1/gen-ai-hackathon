@@ -4,17 +4,20 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { User, BarChart3, Settings, Sparkles, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-const navItems = [
-  { title: "AI-Powered Search", url: "/ai-search", icon: Sparkles, accent: true },
-  { title: "Profiles", url: "/profiles", icon: User },
-  { title: "Analyses", url: "/analyses", icon: BarChart3 },
-  { title: "Download", url: "/download", icon: Download },
-  { title: "Settings", url: "/settings", icon: Settings },
-]
+import { useLanguage } from "@/lib/language-context"
+import { t } from "@/lib/translations"
 
 export function TopNavbar() {
   const pathname = usePathname()
+  const { language } = useLanguage()
+
+  const navItems = [
+    { titleKey: "nav_ai_search" as const, url: "/ai-search", icon: Sparkles, accent: true },
+    { titleKey: "nav_profiles" as const, url: "/profiles", icon: User },
+    { titleKey: "nav_analyses" as const, url: "/analyses", icon: BarChart3 },
+    { titleKey: "nav_download" as const, url: "/download", icon: Download },
+    { titleKey: "nav_settings" as const, url: "/settings", icon: Settings },
+  ]
 
   return (
     <nav className="flex items-center gap-1">
@@ -23,7 +26,7 @@ export function TopNavbar() {
 
         return (
           <Link
-            key={item.title}
+            key={item.url}
             href={item.url}
             className={cn(
               "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
@@ -35,7 +38,7 @@ export function TopNavbar() {
             )}
           >
             <item.icon className="size-4" />
-            <span className="hidden sm:inline">{item.title}</span>
+            <span className="hidden sm:inline">{t(language, item.titleKey)}</span>
           </Link>
         )
       })}

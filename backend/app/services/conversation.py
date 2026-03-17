@@ -110,19 +110,20 @@ class ConversationService:
         return self._client
 
     async def chat(
-        self, messages: list[dict], profile_name: str
+        self, messages: list[dict], profile_name: str, language: str = "en"
     ) -> tuple[str, bool, dict | None]:
         """Send conversation to Claude and parse the response.
 
         Args:
             messages: List of {"role": "user"|"assistant", "content": str} dicts.
             profile_name: User's profile name for personalization.
+            language: Response language code ("en" or "de").
 
         Returns:
             Tuple of (response_text, ready_to_summarize, mapped_preferences_or_none).
         """
         client = self.get_client()
-        system_prompt = build_conversation_system_prompt(profile_name=profile_name)
+        system_prompt = build_conversation_system_prompt(profile_name=profile_name, language=language)
 
         # If no messages yet, inject a synthetic trigger so Claude produces the opening greeting
         api_messages = messages if messages else [{"role": "user", "content": "__begin__"}]

@@ -6,11 +6,12 @@ through natural conversation, and signal readiness via a sentinel tag.
 """
 
 
-def build_conversation_system_prompt(profile_name: str = "") -> str:
+def build_conversation_system_prompt(profile_name: str = "", language: str = "en") -> str:
     """Build the system prompt for the property advisor conversation.
 
     Args:
         profile_name: Optional user profile name for personalization.
+        language: Response language code ("en" or "de").
 
     Returns:
         Complete system prompt string for Claude.
@@ -21,7 +22,15 @@ def build_conversation_system_prompt(profile_name: str = "") -> str:
         else ""
     )
 
-    return f"""You are a friendly Swiss property search advisor. Your goal is to help the user \
+    language_instruction = (
+        "IMPORTANT: You MUST respond in German (Deutsch) for all your messages. This applies to every single response you give."
+        if language == "de"
+        else "Respond in English."
+    )
+
+    return f"""{language_instruction}
+
+You are a friendly Swiss property search advisor. Your goal is to help the user \
 describe their ideal home through natural, engaging conversation -- and then extract structured \
 preferences from what they tell you.
 

@@ -46,7 +46,7 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
         onInput={handleInput}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        placeholder="Describe what you're looking for..."
+        placeholder="Describe..."
         className={cn(
           "min-h-[56px] max-h-[200px] w-full resize-none rounded-xl border border-input bg-background px-4 py-3 pr-12 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         )}

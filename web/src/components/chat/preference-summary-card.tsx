@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, type KeyboardEvent } from "react"
 import { mapExtractedPreferences } from "@/lib/chat-preferences-mapper"
-import { createProfileWithPreferences } from "@/app/(dashboard)/profiles/actions"
+import { createProfileWithPreferences, setActiveProfile } from "@/app/(dashboard)/profiles/actions"
 import type { Preferences } from "@/lib/schemas/preferences"
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -42,6 +42,7 @@ export function PreferenceSummaryCard({
   const [error, setError] = useState<string | null>(null)
   const [namingStep, setNamingStep] = useState(false)
   const [profileNameInput, setProfileNameInput] = useState("")
+  const [savedProfileId, setSavedProfileId] = useState<string | null>(null)
 
   // Ref to store the value before editing (for Escape revert)
   const previousValueRef = useRef<unknown>(null)
@@ -73,12 +74,24 @@ export function PreferenceSummaryCard({
     setError(null)
     try {
       const profileId = await createProfileWithPreferences(name, preferences)
-      onProfileCreated(profileId)
+      setSavedProfileId(profileId)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create profile. Please try again.")
     } finally {
       setIsCreating(false)
     }
+  }
+
+  const handleSetActive = async (activate: boolean) => {
+    if (!savedProfileId) return
+    if (activate) {
+      try {
+        await setActiveProfile(savedProfileId)
+      } catch {
+        // non-blocking — still navigate
+      }
+    }
+    onProfileCreated(savedProfileId)
   }
 
   // -- Click-to-edit helpers --
@@ -458,7 +471,19 @@ export function PreferenceSummaryCard({
         </CardContent>
 
         <CardFooter className="flex-col gap-3 px-4 py-4">
-          {namingStep ? (
+          {savedProfileId ? (
+            <>
+              <p className="text-sm font-medium w-full">Set this as your active profile?</p>
+              <div className="flex w-full gap-2">
+                <Button className="flex-1" onClick={() => handleSetActive(true)}>
+                  Yes, set active
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => handleSetActive(false)}>
+                  No thanks
+                </Button>
+              </div>
+            </>
+          ) : namingStep ? (
             <>
               <p className="text-sm font-medium w-full">Give this profile a name</p>
               <div className="flex w-full gap-2">
@@ -502,7 +527,7 @@ export function PreferenceSummaryCard({
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
-          {!namingStep && (
+          {!namingStep && !savedProfileId && (
             <button
               type="button"
               className="text-sm text-muted-foreground hover:text-foreground underline"

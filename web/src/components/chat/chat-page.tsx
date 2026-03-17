@@ -7,6 +7,8 @@ import { ChatInput } from "./chat-input"
 import { AIAvatar } from "./ai-avatar"
 import { TypingIndicator } from "./typing-indicator"
 import { PreferenceSummaryCard } from "./preference-summary-card"
+import ReactMarkdown from "react-markdown"
+import { useLanguage } from "@/lib/language-context"
 
 type ConversationPhase = 'chatting' | 'summarizing'
 
@@ -27,6 +29,7 @@ export function ChatPage() {
   const greetingFetched = useRef(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const { language } = useLanguage()
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -43,7 +46,7 @@ export function ChatPage() {
         const res = await fetch(`/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: [], profile_name: '' }),
+          body: JSON.stringify({ messages: [], profile_name: '', language }),
         })
         if (!res.ok) return
         const data = await res.json()
@@ -79,6 +82,7 @@ export function ChatPage() {
         body: JSON.stringify({
           messages: updatedApiMessages,
           profile_name: '',
+          language,
         }),
       })
       if (!res.ok) {
@@ -150,7 +154,9 @@ export function ChatPage() {
             <div key={message.id} className="flex gap-3 rounded-lg bg-muted/50 p-4">
               <AIAvatar />
               <div className="flex-1">
-                <p className="text-sm leading-relaxed">{message.content}</p>
+                <div className="text-sm leading-relaxed [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:my-0.5">
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                </div>
                 <span className="text-xs text-muted-foreground">
                   {message.timestamp.toLocaleTimeString()}
                 </span>

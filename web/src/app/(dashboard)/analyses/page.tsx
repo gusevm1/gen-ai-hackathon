@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { FileSearch } from 'lucide-react'
+import { AnalysesFilterBar } from '@/components/analyses/analyses-filter-bar'
+import { t, type Language, LANG_COOKIE } from '@/lib/translations'
 
 function getTierFromScore(score: number): string {
   if (score >= 80) return 'excellent'
@@ -27,7 +30,11 @@ function formatDate(dateString: string): string {
   })
 }
 
-export default async function AnalysesPage() {
+export default async function AnalysesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ profile?: string; sort?: string }>
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -35,13 +42,25 @@ export default async function AnalysesPage() {
     redirect('/')
   }
 
-  const { data: analyses } = await supabase
+  const params = await searchParams
+  const profileFilter = params.profile ?? ''
+  const sort = params.sort ?? 'newest'
+
+  const cookieStore = await cookies()
+  const lang = (cookieStore.get(LANG_COOKIE)?.value ?? 'en') as Language
+
+  let query = supabase
     .from('analyses')
     .select('id, listing_id, score, breakdown, profile_id, created_at')
     .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: sort === 'oldest' })
 
-  // Fetch profiles for name lookup
+  if (profileFilter) {
+    query = query.eq('profile_id', profileFilter)
+  }
+
+  const { data: analyses } = await query
+
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, name')
@@ -55,19 +74,26 @@ export default async function AnalysesPage() {
 
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Analyses</h1>
-        <p className="text-muted-foreground mt-1">Your scored listings</p>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">{t(lang, 'analyses_title')}</h1>
+        <p className="text-muted-foreground mt-1">{t(lang, 'analyses_subtitle')}</p>
       </div>
+
+      <AnalysesFilterBar
+        profiles={profiles ?? []}
+        currentProfile={profileFilter}
+        currentSort={sort}
+        lang={lang}
+      />
 
       {!analyses || analyses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="flex items-center justify-center h-14 w-14 rounded-full bg-muted mb-4">
             <FileSearch className="h-7 w-7 text-muted-foreground" />
           </div>
-          <h2 className="text-lg font-semibold mb-2">No analyses yet</h2>
+          <h2 className="text-lg font-semibold mb-2">{t(lang, 'analyses_empty_title')}</h2>
           <p className="text-sm text-muted-foreground max-w-sm">
-            Score listings on Flatfox using the browser extension to see results here.
+            {t(lang, 'analyses_empty_desc')}
           </p>
         </div>
       ) : (
@@ -77,15 +103,15 @@ export default async function AnalysesPage() {
             const tier = breakdown?.match_tier ?? getTierFromScore(analysis.score)
             const tierStyle = TIER_STYLES[tier] ?? TIER_STYLES.poor
             const profileName = analysis.profile_id ? profileMap.get(analysis.profile_id) : null
+            const tierKey = `tier_${tier}` as 'tier_excellent' | 'tier_good' | 'tier_fair' | 'tier_poor'
 
             return (
               <Link key={analysis.id} href={`/analysis/${analysis.listing_id}`}>
                 <Card className="cursor-pointer transition-all hover:ring-2 hover:ring-primary/20 hover:shadow-md h-full">
                   <CardContent className="flex flex-col gap-3">
-                    {/* Score badge + listing ID */}
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-foreground truncate">
-                        Listing {analysis.listing_id}
+                        {t(lang, 'analyses_listing')} {analysis.listing_id}
                       </span>
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${tierStyle.bg} ${tierStyle.text}`}
@@ -94,17 +120,15 @@ export default async function AnalysesPage() {
                       </span>
                     </div>
 
-                    {/* Tier label */}
                     <span className="text-xs text-muted-foreground capitalize">
-                      {tier} match
+                      {t(lang, tierKey)}
                     </span>
 
-                    {/* Footer: profile + date */}
                     <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-1 border-t border-border">
                       {profileName ? (
                         <span className="truncate max-w-[60%]">{profileName}</span>
                       ) : (
-                        <span className="text-muted-foreground/50">No profile</span>
+                        <span className="text-muted-foreground/50">{t(lang, 'no_profile')}</span>
                       )}
                       <span>{formatDate(analysis.created_at)}</span>
                     </div>
