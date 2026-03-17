@@ -48,11 +48,11 @@ Requirements for the AI-Powered Conversational Profile Creation milestone. Each 
 
 ### AI Backend (AI)
 
-- [ ] **AI-01**: New FastAPI endpoint on EC2 handles multi-turn conversation state and calls Claude via the `ANTHROPIC_API_KEY` environment variable
-- [ ] **AI-02**: Claude extracts structured preferences from natural language: location, budget, property type, rooms, size, lifestyle preferences, nearby amenities, and importance levels
-- [ ] **AI-03**: Claude asks targeted follow-up questions when key preference fields are missing or unclear
-- [ ] **AI-04**: Claude infers importance levels from language cues (e.g. "absolutely must" → dealbreaker, "would be nice" → low importance)
-- [ ] **AI-05**: Claude signals when it has sufficient information to generate a preference summary
+- [x] **AI-01**: New FastAPI endpoint on EC2 handles multi-turn conversation state and calls Claude via the `ANTHROPIC_API_KEY` environment variable
+- [x] **AI-02**: Claude extracts structured preferences from natural language: location, budget, property type, rooms, size, lifestyle preferences, nearby amenities, and importance levels
+- [x] **AI-03**: Claude asks targeted follow-up questions when key preference fields are missing or unclear
+- [x] **AI-04**: Claude infers importance levels from language cues (e.g. "absolutely must" → dealbreaker, "would be nice" → low importance)
+- [x] **AI-05**: Claude signals when it has sufficient information to generate a preference summary
 
 ### Summary & Editing (SUMM)
 
@@ -120,11 +120,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAT-07 | Phase 14 | Complete |
 | CHAT-08 | Phase 14 | Complete |
 | CHAT-09 | Phase 14 | Complete |
-| AI-01 | Phase 15 | Pending |
-| AI-02 | Phase 15 | Pending |
-| AI-03 | Phase 15 | Pending |
-| AI-04 | Phase 15 | Pending |
-| AI-05 | Phase 15 | Pending |
+| AI-01 | Phase 15 | Complete |
+| AI-02 | Phase 15 | Complete |
+| AI-03 | Phase 15 | Complete |
+| AI-04 | Phase 15 | Complete |
+| AI-05 | Phase 15 | Complete |
 | SUMM-01 | Phase 16 | Pending |
 | SUMM-02 | Phase 16 | Pending |
 | SUMM-03 | Phase 16 | Pending |

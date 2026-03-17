@@ -110,7 +110,7 @@ Plans:
   3. When the user's description is vague or missing key fields, Claude asks targeted follow-up questions rather than guessing
   4. Claude infers importance levels from language cues (e.g. "must have" becomes dealbreaker, "nice to have" becomes low importance)
   5. Claude signals readiness to generate a summary once sufficient preferences have been collected
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 15-01-PLAN.md — Backend models, service, prompt, router, tests (AI-01 through AI-05)
 - [ ] 15-02-PLAN.md — Frontend integration, EC2 deployment, e2e verification
@@ -145,5 +145,5 @@ Plans:
 | 12. UX Polish & History | v2.0 | 0/0 | Not started | - |
 | 13. Security Hardening | v2.0 | 0/0 | Not started | - |
 | 14. Chat UI & Navigation | v3.0 | 3/3 | Complete | 2026-03-17 |
-| 15. AI Conversation Backend | v3.0 | 0/2 | Planned | - |
+| 15. AI Conversation Backend | 1/2 | In Progress|  | - |
 | 16. Summary & Profile Creation | v3.0 | 0/0 | Not started | - |

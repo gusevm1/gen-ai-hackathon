@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Polish & History
-status: completed
-last_updated: "2026-03-17T03:21:51.561Z"
-last_activity: 2026-03-17 -- Completed 14-03-PLAN.md
+status: executing
+last_updated: "2026-03-17T06:18:16.589Z"
+last_activity: 2026-03-17 -- Completed 15-01-PLAN.md
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_plans: 8
+  completed_plans: 7
+  percent: 88
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Milestone v3.0 -- Phase 14 complete
+**Current focus:** Milestone v3.0 -- Phase 15 in progress
 
 ## Current Position
 
-Phase: 14 of 16 (Chat UI & Navigation)
-Plan: 3 of 3 in current phase (complete)
-Status: Phase 14 complete
-Last activity: 2026-03-17 -- Completed 14-03-PLAN.md
+Phase: 15 of 16 (AI Conversation Backend)
+Plan: 1 of 2 in current phase
+Status: Phase 15 in progress
+Last activity: 2026-03-17 -- Completed 15-01-PLAN.md
 
-Progress: [██████████] 100%
+Progress: [█████████░] 88%
 
 ## Accumulated Context
 
@@ -46,6 +46,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [v3.0 Phase 14]: Chat state is fully ephemeral using React useState -- no DB writes, no Supabase imports
 - [v3.0 Phase 14]: Mock AI response with 1.5s delay in chat-page.tsx for UI testing without backend
 - [Phase 14]: Fixed chat-page tests: placeholder queries, scrollIntoView mock, Enter key submission
+- [Phase 15]: Used regex sentinel tag <preferences_ready> for structured extraction from conversational responses
+- [Phase 15]: Added from __future__ import annotations to claude.py for Python 3.9 compat
 
 ### Blockers/Concerns
 
