@@ -46,14 +46,14 @@
 
 **Milestone Goal:** Add a "Download" page to the web app so users can download the Chrome extension and follow sideloading instructions.
 
-- [ ] **Phase 17: Download Page & Sideload Instructions** — Nav tab, zip download, step-by-step Chrome sideloading guide
+- [x] **Phase 17: Download Page & Sideload Instructions** — Nav tab, zip download, step-by-step Chrome sideloading guide
 
 **Requirements:** DL-01, DL-02, DL-03, DL-04, HOST-01
 
 **Plans:** 1 plan
 
 Plans:
-- [ ] 17-01-PLAN.md — Download nav item, extension zip hosting, download page with sideloading instructions
+- [x] 17-01-PLAN.md — Download nav item, extension zip hosting, download page with sideloading instructions
 
 **Success Criteria:**
 1. Authenticated user sees "Download" in top nav
@@ -74,4 +74,4 @@ Plans:
 | v1.0 MVP | Complete | 2026-03-13 |
 | v1.1 Demo-Ready + Multi-Profile | Complete | 2026-03-15 |
 | v2.0 Polish & AI Profile Creation | Complete | 2026-03-17 |
-| v3.0 Extension Download & Install | In Progress | - |
+| v3.0 Extension Download & Install | Complete | 2026-03-17 |

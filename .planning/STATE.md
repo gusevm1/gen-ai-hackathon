@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Extension Download & Install
 status: in_progress
-last_updated: "2026-03-17T12:30:00.000Z"
-last_activity: 2026-03-17 -- Milestone v3.0 started
+last_updated: "2026-03-17T13:57:00.000Z"
+last_activity: 2026-03-17 -- Completed 17-01-PLAN.md
 progress:
   total_phases: 1
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+  percent: 100
 ---
 
 # Project State
@@ -24,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-17 — Milestone v3.0 started
+Phase: 17-download-page-sideload-instructions (1 of 1 plans complete)
+Plan: 01 complete
+Status: Phase complete
+Last activity: 2026-03-17 — Completed 17-01-PLAN.md
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [##########] 100%
 
 ## Accumulated Context
 
@@ -40,6 +40,8 @@ Progress: [░░░░░░░░░░] 0%
 - [v3.0]: Download page requires authentication (inside dashboard layout)
 - [v3.0]: Chrome Web Store developer account registered but submission deferred post-hackathon
 - [v3.0]: Privacy policy page created at /privacy-policy (public, no auth required)
+- [17-01]: Extension zip uses generic filename for stable download URL
+- [17-01]: CopyExtensionsUrl extracted as client component; download page stays server component
 
 ### Blockers/Concerns
 

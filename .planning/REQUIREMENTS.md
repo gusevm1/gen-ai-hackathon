@@ -7,14 +7,14 @@
 
 ### Download Page (DL)
 
-- [ ] **DL-01**: User sees "Download" item in the top navigation bar
-- [ ] **DL-02**: User can download the Chrome extension as a zip file with one click
-- [ ] **DL-03**: User sees step-by-step installation instructions (unzip, open chrome://extensions, enable Developer Mode, Load unpacked)
-- [ ] **DL-04**: Instructions link opens chrome://extensions in a new tab
+- [x] **DL-01**: User sees "Download" item in the top navigation bar
+- [x] **DL-02**: User can download the Chrome extension as a zip file with one click
+- [x] **DL-03**: User sees step-by-step installation instructions (unzip, open chrome://extensions, enable Developer Mode, Load unpacked)
+- [x] **DL-04**: Instructions link opens chrome://extensions in a new tab
 
 ### Hosting (HOST)
 
-- [ ] **HOST-01**: Extension zip is served as a static file from the Next.js public/ directory
+- [x] **HOST-01**: Extension zip is served as a static file from the Next.js public/ directory
 
 ## v2.0 Requirements (in progress — phases 12-13 pending)
 
@@ -146,11 +146,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROF-10 | Phase 16 | Complete |
 | PROF-11 | Phase 16 | Complete |
 
-| DL-01 | Phase 17 | Pending |
-| DL-02 | Phase 17 | Pending |
-| DL-03 | Phase 17 | Pending |
-| DL-04 | Phase 17 | Pending |
-| HOST-01 | Phase 17 | Pending |
+| DL-01 | Phase 17 | Complete |
+| DL-02 | Phase 17 | Complete |
+| DL-03 | Phase 17 | Complete |
+| DL-04 | Phase 17 | Complete |
+| HOST-01 | Phase 17 | Complete |
 
 **Coverage:**
 - v3.0 (Download) requirements: 5 total
