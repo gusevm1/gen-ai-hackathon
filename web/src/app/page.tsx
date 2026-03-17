@@ -3,6 +3,10 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function Home() {
   const [email, setEmail] = useState('')
@@ -39,88 +43,90 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-      <div className="w-full max-w-sm space-y-6 p-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">HomeMatch</h1>
-          <p className="text-sm text-zinc-500 mt-1">
-            {isSignUp ? 'Create an account' : 'Sign in to continue'}
-          </p>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="text-center space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">HomeMatch</h1>
+          <p className="text-sm text-muted-foreground">Your AI-powered Swiss property advisor</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              placeholder="you@example.com"
-            />
-          </div>
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">
+              {isSignUp ? 'Create an account' : 'Welcome back'}
+            </CardTitle>
+            <CardDescription>
+              {isSignUp
+                ? 'Sign up to start finding your perfect home'
+                : 'Sign in to your HomeMatch account'}
+            </CardDescription>
+          </CardHeader>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              placeholder="••••••••"
-            />
-          </div>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="you@example.com"
+                />
+              </div>
 
-          {isSignUp && (
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">
-                Confirm Password
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={6}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                placeholder="••••••••"
-              />
-            </div>
-          )}
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  placeholder="••••••••"
+                />
+              </div>
 
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
-          )}
+              {isSignUp && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    placeholder="••••••••"
+                  />
+                </div>
+              )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-zinc-900 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
-            {loading ? '...' : isSignUp ? 'Sign Up' : 'Sign In'}
-          </button>
-        </form>
+              {error && (
+                <p className="text-sm text-destructive">{error}</p>
+              )}
 
-        <p className="text-center text-sm text-zinc-500">
-          {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-          <button
-            type="button"
-            onClick={() => { setIsSignUp(!isSignUp); setError(null); setConfirmPassword('') }}
-            className="font-medium text-zinc-900 underline dark:text-zinc-100"
-          >
-            {isSignUp ? 'Sign In' : 'Sign Up'}
-          </button>
-        </p>
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? 'Please wait...' : isSignUp ? 'Sign Up' : 'Sign In'}
+              </Button>
+            </form>
+          </CardContent>
+
+          <CardFooter className="justify-center pt-0">
+            <p className="text-sm text-muted-foreground">
+              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+              <button
+                type="button"
+                onClick={() => { setIsSignUp(!isSignUp); setError(null); setConfirmPassword('') }}
+                className="font-medium text-primary hover:underline"
+              >
+                {isSignUp ? 'Sign In' : 'Sign Up'}
+              </button>
+            </p>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   )
