@@ -269,3 +269,48 @@ async def reset_flatfox_client():
     if flatfox_client._client and not flatfox_client._client.is_closed:
         await flatfox_client._client.aclose()
     flatfox_client._client = None
+
+
+# ---------------------------------------------------------------------------
+# Chat / Conversation fixtures (Phase 15)
+# ---------------------------------------------------------------------------
+
+SAMPLE_CHAT_MESSAGES = [
+    {"role": "user", "content": "I'm looking for a 3-room apartment in Zurich for 2000-2500 CHF"}
+]
+
+SAMPLE_CLAUDE_RESPONSE_WITH_PREFS = (
+    "Great, I have a good picture of what you're looking for! Let me summarize your preferences.\n\n"
+    '<preferences_ready>{"location": "Zurich", "offer_type": "rent", "object_types": ["apartment"], '
+    '"min_rooms": 3.0, "max_rooms": null, "min_living_space": null, "max_living_space": null, '
+    '"min_price": 2000, "max_price": 2500, "price_is_dealbreaker": false, '
+    '"rooms_is_dealbreaker": false, "space_is_dealbreaker": false, '
+    '"floor_preference": "any", "availability": "any", "features": [], "soft_criteria": [], '
+    '"importance": {"location": "high", "price": "high", "size": "medium", '
+    '"features": "medium", "condition": "medium"}}</preferences_ready>'
+)
+
+SAMPLE_CLAUDE_RESPONSE_NO_PREFS = (
+    "That sounds great! Zurich is a wonderful city. "
+    "Could you tell me a bit more about your budget range? "
+    "Are you looking to rent or buy?"
+)
+
+
+@pytest.fixture
+def sample_chat_messages():
+    """Return sample chat messages for testing."""
+    import copy
+    return copy.deepcopy(SAMPLE_CHAT_MESSAGES)
+
+
+@pytest.fixture
+def sample_claude_response_with_prefs():
+    """Return a sample Claude response containing <preferences_ready> sentinel."""
+    return SAMPLE_CLAUDE_RESPONSE_WITH_PREFS
+
+
+@pytest.fixture
+def sample_claude_response_no_prefs():
+    """Return a sample Claude response without the sentinel tag."""
+    return SAMPLE_CLAUDE_RESPONSE_NO_PREFS
