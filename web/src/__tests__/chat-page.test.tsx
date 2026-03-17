@@ -2,6 +2,9 @@ import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { ChatPage } from "@/components/chat/chat-page"
 
+// Mock scrollIntoView (not available in jsdom)
+Element.prototype.scrollIntoView = vi.fn()
+
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
   usePathname: () => "/ai-search",
@@ -17,7 +20,7 @@ describe("ChatPage", () => {
     render(<ChatPage />)
 
     expect(
-      screen.getByText(/Describe your ideal property/i)
+      screen.getByPlaceholderText(/Describe your ideal property/i)
     ).toBeDefined()
   })
 
@@ -30,6 +33,9 @@ describe("ChatPage", () => {
   it("shows profile name prompt after clicking Start Creating Profile", async () => {
     render(<ChatPage />)
 
+    // Must type something first -- button is disabled when textarea is empty
+    const textarea = screen.getByPlaceholderText(/Describe your ideal property/i)
+    fireEvent.change(textarea, { target: { value: "A nice 3-room flat in Zurich" } })
     fireEvent.click(screen.getByText("Start Creating Profile"))
 
     await waitFor(() => {
@@ -42,6 +48,9 @@ describe("ChatPage", () => {
   it("sends first message after naming profile", async () => {
     render(<ChatPage />)
 
+    // Fill in description and proceed
+    const textarea = screen.getByPlaceholderText(/Describe your ideal property/i)
+    fireEvent.change(textarea, { target: { value: "A nice 3-room flat in Zurich" } })
     fireEvent.click(screen.getByText("Start Creating Profile"))
 
     await waitFor(() => {
@@ -55,8 +64,8 @@ describe("ChatPage", () => {
     fireEvent.click(screen.getByText("Start Conversation"))
 
     await waitFor(() => {
-      // Expect user message to appear in thread
-      expect(screen.getByText("My Dream Flat")).toBeDefined()
+      // The first message in the thread is the property description, not the profile name
+      expect(screen.getByText("A nice 3-room flat in Zurich")).toBeDefined()
     })
   })
 
@@ -74,6 +83,9 @@ describe("ChatPage", () => {
   it("user can send follow-up messages", async () => {
     render(<ChatPage />)
 
+    // Fill in description and proceed
+    const textarea = screen.getByPlaceholderText(/Describe your ideal property/i)
+    fireEvent.change(textarea, { target: { value: "A nice 3-room flat in Zurich" } })
     fireEvent.click(screen.getByText("Start Creating Profile"))
 
     await waitFor(() => {
@@ -86,13 +98,17 @@ describe("ChatPage", () => {
     fireEvent.change(nameInput, { target: { value: "My Dream Flat" } })
     fireEvent.click(screen.getByText("Start Conversation"))
 
+    // Wait for chatting phase to be active
     await waitFor(() => {
-      const textarea = screen.getByRole("textbox")
-      fireEvent.change(textarea, {
-        target: { value: "I want a 2-bedroom flat near the lake" },
-      })
-      fireEvent.submit(textarea.closest("form")!)
+      expect(screen.getByText("A nice 3-room flat in Zurich")).toBeDefined()
     })
+
+    // Now send a follow-up message via Enter key
+    const chatTextarea = screen.getByRole("textbox")
+    fireEvent.change(chatTextarea, {
+      target: { value: "I want a 2-bedroom flat near the lake" },
+    })
+    fireEvent.keyDown(chatTextarea, { key: "Enter", code: "Enter" })
 
     await waitFor(() => {
       expect(
