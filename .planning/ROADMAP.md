@@ -43,7 +43,7 @@
 
 **Milestone Goal:** Introduce a conversational AI interface that lets users describe their dream property in natural language and have the system extract and create a structured profile -- making profile creation feel like talking to a property advisor.
 
-- [ ] **Phase 14: Chat UI & Navigation** — Nav item, chat page layout, input UX, profile name prompt, message thread, AI avatar
+- [x] **Phase 14: Chat UI & Navigation** — Nav item, chat page layout, input UX, profile name prompt, message thread, AI avatar (completed 2026-03-17)
 - [ ] **Phase 15: AI Conversation Backend** — New EC2 endpoint, multi-turn Claude integration, preference extraction, follow-up questions, summary signal
 - [ ] **Phase 16: Summary & Profile Creation** — Structured summary card, inline editing, confirm-to-create via existing API, redirect to profile
 
@@ -94,7 +94,7 @@ Plans:
   3. After typing their first message and pressing "Start Creating Profile", the user is prompted to name the profile before the conversation begins
   4. User and AI messages appear in a scrollable thread with clear visual distinction, AI messages show a circular HomeMatch avatar, and follow-up messages can be sent freely
   5. Refreshing the page starts a clean session (conversation is not persisted)
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 14-01-PLAN.md — Test scaffolds (Wave 0) + AI-Powered Search nav item
 - [ ] 14-02-PLAN.md — Chat page components, state machine, route entry point
@@ -141,6 +141,6 @@ Plans:
 | 11. Score Caching | v2.0 | 3/3 | Complete | 2026-03-17 |
 | 12. UX Polish & History | v2.0 | 0/0 | Not started | - |
 | 13. Security Hardening | v2.0 | 0/0 | Not started | - |
-| 14. Chat UI & Navigation | 2/3 | In Progress|  | - |
+| 14. Chat UI & Navigation | 3/3 | Complete   | 2026-03-17 | - |
 | 15. AI Conversation Backend | v3.0 | 0/0 | Not started | - |
 | 16. Summary & Profile Creation | v3.0 | 0/0 | Not started | - |

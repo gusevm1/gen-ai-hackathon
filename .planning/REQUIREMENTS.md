@@ -41,8 +41,8 @@ Requirements for the AI-Powered Conversational Profile Creation milestone. Each 
 - [x] **CHAT-03**: On the first (pre-conversation) message, a large "Start Creating Profile" button is shown instead of the standard send arrow
 - [x] **CHAT-04**: Pressing "Start Creating Profile" prompts the user to enter a profile name before the conversation begins
 - [x] **CHAT-05**: After the user enters a name and continues, the conversation starts and the initial description is sent to the AI as the first message
-- [ ] **CHAT-06**: AI responses appear in a scrollable chat thread with clear visual distinction between user and assistant messages
-- [ ] **CHAT-07**: User can send follow-up messages throughout the conversation
+- [x] **CHAT-06**: AI responses appear in a scrollable chat thread with clear visual distinction between user and assistant messages
+- [x] **CHAT-07**: User can send follow-up messages throughout the conversation
 - [x] **CHAT-08**: Conversation is ephemeral — not persisted to the database; starting a new session starts fresh
 - [x] **CHAT-09**: AI assistant messages display a circular avatar matching the HomeMatch extension FAB icon (same logo, same brand colors)
 
@@ -116,8 +116,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAT-03 | Phase 14 | Complete |
 | CHAT-04 | Phase 14 | Complete |
 | CHAT-05 | Phase 14 | Complete |
-| CHAT-06 | Phase 14 | Pending |
-| CHAT-07 | Phase 14 | Pending |
+| CHAT-06 | Phase 14 | Complete |
+| CHAT-07 | Phase 14 | Complete |
 | CHAT-08 | Phase 14 | Complete |
 | CHAT-09 | Phase 14 | Complete |
 | AI-01 | Phase 15 | Pending |
