@@ -20,7 +20,7 @@ interface Props {
 export function AnalysesFilterBar({ profiles, currentProfile, currentSort, lang }: Props) {
   const router = useRouter()
 
-  const updateParam = (key: string, value: string) => {
+  const updateParam = (key: string, value: string | null) => {
     const params = new URLSearchParams(window.location.search)
     if (value && value !== "all") {
       params.set(key, value)
