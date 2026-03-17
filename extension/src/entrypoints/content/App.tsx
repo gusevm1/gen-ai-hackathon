@@ -233,6 +233,11 @@ export default function App({ ctx }: AppProps) {
 
     for (const pk of pks) {
       await injectBadge(pk);
+      // On force rescore, immediately reset existing badges to grey placeholder
+      if (forceRescore && scoresRef.current.has(pk)) {
+        scoresRef.current.delete(pk);
+        renderBadge(pk, null, openPanelRef.current);
+      }
     }
 
     // 5. Score listings and update badges progressively
