@@ -31,8 +31,8 @@ Requirements for the AI-Powered Conversational Profile Creation milestone. Each 
 
 ### Navigation (NAV)
 
-- [ ] **NAV-01**: "AI-Powered Search" nav item appears in the top navbar using the existing pinkish-red accent color to visually distinguish it as a key feature
-- [ ] **NAV-02**: Navigation order is: HomeMatch Logo | AI-Powered Search | Profiles | Analysis | Settings
+- [x] **NAV-01**: "AI-Powered Search" nav item appears in the top navbar using the existing pinkish-red accent color to visually distinguish it as a key feature
+- [x] **NAV-02**: Navigation order is: HomeMatch Logo | AI-Powered Search | Profiles | Analysis | Settings
 
 ### Chat Interface (CHAT)
 
@@ -109,8 +109,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HIST-02 | Phase 12 | Pending |
 | SEC-01 | Phase 13 | Pending |
 | SEC-02 | Phase 13 | Pending |
-| NAV-01 | Phase 14 | Pending |
-| NAV-02 | Phase 14 | Pending |
+| NAV-01 | Phase 14 | Complete |
+| NAV-02 | Phase 14 | Complete |
 | CHAT-01 | Phase 14 | Pending |
 | CHAT-02 | Phase 14 | Pending |
 | CHAT-03 | Phase 14 | Pending |

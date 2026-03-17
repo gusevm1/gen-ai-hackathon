@@ -94,9 +94,9 @@ Plans:
   3. After typing their first message and pressing "Start Creating Profile", the user is prompted to name the profile before the conversation begins
   4. User and AI messages appear in a scrollable thread with clear visual distinction, AI messages show a circular HomeMatch avatar, and follow-up messages can be sent freely
   5. Refreshing the page starts a clean session (conversation is not persisted)
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 Plans:
-- [ ] 14-01-PLAN.md — Test scaffolds (Wave 0) + AI-Powered Search nav item
+- [x] 14-01-PLAN.md — Test scaffolds (Wave 0) + AI-Powered Search nav item
 - [ ] 14-02-PLAN.md — Chat page components, state machine, route entry point
 - [ ] 14-03-PLAN.md — Full test suite verification + visual checkpoint
 
@@ -141,6 +141,6 @@ Plans:
 | 11. Score Caching | v2.0 | 3/3 | Complete | 2026-03-17 |
 | 12. UX Polish & History | v2.0 | 0/0 | Not started | - |
 | 13. Security Hardening | v2.0 | 0/0 | Not started | - |
-| 14. Chat UI & Navigation | v3.0 | 0/3 | Planned | - |
+| 14. Chat UI & Navigation | v3.0 | 1/3 | In Progress | - |
 | 15. AI Conversation Backend | v3.0 | 0/0 | Not started | - |
 | 16. Summary & Profile Creation | v3.0 | 0/0 | Not started | - |
