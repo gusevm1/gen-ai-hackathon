@@ -19,6 +19,7 @@ async def test_get_listing_real_api():
         await client.close()
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_listings_endpoint():
     """Test GET /listings/{pk} returns structured listing data via ASGI transport."""
@@ -36,6 +37,7 @@ async def test_listings_endpoint():
         assert "attributes" in data
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_listing_not_found():
     """Test that a nonexistent listing returns 404 or 502."""
