@@ -50,11 +50,22 @@
 
 **Requirements:** DL-01, DL-02, DL-03, DL-04, HOST-01
 
+**Plans:** 1 plan
+
+Plans:
+- [ ] 17-01-PLAN.md — Download nav item, extension zip hosting, download page with sideloading instructions
+
 **Success Criteria:**
 1. Authenticated user sees "Download" in top nav
 2. Clicking "Download Extension" downloads the zip file
 3. Instructions clearly guide user through unzip → chrome://extensions → Developer Mode → Load unpacked
 4. Extension zip is up-to-date in public/ directory
+
+### Phase 17: Download Page & Sideload Instructions
+
+**Goal:** Add a "Download" page to the web app with a nav tab, zip download, and step-by-step Chrome sideloading guide so users can install the extension.
+
+**Requirements:** DL-01, DL-02, DL-03, DL-04, HOST-01
 
 ## Progress
 
