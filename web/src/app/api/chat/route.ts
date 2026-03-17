@@ -1,29 +1,22 @@
-import { streamText, type UIMessage, convertToModelMessages } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
-import { createClient } from '@/lib/supabase/server'
-import { CHAT_SYSTEM_PROMPT } from '@/lib/chat/system-prompt'
+import { NextRequest, NextResponse } from "next/server"
 
-export const maxDuration = 60 // Vercel Fluid Compute timeout
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL
 
-export async function POST(req: Request) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    })
+export async function POST(req: NextRequest) {
+  if (!BACKEND_URL) {
+    return NextResponse.json(
+      { detail: "Backend URL not configured" },
+      { status: 500 }
+    )
   }
 
-  const { messages }: { messages: UIMessage[] } = await req.json()
-
-  const result = streamText({
-    model: anthropic('claude-haiku-4-5-20251001'),
-    system: CHAT_SYSTEM_PROMPT,
-    messages: await convertToModelMessages(messages),
+  const body = await req.json()
+  const res = await fetch(`${BACKEND_URL}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   })
 
-  return result.toUIMessageStreamResponse()
+  const data = await res.json()
+  return NextResponse.json(data, { status: res.status })
 }

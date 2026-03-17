@@ -18,8 +18,6 @@ interface Message {
   timestamp: Date
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL
-
 export function ChatPage() {
   const [phase, setPhase] = useState<ConversationPhase>('idle')
   const [messages, setMessages] = useState<Message[]>([])
@@ -38,7 +36,7 @@ export function ChatPage() {
     setIsTyping(true)
     try {
       const allMessages = [...messages, { role: 'user' as const, content: userMessage }]
-      const res = await fetch(`${BACKEND_URL}/chat`, {
+      const res = await fetch(`/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
