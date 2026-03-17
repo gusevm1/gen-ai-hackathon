@@ -48,7 +48,7 @@ export function ChatInput({ onSend, disabled = false, showStartButton = false }:
           onInput={handleInput}
           onKeyDown={handleKeyDown}
           disabled={disabled}
-          placeholder="Describe your ideal property — location, budget, rooms, size, lifestyle, nearby amenities like train stations, schools, supermarkets, cafes..."
+          placeholder="Dream big! Imagine your perfect home— where is it, what's the vibe, how many rooms, your ideal budget and size, and all the little details like nearby cafes, schools, parks, or train stations, what do you value the most? What kind of person are you?...Just start typing and let me help you make it real!"
           className={cn(
             "min-h-[80px] max-h-[200px] w-full resize-none rounded-xl border border-input bg-background px-4 py-3 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             !showStartButton && "pr-12"
