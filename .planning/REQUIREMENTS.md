@@ -36,15 +36,15 @@ Requirements for the AI-Powered Conversational Profile Creation milestone. Each 
 
 ### Chat Interface (CHAT)
 
-- [ ] **CHAT-01**: "AI-Powered Search" page displays a minimal, centered layout with a large text input as the primary element
-- [ ] **CHAT-02**: Input placeholder guides the user to describe location, budget, size, rooms, lifestyle preferences, and nearby amenities (train, schools, supermarkets, cafés, etc.)
-- [ ] **CHAT-03**: On the first (pre-conversation) message, a large "Start Creating Profile" button is shown instead of the standard send arrow
-- [ ] **CHAT-04**: Pressing "Start Creating Profile" prompts the user to enter a profile name before the conversation begins
-- [ ] **CHAT-05**: After the user enters a name and continues, the conversation starts and the initial description is sent to the AI as the first message
+- [x] **CHAT-01**: "AI-Powered Search" page displays a minimal, centered layout with a large text input as the primary element
+- [x] **CHAT-02**: Input placeholder guides the user to describe location, budget, size, rooms, lifestyle preferences, and nearby amenities (train, schools, supermarkets, cafés, etc.)
+- [x] **CHAT-03**: On the first (pre-conversation) message, a large "Start Creating Profile" button is shown instead of the standard send arrow
+- [x] **CHAT-04**: Pressing "Start Creating Profile" prompts the user to enter a profile name before the conversation begins
+- [x] **CHAT-05**: After the user enters a name and continues, the conversation starts and the initial description is sent to the AI as the first message
 - [ ] **CHAT-06**: AI responses appear in a scrollable chat thread with clear visual distinction between user and assistant messages
 - [ ] **CHAT-07**: User can send follow-up messages throughout the conversation
-- [ ] **CHAT-08**: Conversation is ephemeral — not persisted to the database; starting a new session starts fresh
-- [ ] **CHAT-09**: AI assistant messages display a circular avatar matching the HomeMatch extension FAB icon (same logo, same brand colors)
+- [x] **CHAT-08**: Conversation is ephemeral — not persisted to the database; starting a new session starts fresh
+- [x] **CHAT-09**: AI assistant messages display a circular avatar matching the HomeMatch extension FAB icon (same logo, same brand colors)
 
 ### AI Backend (AI)
 
@@ -111,15 +111,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-02 | Phase 13 | Pending |
 | NAV-01 | Phase 14 | Complete |
 | NAV-02 | Phase 14 | Complete |
-| CHAT-01 | Phase 14 | Pending |
-| CHAT-02 | Phase 14 | Pending |
-| CHAT-03 | Phase 14 | Pending |
-| CHAT-04 | Phase 14 | Pending |
-| CHAT-05 | Phase 14 | Pending |
+| CHAT-01 | Phase 14 | Complete |
+| CHAT-02 | Phase 14 | Complete |
+| CHAT-03 | Phase 14 | Complete |
+| CHAT-04 | Phase 14 | Complete |
+| CHAT-05 | Phase 14 | Complete |
 | CHAT-06 | Phase 14 | Pending |
 | CHAT-07 | Phase 14 | Pending |
-| CHAT-08 | Phase 14 | Pending |
-| CHAT-09 | Phase 14 | Pending |
+| CHAT-08 | Phase 14 | Complete |
+| CHAT-09 | Phase 14 | Complete |
 | AI-01 | Phase 15 | Pending |
 | AI-02 | Phase 15 | Pending |
 | AI-03 | Phase 15 | Pending |

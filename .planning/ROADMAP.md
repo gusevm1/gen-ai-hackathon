@@ -141,6 +141,6 @@ Plans:
 | 11. Score Caching | v2.0 | 3/3 | Complete | 2026-03-17 |
 | 12. UX Polish & History | v2.0 | 0/0 | Not started | - |
 | 13. Security Hardening | v2.0 | 0/0 | Not started | - |
-| 14. Chat UI & Navigation | v3.0 | 1/3 | In Progress | - |
+| 14. Chat UI & Navigation | 2/3 | In Progress|  | - |
 | 15. AI Conversation Backend | v3.0 | 0/0 | Not started | - |
 | 16. Summary & Profile Creation | v3.0 | 0/0 | Not started | - |
