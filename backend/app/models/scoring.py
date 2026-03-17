@@ -58,3 +58,4 @@ class ScoreRequest(BaseModel):
     user_id: str = Field(description="Supabase user UUID")
     profile_id: str = Field(description="Active profile UUID")
     preferences: dict = Field(description="Profile preferences JSONB")
+    force_rescore: bool = Field(default=False, description="If True, bypass cached score and recompute")

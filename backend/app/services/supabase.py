@@ -34,6 +34,32 @@ class SupabaseService:
             )
         return self._client
 
+    def get_analysis(
+        self, user_id: str, profile_id: str, listing_id: str
+    ) -> dict | None:
+        """Retrieve an existing analysis from Supabase.
+
+        Returns the breakdown dict if found, or None if no analysis exists.
+
+        Args:
+            user_id: The Supabase user UUID.
+            profile_id: The active profile UUID.
+            listing_id: The Flatfox listing PK as string.
+        """
+        client = self.get_client()
+        result = (
+            client.table("analyses")
+            .select("breakdown")
+            .eq("user_id", user_id)
+            .eq("listing_id", listing_id)
+            .eq("profile_id", profile_id)
+            .maybeSingle()
+            .execute()
+        )
+        if result.data:
+            return result.data.get("breakdown")
+        return None
+
     def save_analysis(
         self, user_id: str, profile_id: str, listing_id: str, score_data: dict
     ) -> None:

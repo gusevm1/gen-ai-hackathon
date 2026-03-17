@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { preferencesSchema, migratePreferences } from '@/lib/schemas/preferences'
 import { saveProfilePreferences } from '@/app/(dashboard)/profiles/actions'
 import { PreferencesForm } from '@/components/preferences/preferences-form'
+import { buildFlatfoxUrl } from '@/lib/flatfox-url'
 
 interface EditProfilePageProps {
   params: Promise<{ profileId: string }>
@@ -31,6 +32,7 @@ export default async function EditProfilePage({ params }: EditProfilePageProps) 
 
   const defaults = preferencesSchema.parse(migratePreferences((profile.preferences ?? {}) as Record<string, unknown>))
   const id = profile.id
+  const flatfoxUrl = buildFlatfoxUrl(defaults)
 
   async function handleSave(data: Parameters<typeof saveProfilePreferences>[1]) {
     'use server'
@@ -46,7 +48,18 @@ export default async function EditProfilePage({ params }: EditProfilePageProps) 
         <ArrowLeft className="size-4" />
         Back to Profiles
       </Link>
-      <h1 className="text-2xl font-bold mb-2">{profile.name}</h1>
+      <div className="flex items-start justify-between mb-2">
+        <h1 className="text-2xl font-bold">{profile.name}</h1>
+        <a
+          href={flatfoxUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline shrink-0"
+        >
+          <ExternalLink className="size-4" />
+          Open in Flatfox
+        </a>
+      </div>
       <p className="text-muted-foreground mb-8">
         Edit preferences for this profile. These will be used to score listings on Flatfox.
       </p>

@@ -20,7 +20,6 @@ import { Pencil, Loader2, X } from "lucide-react"
 
 interface PreferenceSummaryCardProps {
   extractedPreferences: Record<string, unknown>
-  profileName: string
   onProfileCreated: (profileId: string) => void
   onContinueChatting: () => void
 }
@@ -29,7 +28,6 @@ type ImportanceLevel = "critical" | "high" | "medium" | "low"
 
 export function PreferenceSummaryCard({
   extractedPreferences,
-  profileName,
   onProfileCreated,
   onContinueChatting,
 }: PreferenceSummaryCardProps) {
@@ -42,6 +40,8 @@ export function PreferenceSummaryCard({
   const [editingField, setEditingField] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [namingStep, setNamingStep] = useState(false)
+  const [profileNameInput, setProfileNameInput] = useState("")
 
   // Ref to store the value before editing (for Escape revert)
   const previousValueRef = useRef<unknown>(null)
@@ -57,11 +57,22 @@ export function PreferenceSummaryCard({
     }))
   }
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
+    // First click: show naming prompt
+    if (!namingStep) {
+      setNamingStep(true)
+      return
+    }
+    // Second click: save with entered name
+    handleSaveWithName()
+  }
+
+  const handleSaveWithName = async () => {
+    const name = profileNameInput.trim() || "My Profile"
     setIsCreating(true)
     setError(null)
     try {
-      const profileId = await createProfileWithPreferences(profileName, preferences)
+      const profileId = await createProfileWithPreferences(name, preferences)
       onProfileCreated(profileId)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create profile. Please try again.")
@@ -235,7 +246,7 @@ export function PreferenceSummaryCard({
       <Card className="rounded-xl border bg-card">
         <CardHeader className="px-4 py-6">
           <h2 className="text-xl font-semibold">Your Preference Summary</h2>
-          <p className="text-sm text-muted-foreground">Profile: {profileName}</p>
+          <p className="text-sm text-muted-foreground">Review and edit before saving</p>
         </CardHeader>
 
         <CardContent className="px-4 space-y-8">
@@ -447,30 +458,59 @@ export function PreferenceSummaryCard({
         </CardContent>
 
         <CardFooter className="flex-col gap-3 px-4 py-4">
-          <Button
-            className="w-full"
-            disabled={isCreating}
-            onClick={handleConfirm}
-          >
-            {isCreating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating profile...
-              </>
-            ) : (
-              "Confirm & Create Profile"
-            )}
-          </Button>
+          {namingStep ? (
+            <>
+              <p className="text-sm font-medium w-full">Give this profile a name</p>
+              <div className="flex w-full gap-2">
+                <Input
+                  autoFocus
+                  placeholder="e.g. Zurich Family Apartment"
+                  value={profileNameInput}
+                  onChange={(e) => setProfileNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveWithName()
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  disabled={isCreating}
+                  onClick={handleSaveWithName}
+                >
+                  {isCreating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Save"
+                  )}
+                </Button>
+              </div>
+              <button
+                type="button"
+                className="text-sm text-muted-foreground hover:text-foreground underline"
+                onClick={() => setNamingStep(false)}
+              >
+                Back
+              </button>
+            </>
+          ) : (
+            <Button
+              className="w-full"
+              onClick={handleConfirm}
+            >
+              Confirm & Create Profile
+            </Button>
+          )}
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
-          <button
-            type="button"
-            className="text-sm text-muted-foreground hover:text-foreground underline"
-            onClick={onContinueChatting}
-          >
-            Continue chatting instead
-          </button>
+          {!namingStep && (
+            <button
+              type="button"
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+              onClick={onContinueChatting}
+            >
+              Continue chatting instead
+            </button>
+          )}
         </CardFooter>
       </Card>
     </div>

@@ -124,11 +124,14 @@ class ConversationService:
         client = self.get_client()
         system_prompt = build_conversation_system_prompt(profile_name=profile_name)
 
+        # If no messages yet, inject a synthetic trigger so Claude produces the opening greeting
+        api_messages = messages if messages else [{"role": "user", "content": "__begin__"}]
+
         response = await client.messages.create(
             model=CHAT_MODEL,
             max_tokens=2048,
             system=system_prompt,
-            messages=messages,
+            messages=api_messages,
         )
 
         raw_text = response.content[0].text

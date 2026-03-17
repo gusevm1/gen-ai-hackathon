@@ -37,6 +37,20 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
 
     - 502: Listing fetch failed or Claude scoring failed
     """
+    # 0. Safeguard: return cached score if it exists (unless force_rescore)
+    if not request.force_rescore:
+        try:
+            cached = await asyncio.to_thread(
+                supabase_service.get_analysis,
+                request.user_id,
+                request.profile_id,
+                str(request.listing_id),
+            )
+            if cached:
+                return ScoreResponse.model_validate(cached)
+        except Exception:
+            logger.warning("Cache pre-check failed for listing=%s, proceeding to score", request.listing_id)
+
     # 1. Fetch listing from Flatfox
     try:
         listing = await flatfox_client.get_listing(request.listing_id)

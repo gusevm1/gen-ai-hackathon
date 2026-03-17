@@ -60,6 +60,12 @@ DEALBREAKER RULES:
 - A rooms dealbreaker means the listing has FEWER rooms than the user's minimum -- score size at 0.
 - A living space dealbreaker means the listing has LESS space than the user's minimum -- score size at 0.
 
+SCORE DISTRIBUTION:
+- Use the FULL 0–100 range. Avoid clustering around specific numbers. Scores must reflect real differences between listings.
+- Score anchors: 90–100 = near perfect match | 70–89 = strong match | 50–69 = moderate match with compromises | 30–49 = weak match | 0–29 = poor match.
+- Each category score MUST be justified by concrete data from the listing (e.g., price numbers, room count, location, specific features).
+- The overall score must be derived logically from the weighted category scores — do not guess it independently.
+
 IMPORTANCE LEVELS:
 - Category importance is expressed as: CRITICAL, HIGH, MEDIUM, LOW.
 - Use these to weight your overall score calculation. CRITICAL categories matter most.
