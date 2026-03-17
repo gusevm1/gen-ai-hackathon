@@ -44,7 +44,7 @@
 **Milestone Goal:** Introduce a conversational AI interface that lets users describe their dream property in natural language and have the system extract and create a structured profile -- making profile creation feel like talking to a property advisor.
 
 - [x] **Phase 14: Chat UI & Navigation** — Nav item, chat page layout, input UX, profile name prompt, message thread, AI avatar (completed 2026-03-17)
-- [ ] **Phase 15: AI Conversation Backend** — New EC2 endpoint, multi-turn Claude integration, preference extraction, follow-up questions, summary signal
+- [x] **Phase 15: AI Conversation Backend** — New EC2 endpoint, multi-turn Claude integration, preference extraction, follow-up questions, summary signal (completed 2026-03-17)
 - [ ] **Phase 16: Summary & Profile Creation** — Structured summary card, inline editing, confirm-to-create via existing API, redirect to profile
 
 ## Phase Details
@@ -145,5 +145,5 @@ Plans:
 | 12. UX Polish & History | v2.0 | 0/0 | Not started | - |
 | 13. Security Hardening | v2.0 | 0/0 | Not started | - |
 | 14. Chat UI & Navigation | v3.0 | 3/3 | Complete | 2026-03-17 |
-| 15. AI Conversation Backend | v3.0 | 2/2 | Complete | 2026-03-17 |
+| 15. AI Conversation Backend | v3.0 | Complete    | 2026-03-17 | 2026-03-17 |
 | 16. Summary & Profile Creation | v3.0 | 0/0 | Not started | - |
