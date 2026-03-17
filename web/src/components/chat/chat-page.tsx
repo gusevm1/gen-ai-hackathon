@@ -16,15 +16,7 @@ interface Message {
   timestamp: Date
 }
 
-const mockAIResponse = async (userMessage: string): Promise<string> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(
-        "That sounds great! Could you tell me more about your budget range and preferred neighborhood? Also, are there any specific amenities nearby that are important to you \u2014 like public transport, schools, or parks?"
-      )
-    }, 1500)
-  })
-}
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL
 
 export function ChatPage() {
   const [phase, setPhase] = useState<ConversationPhase>('idle')
@@ -41,14 +33,41 @@ export function ChatPage() {
   const triggerAIResponse = async (userMessage: string) => {
     setIsTyping(true)
     try {
-      const response = await mockAIResponse(userMessage)
+      const allMessages = [...messages, { role: 'user' as const, content: userMessage }]
+      const res = await fetch(`${BACKEND_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: allMessages.map(m => ({ role: m.role, content: m.content })),
+          profile_name: profileName,
+        }),
+      })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }))
+        throw new Error(errorData.detail || `Chat failed: ${res.status}`)
+      }
+      const data = await res.json()
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: response,
+        content: data.message,
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, assistantMessage])
+      // Store readiness signal for Phase 16 (summary view)
+      if (data.ready_to_summarize && data.extracted_preferences) {
+        console.log('[HomeMatch] Preferences ready:', data.extracted_preferences)
+        // Phase 16 will add: transition to summary card view
+      }
+    } catch (err) {
+      // Show error as an assistant message so user sees it in the thread
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `Sorry, I encountered an error. Please try again. (${err instanceof Error ? err.message : 'Unknown error'})`,
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
     } finally {
       setIsTyping(false)
     }

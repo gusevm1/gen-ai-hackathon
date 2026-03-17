@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { ChatPage } from "@/components/chat/chat-page"
 
@@ -14,6 +14,26 @@ vi.mock("next/navigation", () => ({
     prefetch: vi.fn(),
   }),
 }))
+
+// Mock fetch for real API calls
+const mockFetch = vi.fn()
+
+beforeEach(() => {
+  vi.stubGlobal("fetch", mockFetch)
+  mockFetch.mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      message: "That sounds great! Could you tell me more about your budget range and preferred neighborhood?",
+      ready_to_summarize: false,
+      extracted_preferences: null,
+    }),
+  })
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  mockFetch.mockReset()
+})
 
 describe("ChatPage", () => {
   it("renders centered layout in idle state", () => {
