@@ -53,28 +53,41 @@ export async function scoreListing(
 }
 
 /**
- * Score multiple listings sequentially (NOT in parallel to avoid
- * overwhelming the backend). Calls `onResult` after each score
- * arrives for progressive rendering.
+ * Score multiple listings in parallel batches. Calls `onResult` after
+ * each individual listing scores for progressive badge rendering.
  *
  * @param listingIds - Array of Flatfox listing PKs
  * @param jwt - Supabase JWT access token
  * @param onResult - Optional callback invoked after each listing is scored
  * @param forceRescore - Bypass cache and force fresh scores
- * @returns Map of listingId to ScoreResponse
+ * @param concurrency - Max parallel requests per batch (default: 5)
+ * @returns Map of listingId to ScoreResponse (only successful scores)
  */
 export async function scoreListings(
   listingIds: number[],
   jwt: string,
   onResult?: (id: number, result: ScoreResponse, prefStale: boolean) => void,
   forceRescore: boolean = false,
+  concurrency: number = 5,
 ): Promise<Map<number, ScoreResponse>> {
   const results = new Map<number, ScoreResponse>();
 
-  for (const id of listingIds) {
-    const { data, prefStale } = await scoreListing(id, jwt, forceRescore);
-    results.set(id, data);
-    onResult?.(id, data, prefStale);
+  for (let i = 0; i < listingIds.length; i += concurrency) {
+    const batch = listingIds.slice(i, i + concurrency);
+
+    const settled = await Promise.allSettled(
+      batch.map(async (id) => {
+        const { data, prefStale } = await scoreListing(id, jwt, forceRescore);
+        results.set(id, data);
+        onResult?.(id, data, prefStale);
+      }),
+    );
+
+    for (const result of settled) {
+      if (result.status === 'rejected') {
+        console.error('[HomeMatch] Scoring failed for a listing:', result.reason);
+      }
+    }
   }
 
   return results;

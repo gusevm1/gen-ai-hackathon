@@ -241,43 +241,39 @@ export default function App({ ctx }: AppProps) {
     }
 
     // 5. Score listings and update badges progressively
-    try {
-      await scoreListings(pks, jwt, (id, result, prefStale) => {
-        // If any result signals preference-staleness, set the stale reason
-        if (prefStale) {
-          staleReasonRef.current = 'preferences-changed';
-          isStaleRef.current = true;
-          setIsStale(true);
-        }
+    await scoreListings(pks, jwt, (id, result, prefStale) => {
+      // If any result signals preference-staleness, set the stale reason
+      if (prefStale) {
+        staleReasonRef.current = 'preferences-changed';
+        isStaleRef.current = true;
+        setIsStale(true);
+      }
 
-        // Update both ref and state
-        scoresRef.current.set(id, result);
-        setScores((prev) => {
-          const next = new Map(prev);
-          next.set(id, result);
-          return next;
-        });
+      // Update both ref and state
+      scoresRef.current.set(id, result);
+      setScores((prev) => {
+        const next = new Map(prev);
+        next.set(id, result);
+        return next;
+      });
 
-        // Update the badge shadow root content
-        renderBadge(id, result, null);
-      }, forceRescore);
+      // Update the badge shadow root content
+      renderBadge(id, result, null);
+    }, forceRescore);
 
-      // Clear stale state after successful re-score
-      isStaleRef.current = false;
-      staleReasonRef.current = null;
-      setIsStale(false);
-      rerenderAllBadges(openPanelRef.current);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Scoring failed';
-      setError(message);
-      const unscoredPks = pks.filter(
-        (pk) => !scoresRef.current.has(pk),
-      );
+    // Clean up loading skeletons for any listings that failed
+    const unscoredPks = pks.filter((pk) => !scoresRef.current.has(pk));
+    if (unscoredPks.length > 0) {
+      setError(`${unscoredPks.length} listing(s) failed to score`);
       cleanupBadges(unscoredPks);
-    } finally {
-      setIsScoring(false);
     }
+
+    // Clear stale state after scoring completes
+    isStaleRef.current = false;
+    staleReasonRef.current = null;
+    setIsStale(false);
+    rerenderAllBadges(openPanelRef.current);
+    setIsScoring(false);
   }, [injectBadge, renderBadge, cleanupBadges, rerenderAllBadges]);
 
   const handleForceRescore = useCallback(() => {
