@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Polish & History
-status: completed
-last_updated: "2026-03-17T06:31:28.664Z"
-last_activity: 2026-03-17 -- Completed 15-02-PLAN.md
+status: executing
+last_updated: "2026-03-17T07:25:11.379Z"
+last_activity: 2026-03-17 -- Completed 16-01-PLAN.md
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_plans: 10
+  completed_plans: 9
+  percent: 90
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Milestone v3.0 -- Phase 15 in progress
+**Current focus:** Milestone v3.0 -- Phase 16 in progress
 
 ## Current Position
 
-Phase: 15 of 16 (AI Conversation Backend)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase 15 complete
-Last activity: 2026-03-17 -- Completed 15-02-PLAN.md
+Phase: 16 of 16 (Summary & Profile Creation)
+Plan: 1 of 2 in current phase (Plan 01 complete)
+Status: Phase 16 in progress
+Last activity: 2026-03-17 -- Completed 16-01-PLAN.md
 
-Progress: [██████████] 100%
+Progress: [█████████░] 90%
 
 ## Accumulated Context
 
@@ -49,6 +49,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 15]: Used regex sentinel tag <preferences_ready> for structured extraction from conversational responses
 - [Phase 15]: Added from __future__ import annotations to claude.py for Python 3.9 compat
 - [Phase 15]: Error messages shown inline as assistant messages for conversational UX continuity
+- [Phase 16]: Mapper delegates entirely to preferencesSchema.parse() since backend already provides camelCase keys
+- [Phase 16]: Test file placed in src/__tests__/ to match vitest include pattern instead of src/lib/__tests__/
 
 ### Blockers/Concerns
 
