@@ -1,7 +1,20 @@
-# Requirements: HomeMatch v3.0
+# Requirements: HomeMatch
 
 **Defined:** 2026-03-17
 **Core Value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website they're already on.
+
+## v3.0 Requirements — Extension Download & Install
+
+### Download Page (DL)
+
+- [ ] **DL-01**: User sees "Download" item in the top navigation bar
+- [ ] **DL-02**: User can download the Chrome extension as a zip file with one click
+- [ ] **DL-03**: User sees step-by-step installation instructions (unzip, open chrome://extensions, enable Developer Mode, Load unpacked)
+- [ ] **DL-04**: Instructions link opens chrome://extensions in a new tab
+
+### Hosting (HOST)
+
+- [ ] **HOST-01**: Extension zip is served as a static file from the Next.js public/ directory
 
 ## v2.0 Requirements (in progress — phases 12-13 pending)
 
@@ -133,11 +146,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROF-10 | Phase 16 | Complete |
 | PROF-11 | Phase 16 | Complete |
 
+| DL-01 | Phase 17 | Pending |
+| DL-02 | Phase 17 | Pending |
+| DL-03 | Phase 17 | Pending |
+| DL-04 | Phase 17 | Pending |
+| HOST-01 | Phase 17 | Pending |
+
 **Coverage:**
-- v3.0 requirements: 20 total
-- Mapped to phases: 20
+- v3.0 (Download) requirements: 5 total
+- Mapped to phases: 5
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 after v3.0 Extension Download milestone*

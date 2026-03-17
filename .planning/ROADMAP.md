@@ -5,7 +5,7 @@
 - :white_check_mark: **v1.0 MVP** — Phases 1-4 (shipped 2026-03-13)
 - :white_check_mark: **v1.1 Demo-Ready + Multi-Profile** — Phases 5-10 (shipped 2026-03-15)
 - :white_check_mark: **v2.0 Polish & AI Profile Creation** — Phases 11-16 (shipped 2026-03-17)
-- **v3.0 Extension Distribution & Onboarding** — (planned)
+- **v3.0 Extension Download & Install** — Phase 17
 
 ## Phases
 
@@ -42,11 +42,19 @@
 
 </details>
 
-### v3.0 Extension Distribution & Onboarding
+### v3.0 Extension Download & Install
 
-**Milestone Goal:** Make the Chrome extension easily downloadable from the HomeMatch website, with a dedicated page for installation instructions and a smooth onboarding flow.
+**Milestone Goal:** Add a "Download" page to the web app so users can download the Chrome extension and follow sideloading instructions.
 
-**Phases:** TBD
+- [ ] **Phase 17: Download Page & Sideload Instructions** — Nav tab, zip download, step-by-step Chrome sideloading guide
+
+**Requirements:** DL-01, DL-02, DL-03, DL-04, HOST-01
+
+**Success Criteria:**
+1. Authenticated user sees "Download" in top nav
+2. Clicking "Download Extension" downloads the zip file
+3. Instructions clearly guide user through unzip → chrome://extensions → Developer Mode → Load unpacked
+4. Extension zip is up-to-date in public/ directory
 
 ## Progress
 
@@ -55,4 +63,4 @@
 | v1.0 MVP | Complete | 2026-03-13 |
 | v1.1 Demo-Ready + Multi-Profile | Complete | 2026-03-15 |
 | v2.0 Polish & AI Profile Creation | Complete | 2026-03-17 |
-| v3.0 Extension Distribution & Onboarding | Planned | - |
+| v3.0 Extension Download & Install | In Progress | - |
