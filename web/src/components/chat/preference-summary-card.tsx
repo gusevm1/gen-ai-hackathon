@@ -346,16 +346,75 @@ export function PreferenceSummaryCard({
                 onAdd={(val) => updateField("features", [...preferences.features, val])}
               />
             </div>
-            <div>
-              <span className="text-xs text-muted-foreground">Soft Criteria</span>
-              <BadgeListField
-                items={preferences.softCriteria}
-                placeholder="Add a preference..."
-                onRemove={(idx) =>
-                  updateField("softCriteria", preferences.softCriteria.filter((_, i) => i !== idx))
+            <div className="space-y-3">
+              <span className="text-xs text-muted-foreground">Custom Criteria</span>
+              {(preferences.dynamicFields ?? []).map((field, idx) => (
+                <div key={idx} className="flex gap-2 items-center">
+                  <Input
+                    placeholder="Criterion name"
+                    className="h-7 text-sm flex-1"
+                    value={field.name}
+                    onChange={(e) => {
+                      const updated = [...preferences.dynamicFields]
+                      updated[idx] = { ...updated[idx], name: e.target.value }
+                      updateField("dynamicFields", updated)
+                    }}
+                  />
+                  <Input
+                    placeholder="Details"
+                    className="h-7 text-sm flex-1"
+                    value={field.value}
+                    onChange={(e) => {
+                      const updated = [...preferences.dynamicFields]
+                      updated[idx] = { ...updated[idx], value: e.target.value }
+                      updateField("dynamicFields", updated)
+                    }}
+                  />
+                  <Select
+                    value={field.importance}
+                    onValueChange={(val) => {
+                      const updated = [...preferences.dynamicFields]
+                      updated[idx] = { ...updated[idx], importance: val as ImportanceLevel }
+                      updateField("dynamicFields", updated)
+                    }}
+                  >
+                    <SelectTrigger size="sm" className="h-7 text-sm w-[110px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="critical">Critical</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateField(
+                        "dynamicFields",
+                        preferences.dynamicFields.filter((_, i) => i !== idx)
+                      )
+                    }
+                    className="shrink-0 hover:text-destructive"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  updateField("dynamicFields", [
+                    ...(preferences.dynamicFields ?? []),
+                    { name: "", value: "", importance: "medium" as const },
+                  ])
                 }
-                onAdd={(val) => updateField("softCriteria", [...preferences.softCriteria, val])}
-              />
+              >
+                + Add Criterion
+              </Button>
             </div>
           </section>
 

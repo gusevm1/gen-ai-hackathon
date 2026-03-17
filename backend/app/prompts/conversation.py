@@ -91,7 +91,7 @@ The JSON inside the tag MUST follow this EXACT schema:
   "floor_preference": "any" | "ground" | "not_ground",
   "availability": "any" | "string",
   "features": ["string"],
-  "soft_criteria": ["string"],
+  "soft_criteria": [{{"name": "string", "value": "string", "importance": "critical" | "high" | "medium" | "low"}}],
   "importance": {{
     "location": "critical" | "high" | "medium" | "low",
     "price": "critical" | "high" | "medium" | "low",

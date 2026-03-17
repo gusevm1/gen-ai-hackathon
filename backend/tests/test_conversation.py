@@ -89,6 +89,39 @@ def test_map_extracted_apartment_type():
     assert mapped["objectCategory"] == "APARTMENT"
 
 
+def test_map_extracted_structured_soft_criteria_to_dynamic_fields():
+    """Maps structured soft_criteria dicts to dynamicFields and empties softCriteria."""
+    extracted = {
+        "offer_type": "rent",
+        "object_types": [],
+        "importance": {},
+        "soft_criteria": [
+            {"name": "quiet neighborhood", "value": "no traffic", "importance": "high"},
+            {"name": "near public transport", "value": "", "importance": "medium"},
+        ],
+    }
+    mapped = map_extracted_to_user_preferences(extracted)
+    assert mapped["softCriteria"] == []
+    assert len(mapped["dynamicFields"]) == 2
+    assert mapped["dynamicFields"][0] == {"name": "quiet neighborhood", "value": "no traffic", "importance": "high"}
+    assert mapped["dynamicFields"][1] == {"name": "near public transport", "value": "", "importance": "medium"}
+
+
+def test_map_extracted_plain_string_soft_criteria_to_dynamic_fields():
+    """Falls back gracefully for legacy plain-string soft_criteria."""
+    extracted = {
+        "offer_type": "rent",
+        "object_types": [],
+        "importance": {},
+        "soft_criteria": ["near Bahnhof", "quiet area"],
+    }
+    mapped = map_extracted_to_user_preferences(extracted)
+    assert mapped["softCriteria"] == []
+    assert len(mapped["dynamicFields"]) == 2
+    assert mapped["dynamicFields"][0] == {"name": "near Bahnhof", "value": "", "importance": "medium"}
+    assert mapped["dynamicFields"][1] == {"name": "quiet area", "value": "", "importance": "medium"}
+
+
 def test_map_extracted_validates_against_user_preferences():
     """Mapped result validates against UserPreferences without error."""
     extracted = {
@@ -107,7 +140,9 @@ def test_map_extracted_validates_against_user_preferences():
         "floor_preference": "any",
         "availability": "any",
         "features": [],
-        "soft_criteria": [],
+        "soft_criteria": [
+            {"name": "quiet neighborhood", "value": "no traffic", "importance": "high"},
+        ],
         "importance": {
             "location": "high",
             "price": "high",
@@ -117,6 +152,8 @@ def test_map_extracted_validates_against_user_preferences():
         },
     }
     mapped = map_extracted_to_user_preferences(extracted)
+    assert mapped["softCriteria"] == []
+    assert len(mapped["dynamicFields"]) == 1
     # Should not raise ValidationError
     prefs = UserPreferences.model_validate(mapped)
     assert prefs.location == "Zurich"

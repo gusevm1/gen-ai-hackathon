@@ -289,7 +289,9 @@ SAMPLE_CLAUDE_RESPONSE_WITH_PREFS = (
     '"min_rooms": 3.0, "max_rooms": null, "min_living_space": null, "max_living_space": null, '
     '"min_price": 2000, "max_price": 2500, "price_is_dealbreaker": false, '
     '"rooms_is_dealbreaker": false, "space_is_dealbreaker": false, '
-    '"floor_preference": "any", "availability": "any", "features": [], "soft_criteria": [], '
+    '"floor_preference": "any", "availability": "any", "features": [], '
+    '"soft_criteria": [{"name": "quiet neighborhood", "value": "no traffic", "importance": "high"}, '
+    '{"name": "near public transport", "value": "", "importance": "medium"}], '
     '"importance": {"location": "high", "price": "high", "size": "medium", '
     '"features": "medium", "condition": "medium"}}</preferences_ready>'
 )

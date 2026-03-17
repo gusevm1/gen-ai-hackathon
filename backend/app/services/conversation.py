@@ -82,7 +82,12 @@ def map_extracted_to_user_preferences(extracted: dict) -> dict:
         "floorPreference": extracted.get("floor_preference", "any"),
         "availability": extracted.get("availability", "any"),
         "features": extracted.get("features", []),
-        "softCriteria": extracted.get("soft_criteria", []),
+        "dynamicFields": [
+            {"name": sc["name"], "value": sc.get("value", ""), "importance": sc.get("importance", "medium")}
+            if isinstance(sc, dict) else {"name": sc, "value": "", "importance": "medium"}
+            for sc in extracted.get("soft_criteria", [])
+        ],
+        "softCriteria": [],
         "importance": extracted.get("importance", {}),
     }
 
