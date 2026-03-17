@@ -71,18 +71,20 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
     )
 
     # 4. Override API prices with web-scraped prices (Flatfox API returns stale data)
+    # Only apply rent price overrides for RENT listings — SALE listings use price_display directly
     wp = page_data.web_prices
-    if wp.rent_gross is not None and wp.rent_gross != listing.rent_gross:
-        logger.warning(
-            "Listing %d price mismatch: API rent_gross=%s, web=%s -- using web price",
-            listing.pk, listing.rent_gross, wp.rent_gross,
-        )
-        listing.rent_gross = wp.rent_gross
-        listing.price_display = wp.rent_gross
-    if wp.rent_net is not None:
-        listing.rent_net = wp.rent_net
-    if wp.rent_charges is not None:
-        listing.rent_charges = wp.rent_charges
+    if listing.offer_type.upper() != "SALE":
+        if wp.rent_gross is not None and wp.rent_gross != listing.rent_gross:
+            logger.warning(
+                "Listing %d price mismatch: API rent_gross=%s, web=%s -- using web price",
+                listing.pk, listing.rent_gross, wp.rent_gross,
+            )
+            listing.rent_gross = wp.rent_gross
+            listing.price_display = wp.rent_gross
+        if wp.rent_net is not None:
+            listing.rent_net = wp.rent_net
+        if wp.rent_charges is not None:
+            listing.rent_charges = wp.rent_charges
 
     # 5. Score with Claude (includes images when available)
     try:
@@ -97,12 +99,17 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
 
     # 6. Save analysis to Supabase with profile_id (fire and forget -- log error but don't fail)
     try:
+        # Inject listing title so frontend can display it instead of the raw listing ID
+        score_data = result.model_dump()
+        score_data["listing_title"] = (
+            listing.description_title or listing.public_title or listing.short_title or None
+        )
         await asyncio.to_thread(
             supabase_service.save_analysis,
             request.user_id,
             request.profile_id,
             str(request.listing_id),
-            result.model_dump(),
+            score_data,
         )
     except Exception:
         logger.exception("Failed to save analysis for user=%s listing=%s", request.user_id, request.listing_id)

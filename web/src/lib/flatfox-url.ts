@@ -23,25 +23,21 @@ export function buildFlatfoxUrl(prefs: FlatfoxUrlPreferences): string {
     params.set("offer_type", "SALE")
   }
 
-  // Location (city or free-text)
+  // Location — Flatfox expects place_name + query + place_type
   if (prefs.location) {
-    params.set("location", prefs.location)
+    params.set("place_name", prefs.location)
+    params.set("query", prefs.location)
+    params.set("place_type", "place")
   }
 
-  // Price range
-  if (prefs.budgetMin != null) {
-    params.set("price_display_from", String(prefs.budgetMin))
-  }
+  // Price — use max_price (not price_display_to)
   if (prefs.budgetMax != null) {
-    params.set("price_display_to", String(prefs.budgetMax))
+    params.set("max_price", String(prefs.budgetMax))
   }
 
-  // Room range
+  // Rooms — Flatfox uses min_rooms with integer values (floor float buckets)
   if (prefs.roomsMin != null) {
-    params.set("number_of_rooms_from", String(prefs.roomsMin))
-  }
-  if (prefs.roomsMax != null) {
-    params.set("number_of_rooms_to", String(prefs.roomsMax))
+    params.set("min_rooms", String(Math.floor(prefs.roomsMin)))
   }
 
   // Object category

@@ -75,6 +75,7 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
     overall_score?: number
     match_tier?: string
     summary_bullets?: string[]
+    listing_title?: string
     categories?: Array<{
       name: string
       score: number
@@ -93,6 +94,7 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
   const summaryBullets = breakdown.summary_bullets ?? []
   const categories = breakdown.categories ?? []
   const checklist = breakdown.checklist ?? []
+  const listingTitle = breakdown.listing_title ?? null
 
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4">
@@ -102,16 +104,17 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
           Analyses
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <span className="text-foreground">Listing {listingId}</span>
+        <span className="text-foreground">{listingTitle ?? `Listing ${listingId}`}</span>
       </nav>
 
-      <h1 className="sr-only">Analysis - Listing {listingId}</h1>
+      <h1 className="sr-only">Analysis - {listingTitle ?? `Listing ${listingId}`}</h1>
 
       {/* Score header full width */}
       <ScoreHeader
         overallScore={overallScore}
         matchTier={matchTier}
         listingId={listingId}
+        listingTitle={listingTitle}
         profileName={profileName}
       />
 

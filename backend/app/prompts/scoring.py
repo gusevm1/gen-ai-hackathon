@@ -51,6 +51,13 @@ and window views, kitchen and bathroom condition, general maintenance and upkeep
 - If no photos are provided, evaluate based on text data only and note that visual assessment \
 was not possible.
 
+PRICE EVALUATION RULES:
+- The listing's **Type** field shows the offer_type (RENT or SALE). Always use this to interpret the price.
+- If offer_type is SALE: the price is the TOTAL PURCHASE PRICE (one-time). NEVER interpret it as monthly rent. A price of CHF 1,500,000 for a SALE listing is a purchase price, not rent.
+- If offer_type is RENT: the price is MONTHLY RENT. Compare against the user's monthly budget.
+- NEVER use "per month" phrasing when evaluating a SALE listing's price.
+- Compare price against the user's budget using the same scale (purchase vs purchase, monthly vs monthly).
+
 DEALBREAKER RULES:
 - When the user marks a constraint as a DEALBREAKER (HARD LIMIT), and the listing violates that constraint, you MUST:
   1. Score that category at 0.
@@ -207,19 +214,28 @@ def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
     # Truncate long descriptions
     desc_truncated = (listing.description or "No description")[:2000]
 
-    # Format price display
-    if listing.rent_gross:
-        breakdown_parts = []
-        if listing.rent_net is not None:
-            breakdown_parts.append(f"net: CHF {listing.rent_net:,}")
-        if listing.rent_charges is not None:
-            breakdown_parts.append(f"charges: CHF {listing.rent_charges:,}")
-        breakdown = f" ({', '.join(breakdown_parts)})" if breakdown_parts else ""
-        price_str = f"CHF {listing.rent_gross:,}/month{breakdown}"
-    elif listing.price_display:
-        price_str = f"CHF {listing.price_display:,}"
+    # Format price display — use offer_type to avoid misclassifying sale prices as monthly rent
+    is_sale = listing.offer_type.upper() == "SALE"
+    if is_sale:
+        # Sale listing: price_display is the total purchase price, never monthly
+        if listing.price_display:
+            price_str = f"CHF {listing.price_display:,} (total purchase price)"
+        else:
+            price_str = "Not specified"
     else:
-        price_str = "Not specified"
+        # Rental listing: show monthly rent with breakdown
+        if listing.rent_gross:
+            breakdown_parts = []
+            if listing.rent_net is not None:
+                breakdown_parts.append(f"net: CHF {listing.rent_net:,}")
+            if listing.rent_charges is not None:
+                breakdown_parts.append(f"charges: CHF {listing.rent_charges:,}")
+            breakdown = f" ({', '.join(breakdown_parts)})" if breakdown_parts else ""
+            price_str = f"CHF {listing.rent_gross:,}/month{breakdown}"
+        elif listing.price_display:
+            price_str = f"CHF {listing.price_display:,}/month"
+        else:
+            price_str = "Not specified"
 
     # Format address
     if listing.public_address:

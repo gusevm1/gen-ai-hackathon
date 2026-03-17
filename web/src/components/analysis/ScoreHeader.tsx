@@ -18,10 +18,11 @@ interface ScoreHeaderProps {
   overallScore: number
   matchTier: string
   listingId: string
+  listingTitle?: string | null
   profileName?: string
 }
 
-export function ScoreHeader({ overallScore, matchTier, listingId, profileName }: ScoreHeaderProps) {
+export function ScoreHeader({ overallScore, matchTier, listingId, listingTitle, profileName }: ScoreHeaderProps) {
   const colors = getTierColor(matchTier)
 
   return (
@@ -51,20 +52,21 @@ export function ScoreHeader({ overallScore, matchTier, listingId, profileName }:
         </Badge>
       )}
 
-      {/* Listing info row */}
-      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-        <span>Listing {listingId}</span>
-        <span className="text-muted-foreground/40">|</span>
-        <a
-          href={`https://flatfox.ch/en/flat/-/${listingId}/`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline transition-colors"
-        >
-          View on Flatfox
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      </div>
+      {/* Listing title / ID */}
+      <p className="text-base font-medium text-foreground text-center max-w-md">
+        {listingTitle ?? `Listing ${listingId}`}
+      </p>
+
+      {/* View on Flatfox — prominent button */}
+      <a
+        href={`https://flatfox.ch/en/flat/-/${listingId}/`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 rounded-md border border-primary px-4 py-1.5 text-sm font-medium text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+      >
+        <ExternalLink className="h-3.5 w-3.5" />
+        View on Flatfox
+      </a>
     </div>
   )
 }
