@@ -9,7 +9,7 @@ export default defineConfig({
   manifest: {
     name: 'HomeMatch',
     description: 'AI-powered property match scoring for Flatfox.ch',
-    version: '0.2.0',
+    version: '0.4.0',
     icons: {
       16: 'icon-16.png',
       32: 'icon-32.png',

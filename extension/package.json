@@ -2,7 +2,7 @@
   "name": "homematch-extension",
   "description": "AI-powered property match scoring for Homegate.ch",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
