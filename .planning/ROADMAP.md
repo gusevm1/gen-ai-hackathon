@@ -89,6 +89,6 @@ Plans:
 | 8. UI Foundation | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 9. Web Profile Management | v1.1 | 4/4 | Complete | 2026-03-15 |
 | 10. Extension Profile Switcher | v1.1 | 3/3 | Complete | 2026-03-15 |
-| 11. Score Caching | 3/3 | Complete   | 2026-03-17 | - |
+| 11. Score Caching | 3/3 | Complete    | 2026-03-17 | - |
 | 12. UX Polish & History | v2.0 | 0/0 | Not started | - |
 | 13. Security Hardening | v2.0 | 0/0 | Not started | - |
