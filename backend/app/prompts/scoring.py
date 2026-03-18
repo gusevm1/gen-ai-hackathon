@@ -76,7 +76,13 @@ SCORE DISTRIBUTION:
 IMPORTANCE LEVELS:
 - Category importance is expressed as: CRITICAL, HIGH, MEDIUM, LOW.
 - Use these to weight your overall score calculation. CRITICAL categories matter most.
-- For the weight field in each category response, use: critical=90, high=70, medium=50, low=30."""
+- For the weight field in each category response, use: critical=90, high=70, medium=50, low=30.
+
+NEARBY PLACES SEARCH:
+- When the search_nearby_places tool is available, you MAY use it to verify proximity-based criteria.
+- Call the tool AT MOST ONCE. Choose the most important proximity criterion to verify.
+- If results are empty or the tool errors, score based on available listing data and note the limitation.
+- Do NOT call the tool for criteria assessable from listing data alone (balcony, parking, etc.)."""
 
 
 def _fmt_range(min_val, max_val, prefix="", suffix="") -> str:
@@ -280,6 +286,12 @@ def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
         criteria_line = f'\n**Soft criteria:** {", ".join(prefs.soft_criteria) if prefs.soft_criteria else "None"}'
         criteria_block = ""
 
+    # Format coordinates
+    if listing.latitude is not None and listing.longitude is not None:
+        coords_str = f"{listing.latitude}, {listing.longitude}"
+    else:
+        coords_str = "Not available"
+
     return f"""## User Preferences
 
 **Location:** {prefs.location or "No preference"}
@@ -299,6 +311,7 @@ def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
 
 **Title:** {title_str}
 **Address:** {address_str}
+**Coordinates:** {coords_str}
 **Canton:** {listing.state or "Not specified"}
 **Type:** {listing.offer_type} | {listing.object_category} ({listing.object_type})
 **Price:** {price_str}
