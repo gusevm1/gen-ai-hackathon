@@ -4,7 +4,7 @@ import { TopNavbar } from "@/components/top-navbar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NavUser } from "@/components/nav-user"
 import { ProfileSwitcher } from "@/components/profile-switcher"
-import { Home } from "lucide-react"
+import { Logo } from "@/components/logo"
 
 export default async function DashboardLayout({
   children,
@@ -31,10 +31,7 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center gap-2">
-          <Home className="size-5 text-primary" />
-          <span className="text-lg font-semibold tracking-tight">HomeMatch</span>
-        </div>
+        <Logo />
         <TopNavbar />
         <div className="ml-auto flex items-center gap-2">
           <ProfileSwitcher

@@ -1,42 +1,51 @@
+"use client"
+
+import { useState, useEffect } from "react"
+
+const STAGES = [
+  { label: "Fetching listings...", progress: 25 },
+  { label: "Analyzing property details...", progress: 50 },
+  { label: "Scoring compatibility...", progress: 75 },
+  { label: "Finalizing results...", progress: 92 },
+]
+
 export default function AnalysisLoading() {
+  const [stage, setStage] = useState(0)
+  const [progress, setProgress] = useState(5)
+
+  useEffect(() => {
+    let cancelled = false
+    const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
+
+    const run = async () => {
+      for (let i = 0; i < STAGES.length; i++) {
+        if (cancelled) return
+        const delay = i === 0 ? 200 : 900 + Math.random() * 600
+        await sleep(delay)
+        if (cancelled) return
+        setStage(i)
+        setProgress(STAGES[i].progress)
+      }
+    }
+
+    run()
+    return () => { cancelled = true }
+  }, [])
+
   return (
     <div className="container max-w-2xl mx-auto py-8 px-4">
-      {/* Back link placeholder */}
-      <div className="mb-6 h-4 w-32 animate-pulse rounded bg-muted" />
-
-      {/* Score header skeleton */}
-      <div className="flex flex-col items-center gap-4 py-8">
-        <div className="h-20 w-20 animate-pulse rounded-full bg-muted" />
-        <div className="h-6 w-24 animate-pulse rounded-full bg-muted" />
-        <div className="h-4 w-40 animate-pulse rounded bg-muted" />
-      </div>
-
-      {/* Bullets skeleton */}
-      <div className="mt-8 rounded-lg border border-border bg-card p-6">
-        <div className="mb-4 h-5 w-28 animate-pulse rounded bg-muted" />
-        <div className="space-y-3">
-          <div className="h-4 w-full animate-pulse rounded bg-muted" />
-          <div className="h-4 w-5/6 animate-pulse rounded bg-muted" />
-          <div className="h-4 w-4/6 animate-pulse rounded bg-muted" />
-        </div>
-      </div>
-
-      {/* Category bars skeleton */}
-      <div className="mt-8 space-y-4">
-        <div className="mb-4 h-5 w-44 animate-pulse rounded bg-muted" />
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className="rounded-lg border border-border bg-card p-4"
-          >
-            <div className="mb-2 flex items-center justify-between">
-              <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-              <div className="h-4 w-12 animate-pulse rounded bg-muted" />
-            </div>
-            <div className="mb-2 h-2.5 w-full animate-pulse rounded-full bg-muted" />
-            <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+      <div className="flex flex-col items-center justify-center py-24">
+        <div className="w-full max-w-xs space-y-3">
+          <p className="text-sm text-center text-muted-foreground tabular-nums">
+            {STAGES[stage].label}
+          </p>
+          <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-rose-500 transition-all duration-700 ease-out"
+              style={{ width: `${progress}%` }}
+            />
           </div>
-        ))}
+        </div>
       </div>
     </div>
   )

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Logo } from '@/components/logo'
 
 export default function Home() {
   const [email, setEmail] = useState('')
@@ -45,8 +46,8 @@ export default function Home() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">HomeMatch</h1>
+        <div className="flex flex-col items-center gap-2">
+          <Logo size="lg" />
           <p className="text-sm text-muted-foreground">Your AI-powered Swiss property advisor</p>
         </div>
 
