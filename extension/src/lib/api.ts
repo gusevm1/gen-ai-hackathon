@@ -68,7 +68,7 @@ export async function scoreListings(
   jwt: string,
   onResult?: (id: number, result: ScoreResponse, prefStale: boolean) => void,
   forceRescore: boolean = false,
-  concurrency: number = 5,
+  concurrency: number = 10,
 ): Promise<Map<number, ScoreResponse>> {
   const results = new Map<number, ScoreResponse>();
 
