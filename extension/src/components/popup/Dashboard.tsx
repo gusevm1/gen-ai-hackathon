@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Settings, BarChart3, LogOut } from 'lucide-react';
+import { Settings, BarChart3, LogOut, Home } from 'lucide-react';
 import LoginForm from '@/components/popup/LoginForm';
 import { ProfileSection, type Profile } from '@/components/popup/ProfileSection';
 import { ConnectionStatus } from '@/components/popup/ConnectionStatus';
@@ -133,7 +133,10 @@ export default function Dashboard() {
     return (
       <div className="min-w-[320px] max-w-[380px] p-4 space-y-4">
         <div className="text-center space-y-1">
-          <h1 className="text-lg font-bold text-primary">HomeMatch</h1>
+          <div className="flex items-center justify-center gap-2">
+            <Home className="size-5 text-primary" />
+            <h1 className="text-lg font-bold tracking-tight">HomeMatch</h1>
+          </div>
           <p className="text-sm text-muted-foreground">
             Sign in to get AI-powered match scores on Flatfox
           </p>
@@ -164,7 +167,10 @@ export default function Dashboard() {
     <div className="min-w-[320px] max-w-[380px] p-4 space-y-3">
       {/* Header with connection status */}
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-primary">HomeMatch</h1>
+        <div className="flex items-center gap-2">
+          <Home className="size-5 text-primary" />
+          <h1 className="text-lg font-bold tracking-tight">HomeMatch</h1>
+        </div>
         <ConnectionStatus isConnected={isConnected} />
       </div>
 

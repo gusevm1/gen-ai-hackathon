@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { Home } from 'lucide-react';
 
 const BRAND_COLOR = 'hsl(342, 89%, 40%)';
 const BRAND_COLOR_HOVER = 'hsl(342, 89%, 34%)';
@@ -122,10 +123,7 @@ export function Fab({ onClick, onLongPress, isScoring, scoredCount, error }: Fab
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
         ) : (
-          /* House/home icon */
-          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-          </svg>
+          <Home className="w-6 h-6" />
         )}
 
         {/* Circular progress ring for long-press — black for visibility */}
