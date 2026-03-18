@@ -81,6 +81,20 @@ export function Fab({ onClick, onLongPress, isScoring, scoredCount, error }: Fab
 
   return (
     <div className="fixed bottom-6 right-6 z-[999999] flex flex-col items-end gap-2">
+      {/* Scoring duration hint — shown while scoring is in progress */}
+      {isScoring && (
+        <div
+          className="rounded-lg px-3 py-2 text-xs font-medium shadow-md border max-w-[200px] text-center"
+          style={{
+            color: 'hsl(342, 89%, 30%)',
+            backgroundColor: 'hsl(342, 89%, 97%)',
+            borderColor: 'hsl(342, 89%, 85%)',
+          }}
+        >
+          Analysis may take up to 2 min per listing
+        </div>
+      )}
+
       {/* Error tooltip */}
       {showError && error && (
         <div className="bg-red-50 backdrop-blur-sm border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2 max-w-xs shadow-lg">
