@@ -3,13 +3,13 @@
 ## Infrastructure & Deployment
 
 ### EC2 Backend (FastAPI)
-- **SSH**: `ssh -i ~/.ssh/homematch-key.pem ubuntu@63.176.136.105`
+- **SSH**: `ssh -i ~/.ssh/project_key.pem ubuntu@63.176.136.105`
 - **Deploy** (after pushing backend changes to main):
   ```bash
-  ssh -i ~/.ssh/homematch-key.pem ubuntu@63.176.136.105 "cd gen-ai-hackathon && git pull && pkill -f uvicorn; cd backend && nohup /home/ubuntu/gen-ai-hackathon/backend/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/backend.log 2>&1 &"
+  ssh -i ~/.ssh/project_key.pem ubuntu@63.176.136.105 "cd gen-ai-hackathon && git pull && pkill -f uvicorn; cd backend && nohup /home/ubuntu/gen-ai-hackathon/backend/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/backend.log 2>&1 &"
   ```
-- **Health check**: `ssh -i ~/.ssh/homematch-key.pem ubuntu@63.176.136.105 "curl -s http://localhost:8000/health"`
-- **View logs**: `ssh -i ~/.ssh/homematch-key.pem ubuntu@63.176.136.105 "tail -50 /tmp/backend.log"`
+- **Health check**: `ssh -i ~/.ssh/project_key.pem ubuntu@63.176.136.105 "curl -s http://localhost:8000/health"`
+- **View logs**: `ssh -i ~/.ssh/project_key.pem ubuntu@63.176.136.105 "tail -50 /tmp/backend.log"`
 
 ### Supabase
 - **Project ref**: `mlhtozdtiorkemamzjjc`
