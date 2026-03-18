@@ -4,11 +4,14 @@ import { supabase } from '@/lib/supabase';
  * Message types for popup <-> background communication.
  * Covers auth actions + profile management + health checks.
  */
-export type ExtMessage =
+export type AuthMessage =
   | { action: 'signIn'; credentials: { email: string; password: string } }
   | { action: 'signOut' }
   | { action: 'getSession' }
-  | { action: 'getUser' }
+  | { action: 'getUser' };
+
+export type ExtMessage =
+  | AuthMessage
   | { action: 'getProfiles' }
   | { action: 'switchProfile'; profileId: string }
   | { action: 'healthCheck' };
@@ -50,7 +53,7 @@ export async function handleMessage(
       const { error } = await supabase.rpc('set_active_profile', {
         target_profile_id: message.profileId,
       });
-      return { error };
+      return { error: error ? { message: error.message } : null };
     }
     case 'healthCheck': {
       try {

@@ -44,7 +44,7 @@ export default function Dashboard() {
       const profileList: Profile[] = response?.profiles ?? [];
       setProfiles(profileList);
 
-      const active = profileList.find((p) => p.is_default);
+      const active = profileList.find((p) => p.is_default) ?? profileList[0];
       if (active) {
         setActiveProfileId(active.id);
         await activeProfileStorage.setValue({ id: active.id, name: active.name });
