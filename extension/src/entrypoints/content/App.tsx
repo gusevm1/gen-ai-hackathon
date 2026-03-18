@@ -193,6 +193,7 @@ export default function App({ ctx }: AppProps) {
    * Skips already-scored listings unless re-scoring after profile switch.
    */
   const handleScore = useCallback(async (forceRescore: boolean = false) => {
+    console.log('[HomeMatch] handleScore called, forceRescore=', forceRescore);
     setError(null);
 
     // 1. Get session JWT from background script (serves as health check)
@@ -217,11 +218,17 @@ export default function App({ ctx }: AppProps) {
 
     // 3. Extract listing PKs from DOM
     const allPks = extractVisibleListingPKs();
+    console.log('[HomeMatch] JWT obtained, extracted PKs:', allPks);
 
     // If stale or forceRescore, re-score all listings; otherwise skip already scored
     const pks = (isStaleRef.current || forceRescore)
       ? allPks
       : allPks.filter((pk) => !scoresRef.current.has(pk));
+
+    if (allPks.length === 0) {
+      setError('No Flatfox listings found on this page');
+      return;
+    }
 
     if (pks.length === 0) {
       // All visible listings already scored — nothing to do
