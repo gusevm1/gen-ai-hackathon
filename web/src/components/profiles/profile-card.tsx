@@ -1,7 +1,7 @@
 'use client'
 
-import { Star, MoreHorizontal, Copy, Pencil, Trash2, ExternalLink } from 'lucide-react'
-import { buildFlatfoxUrl } from '@/lib/flatfox-url'
+import { Star, MoreHorizontal, Copy, Pencil, Trash2 } from 'lucide-react'
+import { OpenInFlatfoxButton } from '@/components/profiles/open-in-flatfox-button'
 import {
   Card,
   CardHeader,
@@ -87,7 +87,7 @@ export function ProfileCard({
   onDelete,
 }: ProfileCardProps) {
   const summary = buildSummaryLine(profile.preferences)
-  const flatfoxUrl = buildFlatfoxUrl({
+  const flatfoxPrefs = {
     offerType: profile.preferences.offerType as string | undefined,
     objectCategory: profile.preferences.objectCategory as string | undefined,
     location: profile.preferences.location as string | undefined,
@@ -95,7 +95,7 @@ export function ProfileCard({
     budgetMax: profile.preferences.budgetMax as number | null | undefined,
     roomsMin: profile.preferences.roomsMin as number | null | undefined,
     roomsMax: profile.preferences.roomsMax as number | null | undefined,
-  })
+  }
 
   return (
     <Card>
@@ -148,15 +148,7 @@ export function ProfileCard({
             Set Active
           </Button>
         )}
-        <a
-          href={flatfoxUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
-        >
-          <ExternalLink className="size-3" />
-          Open in Flatfox
-        </a>
+        <OpenInFlatfoxButton preferences={flatfoxPrefs} />
       </CardFooter>
     </Card>
   )

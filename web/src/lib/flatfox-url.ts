@@ -3,7 +3,7 @@
  * Maps internal preference fields to Flatfox URL query parameters.
  */
 
-interface FlatfoxUrlPreferences {
+export interface FlatfoxUrlPreferences {
   location?: string
   offerType?: string
   objectCategory?: string
@@ -11,6 +11,7 @@ interface FlatfoxUrlPreferences {
   budgetMax?: number | null
   roomsMin?: number | null
   roomsMax?: number | null
+  boundingBox?: { north: number; south: number; east: number; west: number }
 }
 
 export function buildFlatfoxUrl(prefs: FlatfoxUrlPreferences): string {
@@ -23,11 +24,17 @@ export function buildFlatfoxUrl(prefs: FlatfoxUrlPreferences): string {
     params.set("offer_type", "SALE")
   }
 
-  // Location — Flatfox expects place_name + query + place_type
-  if (prefs.location) {
-    params.set("place_name", prefs.location)
+  // Location — use bounding box if available, otherwise fall back to query
+  if (prefs.boundingBox) {
+    params.set("north", String(prefs.boundingBox.north))
+    params.set("south", String(prefs.boundingBox.south))
+    params.set("east", String(prefs.boundingBox.east))
+    params.set("west", String(prefs.boundingBox.west))
+    if (prefs.location) {
+      params.set("query", prefs.location)
+    }
+  } else if (prefs.location) {
     params.set("query", prefs.location)
-    params.set("place_type", "place")
   }
 
   // Price — use max_price (not price_display_to)
@@ -49,4 +56,39 @@ export function buildFlatfoxUrl(prefs: FlatfoxUrlPreferences): string {
 
   const query = params.toString()
   return `https://flatfox.ch/en/search/${query ? `?${query}` : ""}`
+}
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL
+
+/**
+ * Geocode a location string via the backend, then build a Flatfox URL
+ * with bounding box coordinates for proper geographic scoping.
+ */
+export async function buildFlatfoxUrlWithGeocode(
+  prefs: FlatfoxUrlPreferences
+): Promise<string> {
+  if (!prefs.location || !BACKEND_URL) {
+    return buildFlatfoxUrl(prefs)
+  }
+
+  try {
+    const resp = await fetch(`${BACKEND_URL}/geocode`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ location: prefs.location }),
+    })
+
+    if (!resp.ok) {
+      return buildFlatfoxUrl(prefs)
+    }
+
+    const data = await resp.json()
+    if (data.boundingBox) {
+      return buildFlatfoxUrl({ ...prefs, boundingBox: data.boundingBox })
+    }
+  } catch {
+    // Geocoding failed — fall back to query-only URL
+  }
+
+  return buildFlatfoxUrl(prefs)
 }

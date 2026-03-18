@@ -12,7 +12,7 @@ from fastapi import FastAPI
 load_dotenv()
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import chat, listings, scoring
+from app.routers import chat, geocoding, listings, scoring
 from app.services.conversation import conversation_service
 from app.services.flatfox import flatfox_client
 
@@ -40,6 +40,7 @@ app.add_middleware(
 app.include_router(listings.router)
 app.include_router(scoring.router)
 app.include_router(chat.router)
+app.include_router(geocoding.router)
 
 
 @app.get("/health")
