@@ -1,14 +1,18 @@
 /**
- * Loading skeleton shown in badge position while a score is being computed.
+ * Loading indicator shown in badge position while a score is being computed.
  * Rendered inside per-badge Shadow DOM for style isolation.
- * Uses softer colors and matches the polished badge dimensions.
+ * Shows a "Scoring..." label with an animated rose progress bar.
  */
 export function LoadingSkeleton() {
   return (
-    <div className="inline-flex items-center gap-2 rounded-xl bg-gray-100 animate-pulse px-2.5 py-1.5"
-         style={{ width: 100, height: 40 }}>
-      <div className="w-7 h-7 rounded-full bg-gray-200" />
-      <div className="flex-1 h-3 rounded bg-gray-200" />
+    <div
+      className="inline-flex flex-col justify-center gap-1 rounded-xl bg-white/90 border border-gray-100 shadow-sm px-3 animate-pulse"
+      style={{ width: 110, height: 40 }}
+    >
+      <span className="text-[10px] text-gray-400 font-medium">Scoring...</span>
+      <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+        <div className="h-full rounded-full bg-rose-400" style={{ width: '60%' }} />
+      </div>
     </div>
   );
 }

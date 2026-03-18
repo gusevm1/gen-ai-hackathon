@@ -11,17 +11,17 @@ describe('loading state behavior', () => {
     expect(skeleton!.className).toContain('animate-pulse');
   });
 
-  it('renders with expected dimensions (100x40)', () => {
+  it('renders with expected dimensions (110x40)', () => {
     const { container } = render(createElement(LoadingSkeleton));
     const skeleton = container.firstElementChild as HTMLElement;
-    expect(skeleton.style.width).toBe('100px');
+    expect(skeleton.style.width).toBe('110px');
     expect(skeleton.style.height).toBe('40px');
   });
 
-  it('contains score circle and text placeholders', () => {
+  it('contains label and progress bar placeholders', () => {
     const { container } = render(createElement(LoadingSkeleton));
     const skeleton = container.firstElementChild;
-    // Should have two child elements: circle placeholder and text placeholder
+    // Should have two child elements: text label and progress bar track
     expect(skeleton!.children.length).toBe(2);
   });
 });
