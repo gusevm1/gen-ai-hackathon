@@ -58,21 +58,19 @@ export function buildFlatfoxUrl(prefs: FlatfoxUrlPreferences): string {
   return `https://flatfox.ch/en/search/${query ? `?${query}` : ""}`
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL
-
 /**
- * Geocode a location string via the backend, then build a Flatfox URL
- * with bounding box coordinates for proper geographic scoping.
+ * Geocode a location string via the Next.js API proxy, then build a Flatfox
+ * URL with bounding box coordinates for proper geographic scoping.
  */
 export async function buildFlatfoxUrlWithGeocode(
   prefs: FlatfoxUrlPreferences
 ): Promise<string> {
-  if (!prefs.location || !BACKEND_URL) {
+  if (!prefs.location) {
     return buildFlatfoxUrl(prefs)
   }
 
   try {
-    const resp = await fetch(`${BACKEND_URL}/geocode`, {
+    const resp = await fetch("/api/geocode", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ location: prefs.location }),
