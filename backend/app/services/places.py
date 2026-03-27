@@ -1,7 +1,7 @@
 """Google Places search via Apify compass~crawler-google-places actor."""
 
-import json
 import logging
+import math
 import os
 
 import httpx
@@ -10,6 +10,20 @@ logger = logging.getLogger(__name__)
 
 APIFY_BASE = "https://api.apify.com/v2"
 APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
+
+
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance in km between two lat/lon points."""
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dlon / 2) ** 2
+    )
+    return R * 2 * math.asin(math.sqrt(a))
 
 
 async def search_nearby_places(
@@ -29,7 +43,7 @@ async def search_nearby_places(
         max_results: Maximum number of results to return (default 5).
 
     Returns:
-        List of dicts with keys: title, address, rating, reviews, category.
+        List of dicts with keys: title, address, rating, reviews, category, location.
         Returns [] on any failure (timeout, error, no token).
     """
     if not APIFY_TOKEN:
@@ -66,6 +80,7 @@ async def search_nearby_places(
                     "rating": item.get("totalScore"),
                     "reviews": item.get("reviewsCount"),
                     "category": item.get("categoryName", ""),
+                    "location": item.get("location"),  # dict with "lat" and "lng" keys, or None
                 }
                 for item in items
                 if isinstance(item, dict)
