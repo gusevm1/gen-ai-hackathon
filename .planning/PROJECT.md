@@ -58,11 +58,13 @@ Help users instantly see how well each property listing matches their specific n
 
 ### Active
 
-- [ ] DL-01: "Download" item in the top navigation bar for authenticated users
-- [ ] DL-02: Direct zip download of the Chrome extension from the website
-- [ ] DL-03: Step-by-step sideloading instructions (unzip, chrome://extensions, Developer Mode, Load unpacked)
-- [ ] DL-04: Instructions include link to open chrome://extensions in a new tab
-- [ ] HOST-01: Extension zip served as a static file from Next.js public/ directory
+- [ ] PROX-01: Listing coordinates resolved before scoring (geocode if missing, skip proximity if unavailable)
+- [ ] PROX-02: Proximity requirements extracted from dynamic_fields (query, radius_km, importance)
+- [ ] PROX-03: Apify Google Places called per requirement before Claude scoring (only when requirements exist)
+- [ ] PROX-04: nearby_places_cache table in Supabase deduplicates Apify calls by (lat, lon, query, radius_km)
+- [ ] PROX-05: Verified nearby data injected as structured section into Claude scoring prompt
+- [ ] PROX-06: All search_nearby_places tool references removed from Claude prompts
+- [ ] PROX-07: Claude scoring rules updated — only evaluate on provided nearby data, never guess
 
 ### Out of Scope
 
@@ -72,16 +74,18 @@ Help users instantly see how well each property listing matches their specific n
 - Automatic scoring (user must trigger via FAB — Claude API cost control)
 - Offline mode
 
-## Current Milestone: v2.0 Smart Preferences & UX Polish
+## Current Milestone: v5.0 Proximity-Aware Scoring
 
-**Goal:** Replace manual preference forms with AI chat-driven discovery, overhaul UI design, and enable parallel listing scoring.
+**Goal:** Replace Claude's unreliable tool-calling for place lookup with a deterministic pre-fetch pipeline — Apify fetches nearby places before scoring, results are cached in Supabase, and injected as structured data into the Claude prompt.
 
 **Target features:**
-- Chat-based preference generation with editable output and priority assignment
-- Simplified preferences schema: standard fields + dynamic AI-generated fields
-- Flatfox-inspired UI redesign across web app
-- Parallel scoring of all visible listings from single FAB click
-- Chrome extension distribution from website
+- Coordinate resolution: ensure listings have lat/lon before scoring
+- Proximity extraction: parse dynamic_fields for place requirements (query, radius_km, importance)
+- Apify Google Places pre-fetch: called per requirement, before Claude
+- Supabase nearby_places_cache: deduplicate API calls across requests
+- Prompt injection: append verified nearby data as structured section
+- Remove all search_nearby_places tool references from Claude prompts
+- Updated scoring rules: only evaluate on provided data, never guess
 
 ## Context
 
@@ -123,14 +127,22 @@ Help users instantly see how well each property listing matches their specific n
 | No score caching in v1 | Speed over optimization for hackathon | ⚠️ Revisit |
 | `--no-verify-jwt` on edge function | Gateway rejects extension JWTs; function handles auth itself | ⚠️ Revisit |
 
-## Current Milestone: v3.0 Extension Download & Install
+## Evolution
 
-**Goal:** Add a "Download" page to the web app so authenticated users can download the Chrome extension and follow step-by-step sideloading instructions.
+This document evolves at phase transitions and milestone boundaries.
 
-**Target features:**
-- "Download" nav tab in the top navigation bar
-- Direct zip download of the Chrome extension from the website
-- Step-by-step sideloading instructions (unzip, chrome://extensions, Developer Mode, Load unpacked)
+**After each phase transition** (via `/gsd:transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
 
 ---
-*Last updated: 2026-03-17 after v3.0 Extension Download milestone started*
+*Last updated: 2026-03-27 after v5.0 Proximity-Aware Scoring milestone started*
