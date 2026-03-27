@@ -12,21 +12,21 @@
 
 ### Proximity Extraction
 
-- [ ] **PROX-01**: System parses dynamic_fields from user preferences to identify place-based requirements
-- [ ] **PROX-02**: Each extracted requirement includes query (string), radius_km (float, nullable), and importance level
-- [ ] **PROX-03**: If no proximity requirements exist in dynamic_fields, Apify is never called and scoring proceeds normally
+- [x] **PROX-01**: System parses dynamic_fields from user preferences to identify place-based requirements
+- [x] **PROX-02**: Each extracted requirement includes query (string), radius_km (float, nullable), and importance level
+- [x] **PROX-03**: If no proximity requirements exist in dynamic_fields, Apify is never called and scoring proceeds normally
 
 ### Apify Integration
 
-- [ ] **APIFY-01**: For each proximity requirement, system calls Apify Google Places actor with lat, lon, query, maxResults=5
-- [ ] **APIFY-02**: Response includes name, distance from listing, rating, review count, and address per result
-- [ ] **APIFY-03**: On Apify API failure, system falls back gracefully (treats as empty result, does not crash)
+- [x] **APIFY-01**: For each proximity requirement, system calls Apify Google Places actor with lat, lon, query, maxResults=5
+- [x] **APIFY-02**: Response includes name, distance from listing, rating, review count, and address per result
+- [x] **APIFY-03**: On Apify API failure, system falls back gracefully (treats as empty result, does not crash)
 
 ### Supabase Caching
 
 - [x] **CACHE-04**: nearby_places_cache table created in Supabase (id, lat, lon, query, radius_km, response_json, created_at)
-- [ ] **CACHE-05**: Before calling Apify, system checks cache by (lat, lon, query, radius_km)
-- [ ] **CACHE-06**: On cache miss, Apify result is stored in nearby_places_cache before returning
+- [x] **CACHE-05**: Before calling Apify, system checks cache by (lat, lon, query, radius_km)
+- [x] **CACHE-06**: On cache miss, Apify result is stored in nearby_places_cache before returning
 
 ### Prompt Integration
 
@@ -219,14 +219,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COORD-01 | Phase 22 | Complete |
 | COORD-02 | Phase 22 | Complete |
 | COORD-03 | Phase 22 | Complete |
-| PROX-01 | Phase 23 | Pending |
-| PROX-02 | Phase 23 | Pending |
-| PROX-03 | Phase 23 | Pending |
-| APIFY-01 | Phase 23 | Pending |
-| APIFY-02 | Phase 23 | Pending |
-| APIFY-03 | Phase 23 | Pending |
-| CACHE-05 | Phase 23 | Pending |
-| CACHE-06 | Phase 23 | Pending |
+| PROX-01 | Phase 23 | Complete |
+| PROX-02 | Phase 23 | Complete |
+| PROX-03 | Phase 23 | Complete |
+| APIFY-01 | Phase 23 | Complete |
+| APIFY-02 | Phase 23 | Complete |
+| APIFY-03 | Phase 23 | Complete |
+| CACHE-05 | Phase 23 | Complete |
+| CACHE-06 | Phase 23 | Complete |
 | PROMPT-01 | Phase 24 | Pending |
 | PROMPT-02 | Phase 24 | Pending |
 | PROMPT-03 | Phase 24 | Pending |

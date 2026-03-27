@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Extension Download & Install
 status: verifying
-last_updated: "2026-03-27T22:59:22.786Z"
+last_updated: "2026-03-27T23:26:43.472Z"
 last_activity: 2026-03-27
 progress:
   total_phases: 1
   completed_phases: 1
   total_plans: 1
   completed_plans: 1
-  percent: 0
+  percent: 100
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website they're already on.
-**Current focus:** Phase 22 — Database & Coordinate Resolution
+**Current focus:** Phase 23 — Proximity Extraction & Apify Integration
 
 ## Current Position
 
-Phase: 22 (Database & Coordinate Resolution) — EXECUTING
+Phase: 23 (Proximity Extraction & Apify Integration) — EXECUTING
 Plan: 1 of 1
 Status: Phase complete — ready for verification
-Last activity: 2026-03-27 -- Completed 22-01-PLAN.md
+Last activity: 2026-03-27
 
 Progress: [██████████] 100%
 
@@ -43,6 +43,9 @@ Progress: [██████████] 100%
 - [Phase 22-database-coordinate-resolution]: Migration file created (004_add_nearby_places_cache.sql); DB push requires manual Studio SQL execution due to missing personal access token
 - [Phase 22-database-coordinate-resolution]: TYPE_CHECKING guard used in apify.py for FlatfoxListing import to prevent circular import at module load
 - [Phase 22-database-coordinate-resolution]: Coordinate resolution at step 1a (after listing fetch, before preferences) ensures ClaudeScorer sees resolved lat/lon; geocoding failure never propagates to 502 handler
+- [Phase 23]: Import _AMENITY_KEYWORDS from claude.py into proximity.py to avoid duplication without touching claude.py prompts
+- [Phase 23]: Cache TTL computed in Python datetime arithmetic for supabase-py compatibility
+- [Phase 23]: nearby_places stored in analyses.breakdown JSONB (not ScoreResponse schema) for Phase 24 consumption without API changes
 
 ### Blockers/Concerns
 

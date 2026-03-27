@@ -87,7 +87,7 @@ Plans:
 **Milestone Goal:** Replace Claude's unreliable tool-calling for place lookup with a deterministic pre-fetch pipeline. Apify fetches nearby places before scoring, results are cached in Supabase, and injected as structured data into the Claude prompt.
 
 - [x] **Phase 22: Database & Coordinate Resolution** — nearby_places_cache table + listing coordinate resolution with geocoding fallback (completed 2026-03-27)
-- [ ] **Phase 23: Proximity Extraction & Apify Integration** — Parse proximity requirements from preferences, call Apify Google Places, cache results in Supabase
+- [x] **Phase 23: Proximity Extraction & Apify Integration** — Parse proximity requirements from preferences, call Apify Google Places, cache results in Supabase (completed 2026-03-27)
 - [ ] **Phase 24: Prompt Injection & Scoring Rules** — Inject verified nearby data into Claude prompt, remove tool references, update scoring rules
 
 **Requirements:** COORD-01, COORD-02, COORD-03, PROX-01, PROX-02, PROX-03, APIFY-01, APIFY-02, APIFY-03, CACHE-04, CACHE-05, CACHE-06, PROMPT-01, PROMPT-02, PROMPT-03, SCORE-01, SCORE-02
@@ -103,7 +103,10 @@ Plans:
   2. Scoring pipeline checks listing lat/lon before proximity evaluation
   3. When coordinates are missing, system attempts geocoding and uses the result
   4. When geocoding fails, scoring proceeds without proximity evaluation and does not crash
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 22-01-PLAN.md — Cache table migration & coordinate resolution with geocoding fallback
 
 ### Phase 23: Proximity Extraction & Apify Integration
 **Goal**: System identifies what places the user cares about, fetches verified nearby data from Google Places via Apify, and caches results to avoid duplicate API calls
@@ -115,7 +118,10 @@ Plans:
   3. For each proximity requirement, Apify returns nearby places with name, distance, rating, review count, and address
   4. Apify results are cached by (lat, lon, query, radius_km) — duplicate requests return cached data without API call
   5. On Apify failure, system treats result as empty and scoring continues without crashing
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 22-01-PLAN.md — Cache table migration & coordinate resolution with geocoding fallback
 
 ### Phase 24: Prompt Injection & Scoring Rules
 **Goal**: Claude receives verified nearby data as structured input and scores proximity based only on provided evidence, never guessing
@@ -126,7 +132,10 @@ Plans:
   2. When no proximity requirements exist, the nearby places section is omitted entirely from the prompt
   3. All search_nearby_places tool references are removed from Claude prompts and tool definitions
   4. Claude evaluates amenity proximity only on provided data — if an amenity is not in the data, it is treated as "not found"
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 22-01-PLAN.md — Cache table migration & coordinate resolution with geocoding fallback
 
 ## Progress
 
@@ -142,5 +151,5 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 22. Database & Coordinate Resolution | v5.0 | 1/1 | Complete   | 2026-03-27 |
-| 23. Proximity Extraction & Apify Integration | v5.0 | 0/? | Not started | - |
+| 23. Proximity Extraction & Apify Integration | v5.0 | 1/1 | Complete   | 2026-03-27 |
 | 24. Prompt Injection & Scoring Rules | v5.0 | 0/? | Not started | - |
