@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Extension Download & Install
 status: verifying
-last_updated: "2026-03-27T23:26:43.472Z"
+last_updated: "2026-03-27T23:45:52.142Z"
 last_activity: 2026-03-27
 progress:
   total_phases: 1
@@ -20,11 +20,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website they're already on.
-**Current focus:** Phase 23 — Proximity Extraction & Apify Integration
+**Current focus:** Phase 24 — Prompt Injection & Scoring Rules
 
 ## Current Position
 
-Phase: 23 (Proximity Extraction & Apify Integration) — EXECUTING
+Phase: 24 (Prompt Injection & Scoring Rules) — EXECUTING
 Plan: 1 of 1
 Status: Phase complete — ready for verification
 Last activity: 2026-03-27
@@ -46,6 +46,9 @@ Progress: [██████████] 100%
 - [Phase 23]: Import _AMENITY_KEYWORDS from claude.py into proximity.py to avoid duplication without touching claude.py prompts
 - [Phase 23]: Cache TTL computed in Python datetime arithmetic for supabase-py compatibility
 - [Phase 23]: nearby_places stored in analyses.breakdown JSONB (not ScoreResponse schema) for Phase 24 consumption without API changes
+- [Phase 24]: _AMENITY_KEYWORDS relocated to proximity.py so import direction is proximity->claude (not circular)
+- [Phase 24]: score_listing() simplified to single messages.parse() call — no agentic loop, no tool_choice
+- [Phase 24]: nearby_data or None used at router boundary so empty dict never injects an empty prompt section
 
 ### Blockers/Concerns
 

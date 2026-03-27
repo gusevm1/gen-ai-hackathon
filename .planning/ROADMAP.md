@@ -88,7 +88,7 @@ Plans:
 
 - [x] **Phase 22: Database & Coordinate Resolution** — nearby_places_cache table + listing coordinate resolution with geocoding fallback (completed 2026-03-27)
 - [x] **Phase 23: Proximity Extraction & Apify Integration** — Parse proximity requirements from preferences, call Apify Google Places, cache results in Supabase (completed 2026-03-27)
-- [ ] **Phase 24: Prompt Injection & Scoring Rules** — Inject verified nearby data into Claude prompt, remove tool references, update scoring rules
+- [x] **Phase 24: Prompt Injection & Scoring Rules** — Inject verified nearby data into Claude prompt, remove tool references, update scoring rules (completed 2026-03-27)
 
 **Requirements:** COORD-01, COORD-02, COORD-03, PROX-01, PROX-02, PROX-03, APIFY-01, APIFY-02, APIFY-03, CACHE-04, CACHE-05, CACHE-06, PROMPT-01, PROMPT-02, PROMPT-03, SCORE-01, SCORE-02
 
@@ -121,7 +121,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [x] 22-01-PLAN.md — Cache table migration & coordinate resolution with geocoding fallback
+- [x] 23-01-PLAN.md — Proximity extraction, Apify Google Places client, Supabase cache integration
 
 ### Phase 24: Prompt Injection & Scoring Rules
 **Goal**: Claude receives verified nearby data as structured input and scores proximity based only on provided evidence, never guessing
@@ -135,7 +135,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [x] 22-01-PLAN.md — Cache table migration & coordinate resolution with geocoding fallback
+- [x] 24-01-PLAN.md — Prompt injection, tool removal, scoring rules update
 
 ## Progress
 
@@ -152,4 +152,4 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 22. Database & Coordinate Resolution | v5.0 | 1/1 | Complete   | 2026-03-27 |
 | 23. Proximity Extraction & Apify Integration | v5.0 | 1/1 | Complete   | 2026-03-27 |
-| 24. Prompt Injection & Scoring Rules | v5.0 | 0/? | Not started | - |
+| 24. Prompt Injection & Scoring Rules | v5.0 | 1/1 | Complete   | 2026-03-27 |

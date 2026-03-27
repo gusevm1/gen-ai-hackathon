@@ -30,14 +30,14 @@
 
 ### Prompt Integration
 
-- [ ] **PROMPT-01**: Verified nearby data injected into build_user_prompt as structured "## Nearby Places Data (Verified)" section
-- [ ] **PROMPT-02**: Section only added when nearby data exists — omitted entirely when no proximity requirements
-- [ ] **PROMPT-03**: All search_nearby_places tool references removed from Claude prompts and tool definitions
+- [x] **PROMPT-01**: Verified nearby data injected into build_user_prompt as structured "## Nearby Places Data (Verified)" section
+- [x] **PROMPT-02**: Section only added when nearby data exists — omitted entirely when no proximity requirements
+- [x] **PROMPT-03**: All search_nearby_places tool references removed from Claude prompts and tool definitions
 
 ### Scoring Rules
 
-- [ ] **SCORE-01**: Claude scoring prompt updated: only evaluate amenity proximity on provided data
-- [ ] **SCORE-02**: Claude scoring prompt updated: if amenity not in data → treat as "not found", never guess
+- [x] **SCORE-01**: Claude scoring prompt updated: only evaluate amenity proximity on provided data
+- [x] **SCORE-02**: Claude scoring prompt updated: if amenity not in data → treat as "not found", never guess
 
 ## v4.0 Requirements — Landing Page & Design System
 
@@ -227,11 +227,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APIFY-03 | Phase 23 | Complete |
 | CACHE-05 | Phase 23 | Complete |
 | CACHE-06 | Phase 23 | Complete |
-| PROMPT-01 | Phase 24 | Pending |
-| PROMPT-02 | Phase 24 | Pending |
-| PROMPT-03 | Phase 24 | Pending |
-| SCORE-01 | Phase 24 | Pending |
-| SCORE-02 | Phase 24 | Pending |
+| PROMPT-01 | Phase 24 | Complete |
+| PROMPT-02 | Phase 24 | Complete |
+| PROMPT-03 | Phase 24 | Complete |
+| SCORE-01 | Phase 24 | Complete |
+| SCORE-02 | Phase 24 | Complete |
 
 **Coverage:**
 - v5.0 (Proximity) requirements: 17 total
