@@ -89,13 +89,16 @@ export function HeroSection() {
         </div>
       </div>
 
-      {/* Centered scroll button */}
-      <button
-        onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 inline-flex items-center gap-2.5 rounded-full bg-primary px-8 py-4 text-base font-semibold text-primary-foreground cursor-pointer hover:bg-primary/90 hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 animate-pulse"
-      >
-        Learn More <ArrowDown className="size-5" />
-      </button>
+      {/* Centered scroll button with pulse ring */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
+        <span className="absolute inset-0 rounded-full bg-primary/40 animate-ping" />
+        <button
+          onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+          className="relative inline-flex items-center gap-2.5 rounded-full bg-primary px-8 py-4 text-base font-semibold text-primary-foreground cursor-pointer hover:bg-primary/90 hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200"
+        >
+          Learn More <ArrowDown className="size-5" />
+        </button>
+      </div>
     </section>
   )
 }
