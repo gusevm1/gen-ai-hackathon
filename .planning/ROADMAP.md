@@ -76,7 +76,7 @@ Plans:
 
 - [x] **Phase 18: Design System & Motion Foundation** — Framer Motion, typography scale, dark/light color split, animation primitives
 - [x] **Phase 19: Landing Page v1** — Initial landing page (superseded by Phase 20 redesign)
-- [ ] **Phase 20: Landing Page Redesign** — Full scroll-driven Apple-style landing page: 7 sticky chapters, isometric SVG home, SVG globe → Switzerland zoom, browser demo with score reveal, Hormozi copy
+- [x] **Phase 20: Landing Page Redesign** — Full scroll-driven Apple-style landing page: 7 sticky chapters, isometric SVG home, SVG globe → Switzerland zoom, browser demo with score reveal, Hormozi copy (completed 2026-03-27)
 - [ ] **Phase 21: Dashboard UI Alignment** — Propagate design language to dashboard, profiles, analysis pages
 - [ ] **Phase 22: Polish & QA** — Mobile, performance (LCP/CLS), cross-browser, final copy pass
 

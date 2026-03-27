@@ -1,16 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.0
-milestone_name: Landing Page & Design System
-status: executing
-last_updated: "2026-03-27"
-last_activity: 2026-03-27 — Planned Phase 20 (landing page redesign — scroll-driven, 7 chapters)
+milestone: v3.0
+milestone_name: Extension Download & Install
+status: completed
+last_updated: "2026-03-27T11:54:24Z"
 progress:
-  total_phases: 5
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 2
-  percent: 40
+  total_phases: 1
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+  percent: 25
 ---
 
 # Project State
@@ -24,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 
 ## Current Position
 
-Phase: 19-landing-page (complete)
+Phase: 20-landing-page-redesign (complete)
 Branch: redesign/v4-landing
-Status: Phase 18 (design system) and Phase 19 (landing page) complete. Ready for Phase 20.
+Status: Phase 18, 19, 20 complete. Landing page rebuilt as 7-chapter scroll-driven experience. Ready for Phase 21 (Polish & QA).
 
-Progress: [##________] 25%
+Progress: [####______] 40%
 
 ## Accumulated Context
 
@@ -43,6 +42,8 @@ Progress: [##________] 25%
 - [v4.0]: Copy bilingual EN/DE — Hormozi structure (dream outcome → proof → CTA)
 - [v4.0]: No social proof yet — deferred to later milestone
 - [v4.0]: Phase order: 18 Design System → 19 Landing Page → 20 Dashboard Alignment → 21 Polish & QA
+- [Phase 20-01]: IsometricHome uses useMotionValue(1) as fallback when scrollProgress is undefined — all parts visible in static mode
+- [Phase 20-01]: 7-chapter scroll-driven landing page replaces Phase 19 flat layout — each chapter a sticky section driven by useScroll + useTransform
 
 ### Decisions (added)
 
