@@ -4,13 +4,13 @@ milestone: v4.0
 milestone_name: Landing Page & Design System
 status: planning
 last_updated: "2026-03-27"
-last_activity: 2026-03-27 — Initialized v4.0 milestone, created redesign/v4-landing branch
+last_activity: 2026-03-27 — Completed 19-01 landing page plan
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 2
+  percent: 25
 ---
 
 # Project State
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 
 ## Current Position
 
-Phase: 18-design-system (not yet started)
+Phase: 19-landing-page (complete)
 Branch: redesign/v4-landing
-Status: Milestone initialized, ready to plan Phase 18
+Status: Phase 18 (design system) and Phase 19 (landing page) complete. Ready for Phase 20.
 
-Progress: [__________] 0%
+Progress: [##________] 25%
 
 ## Accumulated Context
 
@@ -44,6 +44,12 @@ Progress: [__________] 0%
 - [v4.0]: No social proof yet — deferred to later milestone
 - [v4.0]: Phase order: 18 Design System → 19 Landing Page → 20 Dashboard Alignment → 21 Polish & QA
 
+### Decisions (added)
+
+- [19-01]: Auth form moved to /auth; / is a Server Component redirecting logged-in users to /dashboard
+- [19-01]: `translations` const exported so tests can import it for coverage checks
+- [19-01]: IntersectionObserver mock pattern established in test files (same as fade-in.test.tsx)
+
 ### Blockers/Concerns
 
-- None yet
+- None
