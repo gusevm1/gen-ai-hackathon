@@ -34,8 +34,8 @@ export function LandingNavbar({ lang }: LandingNavbarProps) {
     >
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <Logo showText className="text-hero-fg" />
-        <Button asChild variant="ghost" className="text-hero-fg hover:bg-white/10 hover:text-hero-fg">
-          <Link href="/auth">{t(lang, 'landing_nav_signin')}</Link>
+        <Button render={<Link href="/auth" />} variant="ghost" className="text-hero-fg hover:bg-white/10 hover:text-hero-fg">
+          {t(lang, 'landing_nav_signin')}
         </Button>
       </div>
     </motion.header>

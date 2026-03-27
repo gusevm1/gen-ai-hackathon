@@ -121,9 +121,10 @@ export const translations = {
   },
 } as const
 
-// Type check: ensures de has all the same keys as en
-const _typeCheck: typeof translations.en = translations.de
-void _typeCheck
+// Ensure de has all keys that en has (key-only check)
+type _DeHasAllEnKeys = keyof typeof translations.en extends keyof typeof translations.de ? true : false
+const _deKeyCheck: _DeHasAllEnKeys = true
+void _deKeyCheck
 
 export type TranslationKey = keyof typeof translations.en
 

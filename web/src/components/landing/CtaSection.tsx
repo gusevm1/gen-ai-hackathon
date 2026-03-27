@@ -43,11 +43,11 @@ export function CtaSection({ lang }: CtaSectionProps) {
             {t(lang, 'landing_cta_subtext')}
           </p>
           <Button
-            asChild
+            render={<Link href="/auth" />}
             size="lg"
             className="bg-hero-teal text-hero-bg hover:bg-hero-teal/90 font-semibold px-10 py-3 rounded-full text-base"
           >
-            <Link href="/auth">{t(lang, 'landing_cta_button')}</Link>
+            {t(lang, 'landing_cta_button')}
           </Button>
         </FadeIn>
       </div>

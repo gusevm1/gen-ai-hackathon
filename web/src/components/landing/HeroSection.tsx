@@ -45,11 +45,11 @@ export function HeroSection({ lang }: HeroSectionProps) {
         </p>
 
         <Button
-          asChild
+          render={<Link href="/auth" />}
           size="lg"
           className="bg-hero-teal text-hero-bg hover:bg-hero-teal/90 font-semibold px-8 py-3 rounded-full text-base"
         >
-          <Link href="/auth">{t(lang, 'landing_hero_cta')}</Link>
+          {t(lang, 'landing_hero_cta')}
         </Button>
 
         <div className="mt-20">
