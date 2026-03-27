@@ -137,10 +137,10 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
         if wp.rent_charges is not None:
             listing.rent_charges = wp.rent_charges
 
-    # 5. Score with Claude (includes images when available)
+    # 5. Score with Claude (includes images + pre-fetched nearby places when available)
     try:
         result = await claude_scorer.score_listing(
-            listing, preferences, image_urls=image_urls
+            listing, preferences, image_urls=image_urls, nearby_places=nearby_data or None
         )
     except Exception as e:
         raise HTTPException(

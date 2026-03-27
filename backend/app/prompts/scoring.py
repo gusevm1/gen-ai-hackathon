@@ -205,7 +205,11 @@ def _format_dynamic_fields_section(prefs: UserPreferences) -> str:
     return "\n".join(lines)
 
 
-def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
+def build_user_prompt(
+    listing: FlatfoxListing,
+    prefs: UserPreferences,
+    nearby_places: dict[str, list[dict]] | None = None,
+) -> str:
     """Build the user prompt with listing data and preferences.
 
     Formats listing and preferences into structured readable text.
@@ -214,6 +218,9 @@ def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
     Args:
         listing: The Flatfox listing to evaluate.
         prefs: The user's search preferences.
+        nearby_places: Optional dict mapping amenity query string to list of place
+            result dicts. When provided, appended as a verified data section before
+            the closing evaluation instruction.
 
     Returns:
         Formatted user prompt with listing data and preferences.
@@ -300,7 +307,8 @@ def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
     else:
         coords_str = "Not available"
 
-    return f"""## User Preferences
+    # Build the base prompt (preferences + listing data + closing instruction)
+    base = f"""## User Preferences
 
 **Location:** {prefs.location or "No preference"}
 **Type:** {prefs.offer_type.value} | {prefs.object_category.value}
@@ -342,6 +350,41 @@ Evaluate this listing against the user's preferences. Score each of the 5 catego
 (location, price, size, features, condition), evaluate the custom criteria and desired features \
 as a checklist, and provide an overall score with summary bullets highlighting key matches \
 and compromises."""
+
+    # Append verified nearby places section when pre-fetched data is available (PROMPT-01, PROMPT-02)
+    if nearby_places:
+        lines = ["\n\n---\n\n## Nearby Places Data (Verified)\n"]
+        lines.append(
+            "The following results were fetched from Google Places before this evaluation.\n"
+            "Evaluate all proximity-based criteria EXCLUSIVELY from this data.\n"
+        )
+        for query, places in nearby_places.items():
+            lines.append(f"\n### {query}")
+            if places:
+                for i, place in enumerate(places, start=1):
+                    name = place.get("name", "Unknown")
+                    dist = place.get("distance_km")
+                    rating = place.get("rating")
+                    review_count = place.get("review_count")
+                    address = place.get("address", "")
+                    dist_str = f"{dist:.2f} km" if dist is not None else "distance unknown"
+                    rating_str = (
+                        f" | Rating: {rating} ({review_count} reviews)"
+                        if rating is not None
+                        else ""
+                    )
+                    lines.append(f"{i}. {name} — {dist_str}{rating_str}")
+                    if address:
+                        lines.append(f"   {address}")
+            else:
+                lines.append("No results found.")
+        lines.append(
+            "\n\nIf an amenity is NOT listed above, treat it as \"not found nearby\" "
+            "— do not guess or infer from listing description."
+        )
+        return base + "\n".join(lines)
+
+    return base
 
 
 def build_image_content_blocks(image_urls: list[str]) -> list[dict]:

@@ -54,6 +54,7 @@ class ClaudeScorer:
         listing: FlatfoxListing,
         preferences: UserPreferences,
         image_urls: list[str] | None = None,
+        nearby_places: dict[str, list[dict]] | None = None,
     ) -> ScoreResponse:
         """Score a listing against user preferences using Claude.
 
@@ -65,6 +66,9 @@ class ClaudeScorer:
             listing: The Flatfox listing to evaluate.
             preferences: The user's search preferences with weights.
             image_urls: Optional list of listing image URLs for visual analysis.
+            nearby_places: Optional pre-fetched proximity data injected into the
+                prompt as a verified data section. When None, proximity section
+                is omitted.
 
         Returns:
             Validated ScoreResponse with category breakdown and summary.
@@ -75,7 +79,7 @@ class ClaudeScorer:
         content: list[dict] = []
         content.extend(build_image_content_blocks(image_urls or []))
         content.append(
-            {"type": "text", "text": build_user_prompt(listing, preferences)}
+            {"type": "text", "text": build_user_prompt(listing, preferences, nearby_places=nearby_places)}
         )
 
         response = await client.messages.parse(
