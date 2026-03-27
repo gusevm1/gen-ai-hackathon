@@ -1,6 +1,32 @@
 # Requirements: HomeMatch
 
-**Defined:** 2026-03-17
+**Defined:** 2026-03-17 | **Updated:** 2026-03-27
+
+## v4.0 Requirements — Landing Page & Design System
+
+### Landing Page (LP)
+
+- [ ] **LP-01**: Public landing page at `/` replaces current redirect — accessible without auth
+- [ ] **LP-02**: Hero section with animated product demo (mock Flatfox → FAB → scoring → analysis)
+- [ ] **LP-03**: Problem/Solution sections with Hormozi-structured copy (EN/DE bilingual)
+- [ ] **LP-04**: Features section showcasing scoring, profiles, and analysis
+- [ ] **LP-05**: Clear primary CTA ("Get Started" / "Sign Up") funneling to auth
+- [ ] **LP-06**: Secondary CTA for existing users ("Sign In" / "Go to Dashboard")
+- [ ] **LP-07**: Page is fully responsive (mobile, tablet, desktop)
+- [ ] **LP-08**: Page achieves LCP < 2.5s and no layout shift from animations
+
+### Design System (DS)
+
+- [ ] **DS-01**: Framer Motion installed and animation primitives defined (easing, duration tokens)
+- [ ] **DS-02**: Dark hero / light dashboard color split established via CSS variables
+- [ ] **DS-03**: Typography scale defined (display, headline, body, caption)
+- [ ] **DS-04**: Single teal accent — no competing secondary colors
+
+### UI Alignment (UI)
+
+- [ ] **UI-01**: Dashboard pages updated to align with landing page design language
+- [ ] **UI-02**: Animations applied to dashboard where meaningful (not decorative)
+- [ ] **UI-03**: Bilingual (EN/DE) copy propagated to all user-facing surfaces
 **Core Value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website they're already on.
 
 ## v3.0 Requirements — Extension Download & Install
