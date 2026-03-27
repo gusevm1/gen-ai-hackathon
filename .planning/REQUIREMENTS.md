@@ -2,6 +2,43 @@
 
 **Defined:** 2026-03-17 | **Updated:** 2026-03-27
 
+## v5.0 Requirements — Proximity-Aware Scoring
+
+### Coordinate Resolution
+
+- [ ] **COORD-01**: Before scoring, system checks if listing has latitude and longitude
+- [ ] **COORD-02**: If coordinates missing, system attempts geocoding (Nominatim or existing Apify geocoder)
+- [ ] **COORD-03**: If geocoding fails, system marks coordinates unavailable and skips proximity evaluation without crashing
+
+### Proximity Extraction
+
+- [ ] **PROX-01**: System parses dynamic_fields from user preferences to identify place-based requirements
+- [ ] **PROX-02**: Each extracted requirement includes query (string), radius_km (float, nullable), and importance level
+- [ ] **PROX-03**: If no proximity requirements exist in dynamic_fields, Apify is never called and scoring proceeds normally
+
+### Apify Integration
+
+- [ ] **APIFY-01**: For each proximity requirement, system calls Apify Google Places actor with lat, lon, query, maxResults=5
+- [ ] **APIFY-02**: Response includes name, distance from listing, rating, review count, and address per result
+- [ ] **APIFY-03**: On Apify API failure, system falls back gracefully (treats as empty result, does not crash)
+
+### Supabase Caching
+
+- [ ] **CACHE-04**: nearby_places_cache table created in Supabase (id, lat, lon, query, radius_km, response_json, created_at)
+- [ ] **CACHE-05**: Before calling Apify, system checks cache by (lat, lon, query, radius_km)
+- [ ] **CACHE-06**: On cache miss, Apify result is stored in nearby_places_cache before returning
+
+### Prompt Integration
+
+- [ ] **PROMPT-01**: Verified nearby data injected into build_user_prompt as structured "## Nearby Places Data (Verified)" section
+- [ ] **PROMPT-02**: Section only added when nearby data exists — omitted entirely when no proximity requirements
+- [ ] **PROMPT-03**: All search_nearby_places tool references removed from Claude prompts and tool definitions
+
+### Scoring Rules
+
+- [ ] **SCORE-01**: Claude scoring prompt updated: only evaluate amenity proximity on provided data
+- [ ] **SCORE-02**: Claude scoring prompt updated: if amenity not in data → treat as "not found", never guess
+
 ## v4.0 Requirements — Landing Page & Design System
 
 ### Landing Page (LP)
@@ -178,11 +215,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DL-04 | Phase 17 | Complete |
 | HOST-01 | Phase 17 | Complete |
 
+| COORD-01 | — | Pending |
+| COORD-02 | — | Pending |
+| COORD-03 | — | Pending |
+| PROX-01 | — | Pending |
+| PROX-02 | — | Pending |
+| PROX-03 | — | Pending |
+| APIFY-01 | — | Pending |
+| APIFY-02 | — | Pending |
+| APIFY-03 | — | Pending |
+| CACHE-04 | — | Pending |
+| CACHE-05 | — | Pending |
+| CACHE-06 | — | Pending |
+| PROMPT-01 | — | Pending |
+| PROMPT-02 | — | Pending |
+| PROMPT-03 | — | Pending |
+| SCORE-01 | — | Pending |
+| SCORE-02 | — | Pending |
+
 **Coverage:**
-- v3.0 (Download) requirements: 5 total
-- Mapped to phases: 5
-- Unmapped: 0 ✓
+- v5.0 (Proximity) requirements: 17 total
+- Mapped to phases: 0 (pending roadmap)
+- Unmapped: 17 ⚠️
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after v3.0 Extension Download milestone*
+*Last updated: 2026-03-27 after v5.0 Proximity-Aware Scoring milestone*
