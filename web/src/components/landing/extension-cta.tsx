@@ -57,6 +57,7 @@ export function ExtensionCTA() {
             Install the HomeMatch Chrome extension and see AI match scores
             directly on Flatfox listing pages. No extra tabs, no context switching
             — just instant insights while you apartment hunt.
+            Sign up for a free account to get started.
           </p>
           <Link
             href="/download"
