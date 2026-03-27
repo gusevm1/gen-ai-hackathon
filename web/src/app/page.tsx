@@ -1,134 +1,17 @@
-'use client'
-
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Logo } from '@/components/logo'
+import { HeroSection } from '@/components/landing/hero-section'
+import { FeaturesCarousel } from '@/components/landing/features-carousel'
+import { HowItWorks } from '@/components/landing/how-it-works'
+import { ExtensionCTA } from '@/components/landing/extension-cta'
+import { Footer } from '@/components/landing/footer'
 
 export default function Home() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
-  const supabase = createClient()
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
-
-    if (isSignUp && password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
-
-    setLoading(true)
-
-    const { error } = isSignUp
-      ? await supabase.auth.signUp({ email, password })
-      : await supabase.auth.signInWithPassword({ email, password })
-
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-      return
-    }
-
-    router.push('/dashboard')
-  }
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="flex flex-col items-center gap-2">
-          <Logo size="lg" />
-          <p className="text-sm text-muted-foreground">Your AI-powered Swiss property advisor</p>
-        </div>
-
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg">
-              {isSignUp ? 'Create an account' : 'Welcome back'}
-            </CardTitle>
-            <CardDescription>
-              {isSignUp
-                ? 'Sign up to start finding your perfect home'
-                : 'Sign in to your HomeMatch account'}
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="you@example.com"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  placeholder="••••••••"
-                />
-              </div>
-
-              {isSignUp && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    placeholder="••••••••"
-                  />
-                </div>
-              )}
-
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
-
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? 'Please wait...' : isSignUp ? 'Sign Up' : 'Sign In'}
-              </Button>
-            </form>
-          </CardContent>
-
-          <CardFooter className="justify-center pt-0">
-            <p className="text-sm text-muted-foreground">
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-              <button
-                type="button"
-                onClick={() => { setIsSignUp(!isSignUp); setError(null); setConfirmPassword('') }}
-                className="font-medium text-primary hover:underline"
-              >
-                {isSignUp ? 'Sign In' : 'Sign Up'}
-              </button>
-            </p>
-          </CardFooter>
-        </Card>
-      </div>
-    </div>
+    <main>
+      <HeroSection />
+      <FeaturesCarousel />
+      <HowItWorks />
+      <ExtensionCTA />
+      <Footer />
+    </main>
   )
 }
