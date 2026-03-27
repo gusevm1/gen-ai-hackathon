@@ -86,7 +86,7 @@ Plans:
 
 **Milestone Goal:** Replace Claude's unreliable tool-calling for place lookup with a deterministic pre-fetch pipeline. Apify fetches nearby places before scoring, results are cached in Supabase, and injected as structured data into the Claude prompt.
 
-- [ ] **Phase 22: Database & Coordinate Resolution** — nearby_places_cache table + listing coordinate resolution with geocoding fallback
+- [x] **Phase 22: Database & Coordinate Resolution** — nearby_places_cache table + listing coordinate resolution with geocoding fallback (completed 2026-03-27)
 - [ ] **Phase 23: Proximity Extraction & Apify Integration** — Parse proximity requirements from preferences, call Apify Google Places, cache results in Supabase
 - [ ] **Phase 24: Prompt Injection & Scoring Rules** — Inject verified nearby data into Claude prompt, remove tool references, update scoring rules
 
@@ -141,6 +141,6 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 22. Database & Coordinate Resolution | v5.0 | 0/? | Not started | - |
+| 22. Database & Coordinate Resolution | v5.0 | 1/1 | Complete   | 2026-03-27 |
 | 23. Proximity Extraction & Apify Integration | v5.0 | 0/? | Not started | - |
 | 24. Prompt Injection & Scoring Rules | v5.0 | 0/? | Not started | - |

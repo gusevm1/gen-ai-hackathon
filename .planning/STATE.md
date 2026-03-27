@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.0
-milestone_name: Proximity-Aware Scoring
-status: ready_to_plan
-last_updated: "2026-03-27"
-last_activity: 2026-03-27 — Roadmap created for v5.0 (Phases 22-24)
+milestone: v3.0
+milestone_name: Extension Download & Install
+status: verifying
+last_updated: "2026-03-27T22:59:22.786Z"
+last_activity: 2026-03-27
 progress:
-  total_phases: 3
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 1
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
   percent: 0
 ---
 
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website they're already on.
-**Current focus:** Milestone v5.0 — Proximity-Aware Scoring, Phase 22 ready to plan
+**Current focus:** Phase 22 — Database & Coordinate Resolution
 
 ## Current Position
 
-Phase: 22 of 24 (Database & Coordinate Resolution)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-03-27 — Roadmap created for v5.0 (Phases 22-24, 17 requirements mapped)
+Phase: 22 (Database & Coordinate Resolution) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-03-27 -- Completed 22-01-PLAN.md
 
-Progress: [__________] 0%
+Progress: [██████████] 100%
 
 ## Accumulated Context
 
@@ -40,7 +40,10 @@ Progress: [__________] 0%
 - [v5.0]: nearby_places_cache table added to Supabase (new, does not modify existing tables)
 - [v5.0]: Proximity pipeline is conditional — no-op when no proximity requirements in dynamic_fields
 - [v5.0]: Graceful degradation on every failure path (missing coords, Apify error, empty results)
+- [Phase 22-database-coordinate-resolution]: Migration file created (004_add_nearby_places_cache.sql); DB push requires manual Studio SQL execution due to missing personal access token
+- [Phase 22-database-coordinate-resolution]: TYPE_CHECKING guard used in apify.py for FlatfoxListing import to prevent circular import at module load
+- [Phase 22-database-coordinate-resolution]: Coordinate resolution at step 1a (after listing fetch, before preferences) ensures ClaudeScorer sees resolved lat/lon; geocoding failure never propagates to 502 handler
 
 ### Blockers/Concerns
 
-- None yet
+- Migration 004 not yet applied to DB: requires Supabase personal access token (sbp_...) or manual Studio SQL application at https://supabase.com/dashboard/project/mlhtozdtiorkemamzjjc/sql/new

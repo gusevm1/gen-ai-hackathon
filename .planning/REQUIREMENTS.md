@@ -6,9 +6,9 @@
 
 ### Coordinate Resolution
 
-- [ ] **COORD-01**: Before scoring, system checks if listing has latitude and longitude
-- [ ] **COORD-02**: If coordinates missing, system attempts geocoding (Nominatim or existing Apify geocoder)
-- [ ] **COORD-03**: If geocoding fails, system marks coordinates unavailable and skips proximity evaluation without crashing
+- [x] **COORD-01**: Before scoring, system checks if listing has latitude and longitude
+- [x] **COORD-02**: If coordinates missing, system attempts geocoding (Nominatim or existing Apify geocoder)
+- [x] **COORD-03**: If geocoding fails, system marks coordinates unavailable and skips proximity evaluation without crashing
 
 ### Proximity Extraction
 
@@ -24,7 +24,7 @@
 
 ### Supabase Caching
 
-- [ ] **CACHE-04**: nearby_places_cache table created in Supabase (id, lat, lon, query, radius_km, response_json, created_at)
+- [x] **CACHE-04**: nearby_places_cache table created in Supabase (id, lat, lon, query, radius_km, response_json, created_at)
 - [ ] **CACHE-05**: Before calling Apify, system checks cache by (lat, lon, query, radius_km)
 - [ ] **CACHE-06**: On cache miss, Apify result is stored in nearby_places_cache before returning
 
@@ -215,10 +215,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DL-04 | Phase 17 | Complete |
 | HOST-01 | Phase 17 | Complete |
 
-| CACHE-04 | Phase 22 | Pending |
-| COORD-01 | Phase 22 | Pending |
-| COORD-02 | Phase 22 | Pending |
-| COORD-03 | Phase 22 | Pending |
+| CACHE-04 | Phase 22 | Complete |
+| COORD-01 | Phase 22 | Complete |
+| COORD-02 | Phase 22 | Complete |
+| COORD-03 | Phase 22 | Complete |
 | PROX-01 | Phase 23 | Pending |
 | PROX-02 | Phase 23 | Pending |
 | PROX-03 | Phase 23 | Pending |
