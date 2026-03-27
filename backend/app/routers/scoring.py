@@ -19,6 +19,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.models.preferences import UserPreferences
 from app.models.scoring import ScoreRequest, ScoreResponse
+from app.services.apify import geocode_listing
 from app.services.claude import claude_scorer
 from app.services.flatfox import flatfox_client
 from app.services.supabase import supabase_service
@@ -59,6 +60,31 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
             status_code=502,
             detail=f"Could not fetch listing: {e}",
         )
+
+    # 1a. Resolve coordinates if missing (COORD-01, COORD-02, COORD-03)
+    # ClaudeScorer already gates proximity evaluation on has_coords, so if geocoding
+    # fails here, scoring proceeds normally without proximity — no crash possible.
+    if listing.latitude is None or listing.longitude is None:
+        logger.info("Listing %d missing coordinates, attempting geocoding", listing.pk)
+        try:
+            geo = await geocode_listing(listing)
+            if geo:
+                listing.latitude = float(geo["lat"])
+                listing.longitude = float(geo["lon"])
+                logger.info(
+                    "Geocoded listing %d to lat=%.6f lon=%.6f",
+                    listing.pk, listing.latitude, listing.longitude,
+                )
+            else:
+                logger.warning(
+                    "Geocoding returned no result for listing %d — proximity evaluation will be skipped",
+                    listing.pk,
+                )
+        except Exception:
+            logger.exception(
+                "Geocoding raised an unexpected error for listing %d — continuing without coordinates",
+                listing.pk,
+            )
 
     # 2. Parse preferences from request (provided by edge function, no DB query)
     preferences = UserPreferences.model_validate(request.preferences)
