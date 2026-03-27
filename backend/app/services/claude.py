@@ -32,23 +32,6 @@ CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 
 MAX_LOOP_ITERATIONS = 3
 
-# Amenity-related keywords (EN + DE) that indicate proximity criteria
-_AMENITY_KEYWORDS = re.compile(
-    r"(?i)\b("
-    r"school|schule|gym|fitnessstudio|fitness|supermarket|supermarkt|einkauf"
-    r"|transport|öv|tram|bus|train|zug|bahn|bahnhof|station|haltestelle"
-    r"|park|grünfläche|spielplatz|playground"
-    r"|hospital|spital|krankenhaus|arzt|doctor|apotheke|pharmacy"
-    r"|restaurant|café|cafe|bar|bakery|bäckerei"
-    r"|kindergarten|kita|daycare|nursery|krippe"
-    r"|university|universität|uni|library|bibliothek"
-    r"|shop|laden|geschäft|mall|einkaufszentrum"
-    r"|swimming|schwimmbad|pool|lake|see"
-    r"|near|nearby|nähe|nah|walking|gehweite|fussdistanz|erreichbar"
-    r"|close\s+to|in\s+der\s+nähe"
-    r")\b"
-)
-
 PLACES_TOOL = {
     "name": "search_nearby_places",
     "description": (

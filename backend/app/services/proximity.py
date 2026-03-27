@@ -19,11 +19,27 @@ from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
 
 from app.models.preferences import ImportanceLevel, UserPreferences
-from app.services.claude import _AMENITY_KEYWORDS
 from app.services.places import haversine_km, search_nearby_places
 from app.services.supabase import supabase_service
 
 logger = logging.getLogger(__name__)
+
+# Amenity-related keywords (EN + DE) that indicate proximity criteria
+_AMENITY_KEYWORDS = re.compile(
+    r"(?i)\b("
+    r"school|schule|gym|fitnessstudio|fitness|supermarket|supermarkt|einkauf"
+    r"|transport|öv|tram|bus|train|zug|bahn|bahnhof|station|haltestelle"
+    r"|park|grünfläche|spielplatz|playground"
+    r"|hospital|spital|krankenhaus|arzt|doctor|apotheke|pharmacy"
+    r"|restaurant|café|cafe|bar|bakery|bäckerei"
+    r"|kindergarten|kita|daycare|nursery|krippe"
+    r"|university|universität|uni|library|bibliothek"
+    r"|shop|laden|geschäft|mall|einkaufszentrum"
+    r"|swimming|schwimmbad|pool|lake|see"
+    r"|near|nearby|nähe|nah|walking|gehweite|fussdistanz|erreichbar"
+    r"|close\s+to|in\s+der\s+nähe"
+    r")\b"
+)
 
 # Regex to parse distance from free-text field value (e.g. "500m", "2km", "1.5 km")
 _DISTANCE_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(m|km)", re.IGNORECASE)
