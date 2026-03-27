@@ -19,6 +19,8 @@ import { SizeRoomsSection } from '@/components/preferences/size-rooms-section'
 import { FeaturesSection } from '@/components/preferences/features-section'
 import { DynamicFieldsSection } from '@/components/preferences/dynamic-fields-section'
 import { ImportanceSection } from '@/components/preferences/importance-section'
+import { useLanguage } from '@/lib/language-context'
+import { t } from '@/lib/translations'
 
 interface PreferencesFormProps {
   defaultValues: Preferences
@@ -33,6 +35,7 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
     type: 'success' | 'error'
     text: string
   } | null>(null)
+  const { language } = useLanguage()
 
   const internalForm = useForm<Preferences>({
     resolver: zodResolver(preferencesSchema) as Resolver<Preferences>,
@@ -45,12 +48,12 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
     try {
       setSaveMessage(null)
       await onSave(data)
-      setSaveMessage({ type: 'success', text: 'Preferences saved successfully!' })
+      setSaveMessage({ type: 'success', text: t(language, 'pref_saved') })
       setTimeout(() => setSaveMessage(null), 3000)
     } catch (error) {
       setSaveMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Failed to save preferences',
+        text: error instanceof Error ? error.message : t(language, 'pref_save_error'),
       })
     }
   }
@@ -65,42 +68,42 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
           className="w-full"
         >
           <AccordionItem value="location">
-            <AccordionTrigger>Location & Type</AccordionTrigger>
+            <AccordionTrigger>{t(language, 'pref_location_type')}</AccordionTrigger>
             <AccordionContent>
               <LocationTypeSection form={form} />
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="budget">
-            <AccordionTrigger>Budget</AccordionTrigger>
+            <AccordionTrigger>{t(language, 'pref_budget')}</AccordionTrigger>
             <AccordionContent>
               <BudgetSection form={form} />
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="size">
-            <AccordionTrigger>Size & Rooms</AccordionTrigger>
+            <AccordionTrigger>{t(language, 'pref_size_rooms')}</AccordionTrigger>
             <AccordionContent>
               <SizeRoomsSection form={form} />
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="features">
-            <AccordionTrigger>Features & Availability</AccordionTrigger>
+            <AccordionTrigger>{t(language, 'pref_features_availability')}</AccordionTrigger>
             <AccordionContent>
               <FeaturesSection form={form} />
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="dynamic">
-            <AccordionTrigger>Custom Criteria</AccordionTrigger>
+            <AccordionTrigger>{t(language, 'pref_custom_criteria')}</AccordionTrigger>
             <AccordionContent>
               <DynamicFieldsSection form={form} />
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="importance">
-            <AccordionTrigger>What Matters Most</AccordionTrigger>
+            <AccordionTrigger>{t(language, 'pref_what_matters')}</AccordionTrigger>
             <AccordionContent>
               <ImportanceSection form={form} />
             </AccordionContent>
@@ -109,7 +112,7 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
 
         <div className="flex items-center gap-4">
           <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? 'Saving...' : 'Save Preferences'}
+            {form.formState.isSubmitting ? t(language, 'pref_saving') : t(language, 'pref_save')}
           </Button>
           {saveMessage && (
             <p

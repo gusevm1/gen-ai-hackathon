@@ -10,17 +10,21 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import { useLanguage } from '@/lib/language-context'
+import { t } from '@/lib/translations'
 
 interface BudgetSectionProps {
   form: UseFormReturn<Preferences>
 }
 
 export function BudgetSection({ form }: BudgetSectionProps) {
+  const { language } = useLanguage()
+
   return (
     <div className="space-y-4">
       {/* Budget Range */}
       <div>
-        <label className="text-sm font-medium">Budget (CHF)</label>
+        <label className="text-sm font-medium">{t(language, 'budget_label')}</label>
         <div className="flex gap-4 mt-2">
           <FormField
             control={form.control}
@@ -30,7 +34,7 @@ export function BudgetSection({ form }: BudgetSectionProps) {
                 <FormControl>
                   <Input
                     type="number"
-                    placeholder="Min CHF"
+                    placeholder={t(language, 'budget_min')}
                     value={field.value ?? ''}
                     onChange={(e) => {
                       const val = e.target.value
@@ -50,7 +54,7 @@ export function BudgetSection({ form }: BudgetSectionProps) {
                 <FormControl>
                   <Input
                     type="number"
-                    placeholder="Max CHF"
+                    placeholder={t(language, 'budget_max')}
                     value={field.value ?? ''}
                     onChange={(e) => {
                       const val = e.target.value
@@ -83,7 +87,7 @@ export function BudgetSection({ form }: BudgetSectionProps) {
               className="text-sm cursor-pointer select-none"
               onClick={() => field.onChange(!field.value)}
             >
-              Hard limit — score 0 if over budget
+              {t(language, 'budget_dealbreaker')}
             </label>
           </div>
         )}
