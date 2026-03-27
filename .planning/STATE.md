@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Landing Page & Design System
-status: planning
+status: executing
 last_updated: "2026-03-27"
-last_activity: 2026-03-27 — Completed 19-01 landing page plan
+last_activity: 2026-03-27 — Planned Phase 20 (landing page redesign — scroll-driven, 7 chapters)
 progress:
-  total_phases: 4
-  completed_phases: 0
-  total_plans: 2
+  total_phases: 5
+  completed_phases: 2
+  total_plans: 3
   completed_plans: 2
-  percent: 25
+  percent: 40
 ---
 
 # Project State

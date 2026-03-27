@@ -74,10 +74,11 @@ Plans:
 
 **Branch:** `redesign/v4-landing` → PR → merge to main
 
-- [ ] **Phase 18: Design System & Motion Foundation** — Framer Motion, typography scale, dark/light color split, animation primitives
-- [ ] **Phase 19: Landing Page** — Hero with product demo animation, copy (EN/DE), features, CTA sections
-- [ ] **Phase 20: Dashboard UI Alignment** — Propagate design language to dashboard, profiles, analysis pages
-- [ ] **Phase 21: Polish & QA** — Mobile, performance (LCP/CLS), cross-browser, final copy pass
+- [x] **Phase 18: Design System & Motion Foundation** — Framer Motion, typography scale, dark/light color split, animation primitives
+- [x] **Phase 19: Landing Page v1** — Initial landing page (superseded by Phase 20 redesign)
+- [ ] **Phase 20: Landing Page Redesign** — Full scroll-driven Apple-style landing page: 7 sticky chapters, isometric SVG home, SVG globe → Switzerland zoom, browser demo with score reveal, Hormozi copy
+- [ ] **Phase 21: Dashboard UI Alignment** — Propagate design language to dashboard, profiles, analysis pages
+- [ ] **Phase 22: Polish & QA** — Mobile, performance (LCP/CLS), cross-browser, final copy pass
 
 **Requirements:** LP-01 → LP-08, DS-01 → DS-04, UI-01 → UI-03
 
