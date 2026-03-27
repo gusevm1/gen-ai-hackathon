@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
@@ -6,6 +7,7 @@ import { preferencesSchema, migratePreferences } from '@/lib/schemas/preferences
 import { saveProfilePreferences } from '@/app/(dashboard)/profiles/actions'
 import { PreferencesForm } from '@/components/preferences/preferences-form'
 import { OpenInFlatfoxButton } from '@/components/profiles/open-in-flatfox-button'
+import { t, type Language } from '@/lib/translations'
 
 interface EditProfilePageProps {
   params: Promise<{ profileId: string }>
@@ -19,6 +21,9 @@ export default async function EditProfilePage({ params }: EditProfilePageProps) 
   if (!user) {
     redirect('/')
   }
+
+  const cookieStore = await cookies()
+  const lang = (cookieStore.get('homematch_lang')?.value ?? 'en') as Language
 
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -45,14 +50,14 @@ export default async function EditProfilePage({ params }: EditProfilePageProps) 
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="size-4" />
-        Back to Profiles
+        {t(lang, 'back_to_profiles')}
       </Link>
       <div className="flex items-start justify-between mb-2">
         <h1 className="text-2xl font-bold">{profile.name}</h1>
         <OpenInFlatfoxButton preferences={defaults} variant="link" />
       </div>
       <p className="text-muted-foreground mb-8">
-        Edit preferences for this profile. These will be used to score listings on Flatfox.
+        {t(lang, 'edit_profile_desc')}
       </p>
       <PreferencesForm
         defaultValues={defaults}

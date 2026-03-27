@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useLanguage } from '@/lib/language-context'
+import { t } from '@/lib/translations'
 
 interface RenameProfileDialogProps {
   open: boolean
@@ -27,6 +29,7 @@ export function RenameProfileDialog({
 }: RenameProfileDialogProps) {
   const [name, setName] = useState(currentName)
   const inputRef = useRef<HTMLInputElement>(null)
+  const { language } = useLanguage()
 
   useEffect(() => {
     if (open) {
@@ -49,10 +52,8 @@ export function RenameProfileDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Rename Profile</DialogTitle>
-          <DialogDescription>
-            Enter a new name for this profile.
-          </DialogDescription>
+          <DialogTitle>{t(language, 'profile_rename_title')}</DialogTitle>
+          <DialogDescription>{t(language, 'profile_rename_desc')}</DialogDescription>
         </DialogHeader>
         <Input
           ref={inputRef}
@@ -67,10 +68,10 @@ export function RenameProfileDialog({
         />
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t(language, 'cancel')}
           </Button>
           <Button onClick={handleSave} disabled={name.trim().length === 0}>
-            Save
+            {t(language, 'save')}
           </Button>
         </DialogFooter>
       </DialogContent>

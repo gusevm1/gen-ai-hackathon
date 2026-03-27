@@ -13,10 +13,13 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { createClient } from "@/lib/supabase/client"
+import { useLanguage } from "@/lib/language-context"
+import { t } from "@/lib/translations"
 
 export function NavUser({ user }: { user: { email: string; name?: string } }) {
   const router = useRouter()
   const supabase = createClient()
+  const { language } = useLanguage()
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -42,7 +45,7 @@ export function NavUser({ user }: { user: { email: string; name?: string } }) {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 size-4" />
-          Sign out
+          {t(language, "sign_out")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

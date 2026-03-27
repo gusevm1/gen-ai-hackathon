@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useLanguage } from '@/lib/language-context'
+import { t } from '@/lib/translations'
 
 interface CreateProfileDialogProps {
   open: boolean
@@ -25,6 +27,7 @@ export function CreateProfileDialog({
 }: CreateProfileDialogProps) {
   const [name, setName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const { language } = useLanguage()
 
   useEffect(() => {
     if (open) {
@@ -46,14 +49,12 @@ export function CreateProfileDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New Profile</DialogTitle>
-          <DialogDescription>
-            Give your new search profile a name.
-          </DialogDescription>
+          <DialogTitle>{t(language, 'profile_create_title')}</DialogTitle>
+          <DialogDescription>{t(language, 'profile_create_desc')}</DialogDescription>
         </DialogHeader>
         <Input
           ref={inputRef}
-          placeholder="e.g., Zurich Family Apartment"
+          placeholder={t(language, 'profile_create_placeholder')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
@@ -65,10 +66,10 @@ export function CreateProfileDialog({
         />
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t(language, 'cancel')}
           </Button>
           <Button onClick={handleCreate} disabled={name.trim().length === 0}>
-            Create
+            {t(language, 'create')}
           </Button>
         </DialogFooter>
       </DialogContent>
