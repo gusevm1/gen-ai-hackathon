@@ -5,7 +5,8 @@
 - :white_check_mark: **v1.0 MVP** — Phases 1-4 (shipped 2026-03-13)
 - :white_check_mark: **v1.1 Demo-Ready + Multi-Profile** — Phases 5-10 (shipped 2026-03-15)
 - :white_check_mark: **v2.0 Polish & AI Profile Creation** — Phases 11-16 (shipped 2026-03-17)
-- **v3.0 Extension Download & Install** — Phase 17
+- :white_check_mark: **v3.0 Extension Download & Install** — Phase 17
+- **v4.0 Landing Page & Design System** — Phases 18–21 (in progress)
 
 ## Phases
 
@@ -67,6 +68,19 @@ Plans:
 
 **Requirements:** DL-01, DL-02, DL-03, DL-04, HOST-01
 
+### v4.0 Landing Page & Design System
+
+**Milestone Goal:** Give HomeMatch a front door. A high-conversion landing page with Apple-inspired design, Hormozi-structured copy, and a live product demo animation — plus UI alignment across the dashboard.
+
+**Branch:** `redesign/v4-landing` → PR → merge to main
+
+- [ ] **Phase 18: Design System & Motion Foundation** — Framer Motion, typography scale, dark/light color split, animation primitives
+- [ ] **Phase 19: Landing Page** — Hero with product demo animation, copy (EN/DE), features, CTA sections
+- [ ] **Phase 20: Dashboard UI Alignment** — Propagate design language to dashboard, profiles, analysis pages
+- [ ] **Phase 21: Polish & QA** — Mobile, performance (LCP/CLS), cross-browser, final copy pass
+
+**Requirements:** LP-01 → LP-08, DS-01 → DS-04, UI-01 → UI-03
+
 ## Progress
 
 | Milestone | Status | Shipped |
@@ -75,3 +89,4 @@ Plans:
 | v1.1 Demo-Ready + Multi-Profile | Complete | 2026-03-15 |
 | v2.0 Polish & AI Profile Creation | Complete | 2026-03-17 |
 | v3.0 Extension Download & Install | Complete | 2026-03-17 |
+| v4.0 Landing Page & Design System | In Progress | — |
