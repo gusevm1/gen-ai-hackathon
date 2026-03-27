@@ -101,7 +101,7 @@ export function ProfileCard({
   }
 
   return (
-    <Card>
+    <Card className="hover:shadow-md hover:ring-2 hover:ring-primary/10 transition-all">
       <CardHeader>
         <CardTitle className="flex items-center gap-1.5">
           {profile.is_default && (

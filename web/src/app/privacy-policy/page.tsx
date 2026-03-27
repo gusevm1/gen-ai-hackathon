@@ -96,7 +96,7 @@ export default function PrivacyPolicyPage() {
                   href="https://supabase.com/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary underline"
+                  className="text-primary underline hover:opacity-80 transition-colors"
                 >
                   Supabase Privacy Policy
                 </a>.
@@ -110,7 +110,7 @@ export default function PrivacyPolicyPage() {
                   href="https://www.anthropic.com/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary underline"
+                  className="text-primary underline hover:opacity-80 transition-colors"
                 >
                   Anthropic Privacy Policy
                 </a>.
@@ -122,7 +122,7 @@ export default function PrivacyPolicyPage() {
                   href="https://vercel.com/legal/privacy-policy"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary underline"
+                  className="text-primary underline hover:opacity-80 transition-colors"
                 >
                   Vercel Privacy Policy
                 </a>.
@@ -134,7 +134,7 @@ export default function PrivacyPolicyPage() {
                   href="https://aws.amazon.com/privacy/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary underline"
+                  className="text-primary underline hover:opacity-80 transition-colors"
                 >
                   AWS Privacy Policy
                 </a>.

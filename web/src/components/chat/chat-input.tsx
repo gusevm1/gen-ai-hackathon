@@ -55,7 +55,7 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
         size="icon"
         onClick={handleSend}
         disabled={disabled || !value.trim()}
-        className="absolute bottom-3 right-3 size-8 rounded-full"
+        className="absolute bottom-3 right-3 size-8 rounded-full cursor-pointer"
       >
         <Send className="size-4" />
       </Button>

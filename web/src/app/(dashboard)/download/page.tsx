@@ -45,7 +45,7 @@ export default function DownloadPage() {
       </div>
 
       <div className="flex flex-col items-center mb-10">
-        <a href="/homematch-extension.zip" download="homematch-extension.zip">
+        <a href="/homematch-extension.zip" download="homematch-extension.zip" className="cursor-pointer">
           <Button size="lg">
             <Download className="size-4" />
             {t(language, "download_btn")}
@@ -58,7 +58,7 @@ export default function DownloadPage() {
 
       <div className="space-y-4">
         {steps.map((step) => (
-          <Card key={step.number}>
+          <Card key={step.number} className="hover:shadow-sm transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">

@@ -44,12 +44,12 @@ export function HeroSection() {
             ))}
           </ul>
 
-          {/* Mobile-only scroll button */}
+          {/* Scroll to How It Works */}
           <button
-            onClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })}
-            className="lg:hidden inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground cursor-pointer hover:bg-primary/90 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-150"
+            onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground cursor-pointer hover:bg-primary/90 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-150"
           >
-            Get Started <ArrowDown className="size-4" />
+            Learn More <ArrowDown className="size-4" />
           </button>
         </div>
       </div>

@@ -32,7 +32,7 @@ export function OpenInFlatfoxButton({ preferences, className, variant = 'card' }
       <button
         onClick={handleClick}
         disabled={loading}
-        className={className ?? "inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline shrink-0 disabled:opacity-50"}
+        className={className ?? "inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline shrink-0 disabled:opacity-50 cursor-pointer"}
       >
         {loading ? <Loader2 className="size-4 animate-spin" /> : <ExternalLink className="size-4" />}
         {loading ? 'Opening...' : 'Open in Flatfox'}
@@ -44,7 +44,7 @@ export function OpenInFlatfoxButton({ preferences, className, variant = 'card' }
     <button
       onClick={handleClick}
       disabled={loading}
-      className={className ?? "inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-50"}
+      className={className ?? "inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-50 cursor-pointer"}
     >
       {loading ? <Loader2 className="size-3 animate-spin" /> : <ExternalLink className="size-3" />}
       {loading ? 'Opening...' : 'Open in Flatfox'}

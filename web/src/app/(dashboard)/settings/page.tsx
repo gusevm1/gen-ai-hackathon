@@ -30,7 +30,7 @@ export default function SettingsPage() {
         <div className="space-y-2">
           <Label>{t(language, "settings_language")}</Label>
           <Select value={language} onValueChange={(v) => handleLanguageChange(v as Language)}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-48 cursor-pointer">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

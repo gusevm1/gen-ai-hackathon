@@ -29,7 +29,7 @@ export function TopNavbar() {
             key={item.url}
             href={item.url}
             className={cn(
-              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
               item.accent
                 ? cn("text-primary", isActive && "bg-primary/10")
                 : isActive

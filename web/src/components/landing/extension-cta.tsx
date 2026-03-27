@@ -1,4 +1,5 @@
-import { Download } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 
 function BrowserMockup() {
   return (
@@ -57,14 +58,13 @@ export function ExtensionCTA() {
             directly on Flatfox listing pages. No extra tabs, no context switching
             — just instant insights while you apartment hunt.
           </p>
-          <a
-            href="/homematch-extension.zip"
-            download
+          <Link
+            href="/download"
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground cursor-pointer hover:bg-primary/90 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-150"
           >
-            <Download className="size-4" />
-            Download Extension
-          </a>
+            Set Up Extension
+            <ArrowRight className="size-4" />
+          </Link>
         </div>
       </div>
     </section>
