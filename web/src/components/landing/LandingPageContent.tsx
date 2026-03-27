@@ -3,25 +3,28 @@
 import { useLanguage } from '@/lib/language-context'
 import type { Language } from '@/lib/translations'
 import { LandingNavbar } from './LandingNavbar'
-import { HeroSection } from './HeroSection'
-import { ProblemSection } from './ProblemSection'
-import { HowItWorksSection } from './HowItWorksSection'
-import { FeaturesSection } from './FeaturesSection'
-import { CtaSection } from './CtaSection'
 import { LandingFooter } from './LandingFooter'
+import { ChapterHook } from './ChapterHook'
+import { ChapterSwitzerland } from './ChapterSwitzerland'
+import { ChapterProblem } from './ChapterProblem'
+import { ChapterMechanism } from './ChapterMechanism'
+import { ChapterScore } from './ChapterScore'
+import { ChapterDream } from './ChapterDream'
+import { ChapterCTA } from './ChapterCTA'
 
 export function LandingPageContent() {
   const { language } = useLanguage()
   const lang = language as Language
-
   return (
-    <div className="min-h-screen">
+    <div className="bg-hero-bg">
       <LandingNavbar lang={lang} />
-      <HeroSection lang={lang} />
-      <ProblemSection lang={lang} />
-      <HowItWorksSection lang={lang} />
-      <FeaturesSection lang={lang} />
-      <CtaSection lang={lang} />
+      <ChapterHook lang={lang} />
+      <ChapterSwitzerland lang={lang} />
+      <ChapterProblem lang={lang} />
+      <ChapterMechanism lang={lang} />
+      <ChapterScore lang={lang} />
+      <ChapterDream lang={lang} />
+      <ChapterCTA lang={lang} />
       <LandingFooter lang={lang} />
     </div>
   )
