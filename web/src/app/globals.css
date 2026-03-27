@@ -140,6 +140,17 @@
   --sidebar-ring: hsl(342 89% 50%);
 }
 
+@keyframes subtle-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  75%, 100% {
+    transform: scale(1.12);
+    opacity: 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
