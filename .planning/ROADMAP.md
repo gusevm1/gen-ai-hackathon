@@ -6,7 +6,8 @@
 - :white_check_mark: **v1.1 Demo-Ready + Multi-Profile** — Phases 5-10 (shipped 2026-03-15)
 - :white_check_mark: **v2.0 Polish & AI Profile Creation** — Phases 11-16 (shipped 2026-03-17)
 - :white_check_mark: **v3.0 Extension Download & Install** — Phase 17
-- **v4.0 Landing Page & Design System** — Phases 18–21 (in progress)
+- **v4.0 Landing Page & Design System** — Phases 18-21 (in progress)
+- **v5.0 Proximity-Aware Scoring** — Phases 22-24 (planned)
 
 ## Phases
 
@@ -81,6 +82,52 @@ Plans:
 
 **Requirements:** LP-01 → LP-08, DS-01 → DS-04, UI-01 → UI-03
 
+### v5.0 Proximity-Aware Scoring
+
+**Milestone Goal:** Replace Claude's unreliable tool-calling for place lookup with a deterministic pre-fetch pipeline. Apify fetches nearby places before scoring, results are cached in Supabase, and injected as structured data into the Claude prompt.
+
+- [ ] **Phase 22: Database & Coordinate Resolution** — nearby_places_cache table + listing coordinate resolution with geocoding fallback
+- [ ] **Phase 23: Proximity Extraction & Apify Integration** — Parse proximity requirements from preferences, call Apify Google Places, cache results in Supabase
+- [ ] **Phase 24: Prompt Injection & Scoring Rules** — Inject verified nearby data into Claude prompt, remove tool references, update scoring rules
+
+**Requirements:** COORD-01, COORD-02, COORD-03, PROX-01, PROX-02, PROX-03, APIFY-01, APIFY-02, APIFY-03, CACHE-04, CACHE-05, CACHE-06, PROMPT-01, PROMPT-02, PROMPT-03, SCORE-01, SCORE-02
+
+## Phase Details
+
+### Phase 22: Database & Coordinate Resolution
+**Goal**: Listings have verified coordinates before scoring, with a cache table ready for proximity data
+**Depends on**: Nothing (first phase of v5.0; backend-only, independent of v4.0)
+**Requirements**: CACHE-04, COORD-01, COORD-02, COORD-03
+**Success Criteria** (what must be TRUE):
+  1. nearby_places_cache table exists in Supabase with columns: id, lat, lon, query, radius_km, response_json, created_at
+  2. Scoring pipeline checks listing lat/lon before proximity evaluation
+  3. When coordinates are missing, system attempts geocoding and uses the result
+  4. When geocoding fails, scoring proceeds without proximity evaluation and does not crash
+**Plans**: TBD
+
+### Phase 23: Proximity Extraction & Apify Integration
+**Goal**: System identifies what places the user cares about, fetches verified nearby data from Google Places via Apify, and caches results to avoid duplicate API calls
+**Depends on**: Phase 22
+**Requirements**: PROX-01, PROX-02, PROX-03, APIFY-01, APIFY-02, APIFY-03, CACHE-05, CACHE-06
+**Success Criteria** (what must be TRUE):
+  1. System extracts place-based requirements (query, radius_km, importance) from user preferences dynamic_fields
+  2. When no proximity requirements exist, Apify is never called and scoring proceeds normally
+  3. For each proximity requirement, Apify returns nearby places with name, distance, rating, review count, and address
+  4. Apify results are cached by (lat, lon, query, radius_km) — duplicate requests return cached data without API call
+  5. On Apify failure, system treats result as empty and scoring continues without crashing
+**Plans**: TBD
+
+### Phase 24: Prompt Injection & Scoring Rules
+**Goal**: Claude receives verified nearby data as structured input and scores proximity based only on provided evidence, never guessing
+**Depends on**: Phase 23
+**Requirements**: PROMPT-01, PROMPT-02, PROMPT-03, SCORE-01, SCORE-02
+**Success Criteria** (what must be TRUE):
+  1. When nearby data exists, Claude prompt includes a "Nearby Places Data (Verified)" section with structured results
+  2. When no proximity requirements exist, the nearby places section is omitted entirely from the prompt
+  3. All search_nearby_places tool references are removed from Claude prompts and tool definitions
+  4. Claude evaluates amenity proximity only on provided data — if an amenity is not in the data, it is treated as "not found"
+**Plans**: TBD
+
 ## Progress
 
 | Milestone | Status | Shipped |
@@ -90,3 +137,10 @@ Plans:
 | v2.0 Polish & AI Profile Creation | Complete | 2026-03-17 |
 | v3.0 Extension Download & Install | Complete | 2026-03-17 |
 | v4.0 Landing Page & Design System | In Progress | — |
+| v5.0 Proximity-Aware Scoring | Not Started | — |
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 22. Database & Coordinate Resolution | v5.0 | 0/? | Not started | - |
+| 23. Proximity Extraction & Apify Integration | v5.0 | 0/? | Not started | - |
+| 24. Prompt Injection & Scoring Rules | v5.0 | 0/? | Not started | - |

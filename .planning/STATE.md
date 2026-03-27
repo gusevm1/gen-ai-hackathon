@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Proximity-Aware Scoring
-status: planning
+status: ready_to_plan
 last_updated: "2026-03-27"
-last_activity: 2026-03-27 — Milestone v5.0 started
+last_activity: 2026-03-27 — Roadmap created for v5.0 (Phases 22-24)
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website they're already on.
-**Current focus:** Milestone v5.0 — Proximity-Aware Scoring
+**Current focus:** Milestone v5.0 — Proximity-Aware Scoring, Phase 22 ready to plan
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 22 of 24 (Database & Coordinate Resolution)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-27 — Milestone v5.0 started
+Status: Ready to plan
+Last activity: 2026-03-27 — Roadmap created for v5.0 (Phases 22-24, 17 requirements mapped)
 
 Progress: [__________] 0%
 

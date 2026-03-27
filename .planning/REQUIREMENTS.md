@@ -113,7 +113,7 @@ Requirements for the AI-Powered Conversational Profile Creation milestone. Each 
 ### Chat Interface (CHAT)
 
 - [x] **CHAT-01**: "AI-Powered Search" page displays a minimal, centered layout with a large text input as the primary element
-- [x] **CHAT-02**: Input placeholder guides the user to describe location, budget, size, rooms, lifestyle preferences, and nearby amenities (train, schools, supermarkets, cafés, etc.)
+- [x] **CHAT-02**: Input placeholder guides the user to describe location, budget, size, rooms, lifestyle preferences, and nearby amenities (train, schools, supermarkets, cafes, etc.)
 - [x] **CHAT-03**: On the first (pre-conversation) message, a large "Start Creating Profile" button is shown instead of the standard send arrow
 - [x] **CHAT-04**: Pressing "Start Creating Profile" prompts the user to enter a profile name before the conversation begins
 - [x] **CHAT-05**: After the user enters a name and continues, the conversation starts and the initial description is sent to the AI as the first message
@@ -215,29 +215,31 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DL-04 | Phase 17 | Complete |
 | HOST-01 | Phase 17 | Complete |
 
-| COORD-01 | — | Pending |
-| COORD-02 | — | Pending |
-| COORD-03 | — | Pending |
-| PROX-01 | — | Pending |
-| PROX-02 | — | Pending |
-| PROX-03 | — | Pending |
-| APIFY-01 | — | Pending |
-| APIFY-02 | — | Pending |
-| APIFY-03 | — | Pending |
-| CACHE-04 | — | Pending |
-| CACHE-05 | — | Pending |
-| CACHE-06 | — | Pending |
-| PROMPT-01 | — | Pending |
-| PROMPT-02 | — | Pending |
-| PROMPT-03 | — | Pending |
-| SCORE-01 | — | Pending |
-| SCORE-02 | — | Pending |
+| CACHE-04 | Phase 22 | Pending |
+| COORD-01 | Phase 22 | Pending |
+| COORD-02 | Phase 22 | Pending |
+| COORD-03 | Phase 22 | Pending |
+| PROX-01 | Phase 23 | Pending |
+| PROX-02 | Phase 23 | Pending |
+| PROX-03 | Phase 23 | Pending |
+| APIFY-01 | Phase 23 | Pending |
+| APIFY-02 | Phase 23 | Pending |
+| APIFY-03 | Phase 23 | Pending |
+| CACHE-05 | Phase 23 | Pending |
+| CACHE-06 | Phase 23 | Pending |
+| PROMPT-01 | Phase 24 | Pending |
+| PROMPT-02 | Phase 24 | Pending |
+| PROMPT-03 | Phase 24 | Pending |
+| SCORE-01 | Phase 24 | Pending |
+| SCORE-02 | Phase 24 | Pending |
 
 **Coverage:**
 - v5.0 (Proximity) requirements: 17 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 17 ⚠️
+- Mapped to phases: 17/17
+- Phase 22: 4 requirements (CACHE-04, COORD-01, COORD-02, COORD-03)
+- Phase 23: 8 requirements (PROX-01, PROX-02, PROX-03, APIFY-01, APIFY-02, APIFY-03, CACHE-05, CACHE-06)
+- Phase 24: 5 requirements (PROMPT-01, PROMPT-02, PROMPT-03, SCORE-01, SCORE-02)
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-27 after v5.0 Proximity-Aware Scoring milestone*
+*Last updated: 2026-03-27 after v5.0 roadmap created (Phases 22-24)*
