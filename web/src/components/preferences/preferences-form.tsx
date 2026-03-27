@@ -47,7 +47,9 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
   async function handleSubmit(data: Preferences) {
     try {
       setSaveMessage(null)
-      await onSave(data)
+      // Always persist the current UI language so the AI scores in the correct language
+      const dataWithLang = { ...data, language: language as 'en' | 'de' | 'fr' | 'it' }
+      await onSave(dataWithLang)
       setSaveMessage({ type: 'success', text: t(language, 'pref_saved') })
       setTimeout(() => setSaveMessage(null), 3000)
     } catch (error) {
