@@ -2,7 +2,7 @@ export type Language = 'en' | 'de'
 
 export const LANG_COOKIE = 'homematch_lang'
 
-const translations = {
+export const translations = {
   en: {
     nav_ai_search: 'AI-Powered Search',
     nav_profiles: 'Profiles',
@@ -29,6 +29,37 @@ const translations = {
     settings_language: 'Language',
     settings_language_en: 'English',
     settings_language_de: 'German',
+    landing_nav_signin: 'Sign In',
+    landing_hero_overline: 'AI-Powered Property Scoring',
+    landing_hero_headline: 'Know instantly if a flat is worth your time.',
+    landing_hero_subtitle: 'HomeMatch scores every Flatfox listing against your preferences — in seconds.',
+    landing_hero_cta: 'Get started free',
+    landing_problem_overline: 'The problem',
+    landing_problem_headline: 'Finding a flat in Zurich takes weeks.',
+    landing_problem_bullet1: 'You scroll through dozens of listings, most of which don\'t match your needs.',
+    landing_problem_bullet2: 'You waste evenings on viewings for places you knew weren\'t right.',
+    landing_problem_bullet3: 'By the time you decide, the good ones are already gone.',
+    landing_howit_overline: 'How it works',
+    landing_howit_headline: 'From install to first score in under 5 minutes.',
+    landing_howit_step1_label: '1. Set your preferences',
+    landing_howit_step1_body: 'Tell HomeMatch what matters to you — location, size, budget, dealbreakers.',
+    landing_howit_step2_label: '2. Install the extension',
+    landing_howit_step2_body: 'Add HomeMatch to Chrome. It takes 30 seconds.',
+    landing_howit_step3_label: '3. Score any listing',
+    landing_howit_step3_body: 'Browse Flatfox as usual. Tap the HomeMatch button to score any listing instantly.',
+    landing_features_overline: 'What you get',
+    landing_features_headline: 'Built for the Swiss rental market.',
+    landing_feat1_title: 'Instant AI scores',
+    landing_feat1_body: 'Every listing gets a 0–100 match score based on your exact preferences, with full reasoning.',
+    landing_feat2_title: 'Multiple profiles',
+    landing_feat2_body: 'Searching for yourself and a partner? Create separate profiles. Scores update automatically.',
+    landing_feat3_title: 'Full analysis breakdown',
+    landing_feat3_body: 'See exactly why a listing scored well or poorly — category by category, in plain language.',
+    landing_cta_overline: 'Ready to find your flat?',
+    landing_cta_headline: 'Stop guessing. Start matching.',
+    landing_cta_subtext: 'Free to use. No credit card. Works on Flatfox.ch.',
+    landing_cta_button: 'Create free account',
+    landing_footer_copyright: '© 2026 HomeMatch. All rights reserved.',
   },
   de: {
     nav_ai_search: 'KI-gestützte Suche',
@@ -56,8 +87,43 @@ const translations = {
     settings_language: 'Sprache',
     settings_language_en: 'Englisch',
     settings_language_de: 'Deutsch',
+    landing_nav_signin: 'Anmelden',
+    landing_hero_overline: 'KI-gestützte Immobilienbewertung',
+    landing_hero_headline: 'Sofort wissen, ob eine Wohnung Ihre Zeit wert ist.',
+    landing_hero_subtitle: 'HomeMatch bewertet jedes Flatfox-Inserat anhand Ihrer Anforderungen — in Sekunden.',
+    landing_hero_cta: 'Kostenlos starten',
+    landing_problem_overline: 'Das Problem',
+    landing_problem_headline: 'Eine Wohnung in Zürich zu finden dauert Wochen.',
+    landing_problem_bullet1: 'Dutzende von Inseraten — die meisten passen nicht zu Ihnen.',
+    landing_problem_bullet2: 'Abende verschwendet für Besichtigungen, die nie infrage kamen.',
+    landing_problem_bullet3: 'Wenn Sie sich entschieden haben, sind die guten längst vergeben.',
+    landing_howit_overline: 'So funktioniert es',
+    landing_howit_headline: 'Von der Installation zum ersten Score in unter 5 Minuten.',
+    landing_howit_step1_label: '1. Anforderungen festlegen',
+    landing_howit_step1_body: 'Sagen Sie HomeMatch, worauf es Ihnen ankommt — Lage, Grösse, Budget, Ausschlusskriterien.',
+    landing_howit_step2_label: '2. Erweiterung installieren',
+    landing_howit_step2_body: 'HomeMatch zu Chrome hinzufügen. Dauert 30 Sekunden.',
+    landing_howit_step3_label: '3. Inserate bewerten',
+    landing_howit_step3_body: 'Flatfox wie gewohnt durchsuchen. HomeMatch-Button drücken — sofort bewertet.',
+    landing_features_overline: 'Was Sie bekommen',
+    landing_features_headline: 'Entwickelt für den Schweizer Mietmarkt.',
+    landing_feat1_title: 'Sofortige KI-Bewertung',
+    landing_feat1_body: 'Jedes Inserat erhält einen Übereinstimmungsscore von 0–100 — mit vollständiger Begründung.',
+    landing_feat2_title: 'Mehrere Profile',
+    landing_feat2_body: 'Suchen Sie für sich und eine weitere Person? Eigene Profile erstellen. Scores passen sich automatisch an.',
+    landing_feat3_title: 'Detaillierte Analyse',
+    landing_feat3_body: 'Sehen Sie genau, warum ein Inserat gut oder schlecht abschneidet — Kategorie für Kategorie.',
+    landing_cta_overline: 'Bereit, Ihre Wohnung zu finden?',
+    landing_cta_headline: 'Aufgehört zu raten. Angefangen zu treffen.',
+    landing_cta_subtext: 'Kostenlos. Keine Kreditkarte. Funktioniert auf Flatfox.ch.',
+    landing_cta_button: 'Kostenloses Konto erstellen',
+    landing_footer_copyright: '© 2026 HomeMatch. Alle Rechte vorbehalten.',
   },
 } as const
+
+// Type check: ensures de has all the same keys as en
+const _typeCheck: typeof translations.en = translations.de
+void _typeCheck
 
 export type TranslationKey = keyof typeof translations.en
 
