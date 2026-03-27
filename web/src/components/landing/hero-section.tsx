@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { Sparkles, Chrome, MessageSquare, ArrowDown } from 'lucide-react'
 import { Logo } from '@/components/logo'
@@ -12,6 +13,14 @@ const BULLETS = [
 ]
 
 export function HeroSection() {
+  const [showButton, setShowButton] = useState(true)
+
+  useEffect(() => {
+    const onScroll = () => setShowButton(window.scrollY < 100)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   return (
     <section className="relative min-h-screen grid grid-cols-1 lg:grid-cols-2">
       {/* Left — image + copy */}
@@ -92,7 +101,7 @@ export function HeroSection() {
       {/* Centered scroll button with glow pulse */}
       <button
         onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 inline-flex items-center gap-2.5 rounded-full bg-primary px-8 py-4 text-base font-semibold text-primary-foreground cursor-pointer hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-200"
+        className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-20 inline-flex items-center gap-2.5 rounded-full bg-primary px-8 py-4 text-base font-semibold text-primary-foreground cursor-pointer hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-300 ${showButton ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ animation: 'glow-pulse 2.5s ease-in-out infinite' }}
       >
         Learn More <ArrowDown className="size-5" />
