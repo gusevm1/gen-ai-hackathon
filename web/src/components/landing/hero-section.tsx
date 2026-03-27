@@ -88,8 +88,8 @@ export function HeroSection() {
             <span className="text-border">|</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/images/genai-hackathon-logo.svg"
-              alt="GenAI Zürich Hackathon 2025"
+              src="/images/genai-hackathon-logo.png"
+              alt="GenAI Zürich Hackathon 2026"
               className="h-7"
             />
           </div>
