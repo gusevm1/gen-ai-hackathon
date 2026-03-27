@@ -21,6 +21,7 @@ from app.models.preferences import UserPreferences
 from app.models.scoring import ScoreRequest, ScoreResponse
 from app.services.apify import geocode_listing
 from app.services.claude import claude_scorer
+from app.services.proximity import fetch_all_proximity_data
 from app.services.flatfox import flatfox_client
 from app.services.supabase import supabase_service
 
@@ -86,6 +87,30 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
                 listing.pk,
             )
 
+    # 1b/1c. Fetch proximity data (PROX-01 through CACHE-06)
+    # Only runs if listing has coordinates. Returns {} immediately if no proximity
+    # requirements exist in dynamic_fields (PROX-03 gate inside fetch_all_proximity_data).
+    nearby_data: dict[str, list[dict]] = {}
+    if listing.latitude is not None and listing.longitude is not None:
+        try:
+            # Parse preferences early for proximity extraction (full parse happens at step 2)
+            _prefs_for_proximity = UserPreferences.model_validate(request.preferences)
+            nearby_data = await fetch_all_proximity_data(
+                listing.latitude,
+                listing.longitude,
+                _prefs_for_proximity,
+            )
+            if nearby_data:
+                logger.info(
+                    "Fetched proximity data for listing %d: %d queries",
+                    listing.pk, len(nearby_data),
+                )
+        except Exception:
+            logger.exception(
+                "Proximity fetch raised unexpected error for listing %d — continuing without proximity data",
+                listing.pk,
+            )
+
     # 2. Parse preferences from request (provided by edge function, no DB query)
     preferences = UserPreferences.model_validate(request.preferences)
 
@@ -130,6 +155,8 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
         score_data["listing_title"] = (
             listing.description_title or listing.public_title or listing.short_title or None
         )
+        if nearby_data:
+            score_data["nearby_places"] = nearby_data
         await asyncio.to_thread(
             supabase_service.save_analysis,
             request.user_id,

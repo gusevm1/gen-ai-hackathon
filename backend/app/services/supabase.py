@@ -87,6 +87,70 @@ class SupabaseService:
             on_conflict="user_id,listing_id,profile_id",
         ).execute()
 
+    def get_nearby_places_cache(
+        self,
+        lat: float,
+        lon: float,
+        query: str,
+        radius_km: float,
+    ) -> list[dict] | None:
+        """Retrieve cached nearby places result for (lat, lon, query, radius_km).
+
+        Returns the cached list of place dicts if a fresh entry (< 7 days) exists.
+        Returns None on cache miss or any error.
+
+        TTL is computed in Python (not raw SQL) for supabase-py compatibility.
+        """
+        from datetime import datetime, timedelta, timezone
+        threshold = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        client = self.get_client()
+        result = (
+            client.table("nearby_places_cache")
+            .select("response_json")
+            .eq("lat", lat)
+            .eq("lon", lon)
+            .eq("query", query)
+            .eq("radius_km", radius_km)
+            .gte("created_at", threshold)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            return result.data[0].get("response_json")
+        return None
+
+    def save_nearby_places_cache(
+        self,
+        lat: float,
+        lon: float,
+        query: str,
+        radius_km: float,
+        results: list[dict],
+    ) -> None:
+        """Insert nearby places results into cache.
+
+        Uses insert (not upsert) — multiple entries per key are allowed;
+        get_nearby_places_cache reads only the most recent within TTL.
+
+        Args:
+            lat: Listing latitude.
+            lon: Listing longitude.
+            query: The search query string.
+            radius_km: Search radius in km.
+            results: List of place dicts to cache as JSONB.
+        """
+        client = self.get_client()
+        client.table("nearby_places_cache").insert(
+            {
+                "lat": lat,
+                "lon": lon,
+                "query": query,
+                "radius_km": radius_km,
+                "response_json": results,
+            }
+        ).execute()
+
 
 # Singleton instance used by routers and lifespan
 supabase_service = SupabaseService()
