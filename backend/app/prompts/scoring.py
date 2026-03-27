@@ -86,11 +86,11 @@ IMPORTANCE LEVELS:
 - Use these to weight your overall score calculation. CRITICAL categories matter most.
 - For the weight field in each category response, use: critical=90, high=70, medium=50, low=30.
 
-NEARBY PLACES SEARCH:
-- When the search_nearby_places tool is available, you MAY use it to verify proximity-based criteria.
-- Call the tool AT MOST ONCE. Choose the most important proximity criterion to verify.
-- If results are empty or the tool errors, score based on available listing data and note the limitation.
-- Do NOT call the tool for criteria assessable from listing data alone (balcony, parking, etc.)."""
+PROXIMITY EVALUATION RULES:
+- Evaluate proximity-based criteria ONLY from the "## Nearby Places Data (Verified)" section in the user prompt.
+- If an amenity is not present in that section, score it as "not found nearby" — do not guess, infer, or search.
+- Never call any tool to search for places. No tool is available for this purpose.
+- If the "## Nearby Places Data (Verified)" section is absent, the user has no proximity requirements — skip proximity evaluation entirely."""
 
 
 def _fmt_range(min_val, max_val, prefix="", suffix="") -> str:
