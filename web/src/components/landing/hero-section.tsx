@@ -90,7 +90,7 @@ export function HeroSection() {
       </div>
 
       {/* Centered scroll button with pulse ring */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 relative">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
         <span className="absolute inset-0 rounded-full bg-primary/25" style={{ animation: 'subtle-ping 2.5s ease-out infinite' }} />
         <button
           onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
