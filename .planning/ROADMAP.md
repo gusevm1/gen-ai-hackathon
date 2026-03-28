@@ -88,7 +88,7 @@ Plans:
 
 **Requirements:** LP-01, LP-02, LP-03, LP-04, LP-05, LP-06
 
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 20-01-PLAN.md — Replace chapter translation keys with 5-section key set (EN + DE); fix landing-translations.test.ts

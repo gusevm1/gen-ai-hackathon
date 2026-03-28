@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Extension Download & Install
 status: completed
-last_updated: "2026-03-27T11:54:24Z"
+last_updated: "2026-03-28T15:18:06.234Z"
 progress:
-  total_phases: 1
+  total_phases: 2
   completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 25
+  total_plans: 4
+  completed_plans: 3
+  percent: 40
 ---
 
 # Project State
@@ -44,6 +44,9 @@ Progress: [####______] 40%
 - [v4.0]: Phase order: 18 Design System → 19 Landing Page → 20 Dashboard Alignment → 21 Polish & QA
 - [Phase 20-01]: IsometricHome uses useMotionValue(1) as fallback when scrollProgress is undefined — all parts visible in static mode
 - [Phase 20-01]: 7-chapter scroll-driven landing page replaces Phase 19 flat layout — each chapter a sticky section driven by useScroll + useTransform
+- [Phase 20-02]: EMPTY_VARIANTS typed as Variants = {} for reduced-motion ternary in motion/react components — TypeScript cannot infer {} assignable to Variants without explicit type annotation
+- [Phase 20-02]: Switzerland polygon uses fill color transition (not pathLength) — pathLength only affects strokes; polygon has fill but no stroke
+- [Phase 20-02]: LandingPageContent stubbed with SectionHero + SectionGlobe immediately to unblock tests — full rewrite deferred to Plan 03
 
 ### Decisions (added)
 
