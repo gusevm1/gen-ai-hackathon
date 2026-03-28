@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: Landing Page v2 & Hackathon Credits
-status: between_milestones
+status: in_progress
 last_updated: "2026-03-28"
 progress:
   total_phases: 2
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 12
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State
@@ -24,9 +24,11 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Milestone v4.0 complete and archived. Branch `redesign/v4-landing` active.
-Phase 22 (Landing Page Section Redesigns) is the first phase to plan.
+Phase 22 plan 02 (SectionProblem Redesign) complete. Next: 22-03.
 
-Progress: [__________] 0% (v4.1 not started)
+Progress: [█████████░] 92% (11/12 plans complete)
+
+**Last session:** 2026-03-28 — Completed 22-02-PLAN.md (SectionProblem redesign)
 
 ## Accumulated Context
 
@@ -46,6 +48,9 @@ Progress: [__________] 0% (v4.1 not started)
 - CTA headline: clamp(2.5rem, 6vw, 4.5rem) min, animate y: 60 → 0 with spring
 - Credits section: minimal, below CTA, shows ETH + Gen-AI Hackathon logos
 - Swiss photography deferred to v4.2 discussion
+- x slide-in uses no initial prop — Framer Motion derives start state from animate value at mount when isInView=false (22-02)
+- jsdom normalizes hsl() to rgba() — PROB-03 test checks both color representations for test reliability (22-02)
+- Card elevation via backgroundColor + border inline style (not Tailwind bg-* classes) — required since hsl() with spaces not supported in Tailwind utilities (22-02)
 
 ### Blockers/Concerns
 

@@ -13,9 +13,9 @@
 
 ### Problem Section
 
-- [ ] **PROB-01**: Decorative background numbers (huge aria-hidden 01/02/03 at 3% opacity) removed from cards
-- [ ] **PROB-02**: Each problem card slides in from the left as it enters the viewport (individual scroll trigger per card)
-- [ ] **PROB-03**: Problem cards redesigned to be more visually engaging — elevated card style, stronger visual hierarchy, attention-hooking rather than plain bordered list
+- [x] **PROB-01**: Decorative background numbers (huge aria-hidden 01/02/03 at 3% opacity) removed from cards
+- [x] **PROB-02**: Each problem card slides in from the left as it enters the viewport (individual scroll trigger per card)
+- [x] **PROB-03**: Problem cards redesigned to be more visually engaging — elevated card style, stronger visual hierarchy, attention-hooking rather than plain bordered list
 
 ### Solution Section
 
@@ -73,9 +73,9 @@
 | HERO-01 | Phase 22 | Pending |
 | HERO-02 | Phase 22 | Pending |
 | HERO-03 | Phase 22 | Pending |
-| PROB-01 | Phase 22 | Pending |
-| PROB-02 | Phase 22 | Pending |
-| PROB-03 | Phase 22 | Pending |
+| PROB-01 | Phase 22 | Complete |
+| PROB-02 | Phase 22 | Complete |
+| PROB-03 | Phase 22 | Complete |
 | SOLN-01 | Phase 22 | Pending |
 | SOLN-02 | Phase 22 | Pending |
 | SOLN-03 | Phase 22 | Pending |

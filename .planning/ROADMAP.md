@@ -76,7 +76,7 @@
 **Requirements:** HERO-01, HERO-02, HERO-03, PROB-01, PROB-02, PROB-03, SOLN-01, SOLN-02, SOLN-03, SOLN-04, CTA-01, CTA-02, CTA-03
 
 **Plans:**
-- [ ] 22-01-PLAN.md — Hero cleanup + tier color unification
+2/3 plans executed
 - [ ] 22-02-PLAN.md — Problem section card redesign (slide-in animation)
 - [ ] 22-03-PLAN.md — Solution enlargement + tier color fix; CTA dramatic entrance
 
