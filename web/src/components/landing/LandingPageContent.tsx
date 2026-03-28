@@ -23,7 +23,7 @@ export function LandingPageContent() {
         aria-hidden
         style={{
           height: 100,
-          background: 'linear-gradient(to bottom, transparent 0%, hsl(173 65% 52% / 0.07) 50%, transparent 100%)',
+          background: 'linear-gradient(to bottom, transparent 0%, hsl(342 89% 50% / 0.07) 50%, transparent 100%)',
         }}
       />
       <SectionCTA lang={lang} />

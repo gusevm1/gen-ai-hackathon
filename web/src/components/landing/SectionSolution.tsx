@@ -55,7 +55,7 @@ function SceneProfile({ active }: { active: boolean }) {
       <div className="flex gap-2 items-start">
         <div
           className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5"
-          style={{ backgroundColor: 'hsl(173 65% 52% / 0.2)', color: 'var(--color-hero-teal)' }}
+          style={{ backgroundColor: 'hsl(342 89% 50% / 0.2)', color: 'var(--color-hero-teal)' }}
         >
           AI
         </div>
@@ -71,7 +71,7 @@ function SceneProfile({ active }: { active: boolean }) {
       <div className="flex gap-2 items-start justify-end">
         <div
           className="rounded-2xl rounded-tr-sm px-3 py-2 max-w-[85%] text-xs leading-relaxed"
-          style={{ backgroundColor: 'hsl(173 65% 52% / 0.18)', color: 'hsl(0 0% 92%)' }}
+          style={{ backgroundColor: 'hsl(342 89% 50% / 0.18)', color: 'hsl(0 0% 92%)' }}
         >
           {typed}
           {active && typed.length < PROFILE_TEXT.length && (
@@ -101,7 +101,7 @@ function SceneProfile({ active }: { active: boolean }) {
           >
             <div
               className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5"
-              style={{ backgroundColor: 'hsl(173 65% 52% / 0.2)', color: 'var(--color-hero-teal)' }}
+              style={{ backgroundColor: 'hsl(342 89% 50% / 0.2)', color: 'var(--color-hero-teal)' }}
             >
               AI
             </div>
@@ -163,8 +163,8 @@ function SceneListings({ active }: { active: boolean }) {
           transition={{ delay: active ? i * 0.12 : 0, duration: 0.35, ease: ease.enter }}
           className="flex items-center justify-between rounded-xl px-3 py-2.5 cursor-pointer"
           style={{
-            backgroundColor: i === 0 ? 'hsl(173 65% 52% / 0.08)' : 'hsl(0 0% 9%)',
-            border: `1px solid ${i === 0 ? 'hsl(173 65% 52% / 0.2)' : 'hsl(0 0% 100% / 0.06)'}`,
+            backgroundColor: i === 0 ? 'hsl(342 89% 50% / 0.08)' : 'hsl(0 0% 9%)',
+            border: `1px solid ${i === 0 ? 'hsl(342 89% 50% / 0.2)' : 'hsl(0 0% 100% / 0.06)'}`,
           }}
         >
           <div>
@@ -393,8 +393,8 @@ export function SectionSolution({ lang }: { lang: Language }) {
                 onClick={() => setScene(i)}
                 className="flex-1 text-left rounded-2xl px-8 py-8 transition-all duration-300"
                 style={{
-                  backgroundColor: active ? 'hsl(173 65% 52% / 0.1)' : 'hsl(0 0% 100% / 0.03)',
-                  border: `1px solid ${active ? 'hsl(173 65% 52% / 0.3)' : 'hsl(0 0% 100% / 0.07)'}`,
+                  backgroundColor: active ? 'hsl(342 89% 50% / 0.1)' : 'hsl(0 0% 100% / 0.03)',
+                  border: `1px solid ${active ? 'hsl(342 89% 50% / 0.3)' : 'hsl(0 0% 100% / 0.07)'}`,
                   cursor: 'pointer',
                 }}
               >
@@ -409,7 +409,7 @@ export function SectionSolution({ lang }: { lang: Language }) {
                   {active && !prefersReduced && (
                     <div
                       className="flex-1 h-0.5 rounded-full overflow-hidden"
-                      style={{ backgroundColor: 'hsl(173 65% 52% / 0.2)' }}
+                      style={{ backgroundColor: 'hsl(342 89% 50% / 0.2)' }}
                     >
                       <motion.div
                         className="h-full rounded-full"

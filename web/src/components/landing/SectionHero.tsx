@@ -66,7 +66,7 @@ export function SectionHero({ lang }: SectionHeroProps) {
         aria-hidden
         className="absolute inset-0 z-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 70% 50% at 50% 50%, hsl(173 65% 52% / 0.11) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse 70% 50% at 50% 50%, hsl(342 89% 50% / 0.11) 0%, transparent 70%)',
         }}
       />
 
@@ -79,7 +79,7 @@ export function SectionHero({ lang }: SectionHeroProps) {
             style={{
               width: 480, height: 480,
               top: '5%', left: '-15%',
-              background: 'hsl(173 65% 52% / 0.07)',
+              background: 'hsl(342 89% 50% / 0.07)',
               filter: 'blur(80px)',
             }}
             animate={{ y: [0, -35, 0], x: [0, 18, 0] }}
@@ -91,7 +91,7 @@ export function SectionHero({ lang }: SectionHeroProps) {
             style={{
               width: 380, height: 380,
               bottom: '0%', right: '-12%',
-              background: 'hsl(173 65% 52% / 0.05)',
+              background: 'hsl(342 89% 50% / 0.05)',
               filter: 'blur(70px)',
             }}
             animate={{ y: [0, 28, 0], x: [0, -22, 0] }}
@@ -155,8 +155,8 @@ export function SectionHero({ lang }: SectionHeroProps) {
           transition={{ delay: 0.1, duration: duration.moderate, ease: ease.enter }}
           className="mb-7 flex items-center gap-2.5 rounded-full border px-4 py-1.5"
           style={{
-            borderColor: 'hsl(173 65% 52% / 0.28)',
-            backgroundColor: 'hsl(173 65% 52% / 0.07)',
+            borderColor: 'hsl(342 89% 50% / 0.28)',
+            backgroundColor: 'hsl(342 89% 50% / 0.07)',
           }}
         >
           {!prefersReduced && (
@@ -189,7 +189,7 @@ export function SectionHero({ lang }: SectionHeroProps) {
               <br />
               <span
                 style={{
-                  background: 'linear-gradient(95deg, var(--color-hero-teal) 0%, hsl(173 80% 78%) 45%, hsl(200 65% 82%) 100%)',
+                  background: 'linear-gradient(95deg, var(--color-hero-teal) 0%, hsl(342 70% 70%) 45%, hsl(342 60% 75%) 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
@@ -226,7 +226,7 @@ export function SectionHero({ lang }: SectionHeroProps) {
             style={{
               backgroundColor: 'var(--color-hero-teal)',
               color: 'var(--color-hero-bg)',
-              boxShadow: '0 0 32px hsl(173 65% 52% / 0.28)',
+              boxShadow: '0 0 32px hsl(342 89% 50% / 0.28)',
             }}
           >
             {t(lang, 'landing_hero_cta')}

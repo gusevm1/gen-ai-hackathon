@@ -23,7 +23,7 @@ export function SectionCTA({ lang }: { lang: Language }) {
         aria-hidden
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 80% 60% at 50% 50%, hsl(173 65% 52% / 0.13) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse 80% 60% at 50% 50%, hsl(342 89% 50% / 0.13) 0%, transparent 70%)',
         }}
       />
 
@@ -70,7 +70,7 @@ export function SectionCTA({ lang }: { lang: Language }) {
           style={{
             backgroundColor: 'var(--color-hero-teal)',
             color: 'var(--color-hero-bg)',
-            boxShadow: '0 0 32px hsl(173 65% 52% / 0.28)',
+            boxShadow: '0 0 32px hsl(342 89% 50% / 0.28)',
           }}
         >
           {t(lang, 'landing_cta_button')}

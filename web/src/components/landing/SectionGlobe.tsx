@@ -62,7 +62,7 @@ export function SectionGlobe({ lang }: SectionGlobeProps) {
     : {
         hidden: { fill: 'hsl(220 15% 25%)', opacity: 0.5 },
         visible: {
-          fill: 'hsl(173 65% 52%)',
+          fill: 'hsl(342 89% 50%)',
           opacity: 1,
           transition: { delay: 1.6, duration: 0.6 },
         },
@@ -157,7 +157,7 @@ export function SectionGlobe({ lang }: SectionGlobeProps) {
           cy="85"
           r="10"
           fill="none"
-          stroke="hsl(173 65% 52%)"
+          stroke="hsl(342 89% 50%)"
           strokeWidth="1.5"
           variants={glowRingVariant}
         />

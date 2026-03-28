@@ -32,7 +32,7 @@ function ProblemItem({
         x: isInView ? 0 : -60,
         scale: isInView ? 1 : 0.99,
         boxShadow: isInView
-          ? 'inset 0 0 0 1px hsl(173 65% 52% / 0.3), 0 0 28px hsl(173 65% 52% / 0.10)'
+          ? 'inset 0 0 0 1px hsl(342 89% 50% / 0.3), 0 0 28px hsl(342 89% 50% / 0.10)'
           : 'none',
       }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
@@ -44,9 +44,9 @@ function ProblemItem({
         className="flex-shrink-0 flex items-center justify-center rounded-full text-sm font-bold tabular-nums mt-1"
         style={{
           width: 44, height: 44,
-          border: '1px solid hsl(173 65% 52% / 0.3)',
+          border: '1px solid hsl(342 89% 50% / 0.3)',
           color: 'var(--color-hero-teal)',
-          backgroundColor: 'hsl(173 65% 52% / 0.07)',
+          backgroundColor: 'hsl(342 89% 50% / 0.07)',
         }}
       >
         {num}
