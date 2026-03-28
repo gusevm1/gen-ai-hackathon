@@ -36,14 +36,14 @@ function ProblemItem({
           : 'none',
       }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="relative flex items-start gap-6 py-8 px-8 rounded-2xl"
+      className="relative flex items-start gap-5 py-5 px-6 rounded-2xl"
       style={{ backgroundColor: 'hsl(0 0% 100% / 0.03)', border: '1px solid hsl(0 0% 100% / 0.07)' }}
     >
       {/* Number badge */}
       <div
         className="flex-shrink-0 flex items-center justify-center rounded-full text-sm font-bold tabular-nums mt-1"
         style={{
-          width: 44, height: 44,
+          width: 36, height: 36,
           border: '1px solid hsl(342 89% 50% / 0.3)',
           color: 'var(--color-hero-teal)',
           backgroundColor: 'hsl(342 89% 50% / 0.07)',
@@ -56,7 +56,7 @@ function ProblemItem({
       <p
         className="font-semibold leading-snug relative z-10"
         style={{
-          fontSize: 'clamp(1.4rem, 3.2vw, 2.25rem)',
+          fontSize: 'clamp(1rem, 2vw, 1.35rem)',
           color: 'var(--color-hero-fg)',
           maxWidth: '75%',
         }}
