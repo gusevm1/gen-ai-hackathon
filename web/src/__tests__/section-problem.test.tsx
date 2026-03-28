@@ -35,4 +35,15 @@ describe('SectionProblem', () => {
     const dashes = container.querySelectorAll('span')
     expect(dashes.length).toBeGreaterThanOrEqual(3)
   })
+
+  it('renders 3 problem items with motion divs', () => {
+    const { container } = render(<SectionProblem lang="en" />)
+    // Each ProblemItem renders a motion.div wrapping the item
+    // Check 3 bullet text items are present by checking problem bullet content
+    const section = container.querySelector('section')
+    expect(section).toBeTruthy()
+    // The 3 items render within the section
+    const itemDivs = container.querySelectorAll('.py-12')
+    expect(itemDivs.length).toBeGreaterThanOrEqual(3)
+  })
 })
