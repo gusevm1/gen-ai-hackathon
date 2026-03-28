@@ -67,10 +67,10 @@ describe('SectionHero', () => {
   it('poor tier color is #ef4444 (HERO-03)', () => {
     const { container } = render(<SectionHero lang="en" />)
     // The poor chip (score 41) renders a score circle span with backgroundColor TIER_COLORS.poor.bg
-    // innerHTML contains the style inline — check for ef4444
+    // JSDOM converts #ef4444 → rgb(239, 68, 68) in inline styles
     const chips = container.querySelectorAll('[data-testid="hero-chip"]')
-    // At least one chip must use ef4444 (the poor tier chip)
     const htmlContent = Array.from(chips).map(c => c.innerHTML).join('')
-    expect(htmlContent).toContain('ef4444')
+    // Check for the JSDOM-normalized rgb value of #ef4444
+    expect(htmlContent).toContain('rgb(239, 68, 68)')
   })
 })

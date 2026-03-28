@@ -11,7 +11,7 @@ const TIER_COLORS = {
   excellent: { bg: '#10b981', text: '#ffffff' },
   good:      { bg: '#3b82f6', text: '#ffffff' },
   fair:      { bg: '#f59e0b', text: '#1a1a1a' },
-  poor:      { bg: '#6b7280', text: '#ffffff' },
+  poor:      { bg: '#ef4444', text: '#ffffff' },
 } as const
 type Tier = keyof typeof TIER_COLORS
 
@@ -217,7 +217,7 @@ export function SectionHero({ lang }: SectionHeroProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.52, duration: duration.slow, ease: ease.enter }}
-          className="flex flex-col sm:flex-row items-center gap-4"
+          className="flex flex-col items-center gap-3"
         >
           <Button
             render={<Link href="/auth" />}
@@ -231,33 +231,11 @@ export function SectionHero({ lang }: SectionHeroProps) {
           >
             {t(lang, 'landing_hero_cta')}
           </Button>
-          <span className="text-sm" style={{ color: 'hsl(0 0% 42%)' }}>
+          <span className="text-sm text-center" style={{ color: 'hsl(0 0% 42%)' }}>
             Free · No credit card · Works on Flatfox today
           </span>
         </motion.div>
 
-        {/* Stats row */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: duration.slow }}
-          className="mt-16 flex items-center gap-10 flex-wrap justify-center"
-        >
-          {[
-            { value: '2,400+', label: 'listings scored daily' },
-            { value: '< 3s',   label: 'per listing scored'   },
-            { value: 'Free',   label: 'to get started'       },
-          ].map(({ value, label }) => (
-            <div key={label} className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-bold" style={{ color: 'var(--color-hero-fg)' }}>
-                {value}
-              </span>
-              <span className="text-xs" style={{ color: 'hsl(0 0% 42%)' }}>
-                {label}
-              </span>
-            </div>
-          ))}
-        </motion.div>
       </div>
     </section>
   )
