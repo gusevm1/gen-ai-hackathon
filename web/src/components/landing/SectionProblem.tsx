@@ -26,35 +26,24 @@ function ProblemItem({
   return (
     <motion.div
       ref={ref}
+      data-testid="problem-item"
       animate={prefersReduced ? {} : {
         opacity: isInView ? 1 : 0.25,
+        x: isInView ? 0 : -60,
         scale: isInView ? 1 : 0.99,
         boxShadow: isInView
           ? 'inset 0 0 0 1px hsl(173 65% 52% / 0.3), 0 0 28px hsl(173 65% 52% / 0.10)'
           : 'none',
       }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="relative flex items-start gap-6 py-12 border-b rounded-xl px-4"
-      style={{ borderColor: 'hsl(0 0% 100% / 0.07)' }}
+      className="relative flex items-start gap-6 py-8 px-8 rounded-2xl"
+      style={{ backgroundColor: 'hsl(0 0% 100% / 0.03)', border: '1px solid hsl(0 0% 100% / 0.07)' }}
     >
-      {/* Decorative background number */}
-      <span
-        aria-hidden
-        className="absolute right-0 top-1/2 -translate-y-1/2 font-black select-none pointer-events-none leading-none"
-        style={{
-          fontSize: 'clamp(5rem, 14vw, 10rem)',
-          color: 'hsl(0 0% 100% / 0.03)',
-          lineHeight: 1,
-        }}
-      >
-        {num}
-      </span>
-
       {/* Number badge */}
       <div
-        className="flex-shrink-0 flex items-center justify-center rounded-full text-xs font-bold tabular-nums mt-1"
+        className="flex-shrink-0 flex items-center justify-center rounded-full text-sm font-bold tabular-nums mt-1"
         style={{
-          width: 36, height: 36,
+          width: 44, height: 44,
           border: '1px solid hsl(173 65% 52% / 0.3)',
           color: 'var(--color-hero-teal)',
           backgroundColor: 'hsl(173 65% 52% / 0.07)',
@@ -109,7 +98,7 @@ export function SectionProblem({ lang }: { lang: Language }) {
         </motion.div>
 
         {/* Problem statements */}
-        <div className="space-y-0">
+        <div className="space-y-4">
           {PROBLEM_KEYS.map(({ num, key }) => (
             <ProblemItem key={num} num={num} statement={t(lang, key)} />
           ))}

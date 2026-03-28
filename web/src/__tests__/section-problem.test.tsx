@@ -31,9 +31,9 @@ describe('SectionProblem', () => {
 
   it('renders 3 bullet points', () => {
     const { container } = render(<SectionProblem lang="en" />)
-    // Each bullet has a teal dash separator
-    const dashes = container.querySelectorAll('span')
-    expect(dashes.length).toBeGreaterThanOrEqual(3)
+    // Each ProblemItem renders a number badge and statement — check for 3 items
+    const items = container.querySelectorAll('[data-testid="problem-item"]')
+    expect(items.length).toBeGreaterThanOrEqual(3)
   })
 
   it('renders 3 problem items with motion divs', () => {
@@ -63,6 +63,11 @@ describe('SectionProblem', () => {
   it('problem card has elevated background color (PROB-03)', () => {
     const { container } = render(<SectionProblem lang="en" />)
     // Card background value should appear in rendered HTML
-    expect(container.innerHTML).toContain('hsl(0 0% 100% / 0.03)')
+    // jsdom normalizes hsl(0 0% 100% / 0.03) → rgba(255, 255, 255, 0.03)
+    const html = container.innerHTML
+    const hasCardBg =
+      html.includes('hsl(0 0% 100% / 0.03)') ||
+      html.includes('rgba(255, 255, 255, 0.03)')
+    expect(hasCardBg).toBe(true)
   })
 })
