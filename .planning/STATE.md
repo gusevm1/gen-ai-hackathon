@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Extension Download & Install
 status: completed
-last_updated: "2026-03-28T15:18:06.234Z"
+last_updated: "2026-03-28T15:27:00.483Z"
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 40
 ---
 
@@ -47,6 +47,8 @@ Progress: [####______] 40%
 - [Phase 20-02]: EMPTY_VARIANTS typed as Variants = {} for reduced-motion ternary in motion/react components — TypeScript cannot infer {} assignable to Variants without explicit type annotation
 - [Phase 20-02]: Switzerland polygon uses fill color transition (not pathLength) — pathLength only affects strokes; polygon has fill but no stroke
 - [Phase 20-02]: LandingPageContent stubbed with SectionHero + SectionGlobe immediately to unblock tests — full rewrite deferred to Plan 03
+- [Phase 20-03]: SectionSolution uses one section element for both How It Works and Features blocks — cohesion over split
+- [Phase 20-03]: stepStaggerVariants defined locally (staggerChildren: 0.15) — specific to 3-step reveal, not reusable
 
 ### Decisions (added)
 
