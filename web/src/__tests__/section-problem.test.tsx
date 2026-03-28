@@ -38,12 +38,31 @@ describe('SectionProblem', () => {
 
   it('renders 3 problem items with motion divs', () => {
     const { container } = render(<SectionProblem lang="en" />)
-    // Each ProblemItem renders a motion.div wrapping the item
-    // Check 3 bullet text items are present by checking problem bullet content
     const section = container.querySelector('section')
     expect(section).toBeTruthy()
-    // The 3 items render within the section
-    const itemDivs = container.querySelectorAll('.py-12')
+    const itemDivs = container.querySelectorAll('[data-testid="problem-item"]')
     expect(itemDivs.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('no decorative background number span present (PROB-01)', () => {
+    const { container } = render(<SectionProblem lang="en" />)
+    // The decorative span has aria-hidden and large clamp font size
+    const ariaHiddenSpans = Array.from(container.querySelectorAll('[aria-hidden]'))
+    const bgNumbers = ariaHiddenSpans.filter(el =>
+      (el as HTMLElement).style.fontSize?.includes('clamp(5rem') ||
+      el.innerHTML === '01' || el.innerHTML === '02' || el.innerHTML === '03'
+    )
+    // After PROB-01, no such element should exist
+    // We check by ensuring no aria-hidden span has the large clamp font
+    const largeSpans = ariaHiddenSpans.filter(el =>
+      (el as HTMLElement).style.fontSize?.includes('clamp')
+    )
+    expect(largeSpans.length).toBe(0)
+  })
+
+  it('problem card has elevated background color (PROB-03)', () => {
+    const { container } = render(<SectionProblem lang="en" />)
+    // Card background value should appear in rendered HTML
+    expect(container.innerHTML).toContain('hsl(0 0% 100% / 0.03)')
   })
 })
