@@ -77,10 +77,33 @@ Plans:
 - [x] **Phase 18: Design System & Motion Foundation** — Framer Motion, typography scale, dark/light color split, animation primitives
 - [x] **Phase 19: Landing Page v1** — Initial landing page (superseded by Phase 20 redesign)
 - [x] **Phase 20: Landing Page Redesign** — 5-section whileInView landing page: Hero, Globe (SVG draw-in), Problem, Solution (3 steps), CTA; replaces broken sticky-parallax chapters (completed 2026-03-28)
-- [ ] **Phase 21: Dashboard UI Alignment** — Propagate design language to dashboard, profiles, analysis pages
-- [ ] **Phase 22: Polish & QA** — Mobile, performance (LCP/CLS), cross-browser, final copy pass
+- [ ] **Phase 21: Landing Page Polish v2** — Extension-matched score badges, scroll-driven problem highlights, cinematic demo improvements, CTA transition
+- [ ] **Phase 22: Dashboard UI Alignment** — Propagate design language to dashboard, profiles, analysis pages
+- [ ] **Phase 23: Polish & QA** — Mobile, performance (LCP/CLS), cross-browser, final copy pass
 
 **Requirements:** LP-01 → LP-08, DS-01 → DS-04, UI-01 → UI-03
+
+### Phase 21: Landing Page Polish v2
+
+**Goal:** Polish the 5-section landing page — extension-matched score badges in the hero, scroll-driven pain point highlighting in the problem section, cinematic demo enlargement with improved step cards, and a smooth visual transition into the CTA.
+
+**Requirements:** LP-03, LP-04, LP-06
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 21-01-PLAN.md — Hero chips overhaul (7 ScoreBadge-style white chips, TIER_COLORS); Solution overline copy update
+- [ ] 21-02-PLAN.md — Problem section scroll highlight (useInView per-item, once: false, teal glow)
+- [ ] 21-03-PLAN.md — Solution browser demo + step card enlargement; gradient divider; CTA radial glow + FadeIn fix
+
+**Success Criteria:**
+1. Hero shows 7 property chips using the exact extension ScoreBadge style (circle + tier label, TIER_COLORS palette)
+2. Problem section: scroll drives per-item highlight/fade; all items illuminate at section end; once: false
+3. Solution section overline reads "How to avoid this" (or equivalent); browser demo is larger; step cards are larger
+4. Smooth visual gradient/divider transition between Solution and CTA sections
+5. All animations re-trigger on scroll (viewport once: false throughout)
+
+---
 
 ### Phase 20: Landing Page Redesign
 
