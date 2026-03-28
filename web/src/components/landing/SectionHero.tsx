@@ -189,7 +189,7 @@ export function SectionHero({ lang }: SectionHeroProps) {
               <br />
               <span
                 style={{
-                  background: 'linear-gradient(95deg, var(--color-hero-teal) 0%, hsl(342 70% 70%) 45%, hsl(342 60% 75%) 100%)',
+                  background: 'linear-gradient(95deg, var(--primary) 0%, hsl(342 70% 65%) 45%, hsl(342 60% 72%) 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
