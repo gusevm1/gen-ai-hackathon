@@ -89,6 +89,7 @@ Plans:
 - [x] **Phase 22: Database & Coordinate Resolution** — nearby_places_cache table + listing coordinate resolution with geocoding fallback (completed 2026-03-27)
 - [x] **Phase 23: Proximity Extraction & Apify Integration** — Parse proximity requirements from preferences, call Apify Google Places, cache results in Supabase (completed 2026-03-27)
 - [x] **Phase 24: Prompt Injection & Scoring Rules** — Inject verified nearby data into Claude prompt, remove tool references, update scoring rules (completed 2026-03-27)
+- [ ] **Phase 25: Restart Backend to Activate Apify Search**
 
 **Requirements:** COORD-01, COORD-02, COORD-03, PROX-01, PROX-02, PROX-03, APIFY-01, APIFY-02, APIFY-03, CACHE-04, CACHE-05, CACHE-06, PROMPT-01, PROMPT-02, PROMPT-03, SCORE-01, SCORE-02
 
@@ -136,6 +137,11 @@ Plans:
 
 Plans:
 - [x] 24-01-PLAN.md — Prompt injection, tool removal, scoring rules update
+
+### Phase 25: Restart Backend to Activate Apify Search
+**Goal**: Restart the EC2 backend so the Apify search changes from v5.0 are live
+**Depends on**: Phase 24
+**Plans**: TBD
 
 ## Progress
 
