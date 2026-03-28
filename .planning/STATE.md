@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 
 ## Current Position
 
-Phase: 21-landing-page-polish-v2 (in progress — Plan 01 complete)
+Phase: 21-landing-page-polish-v2 (in progress — Plans 01 and 03 complete)
 Branch: redesign/v4-landing
-Status: Phase 18, 19, 20 complete. Phase 21 Plan 01 complete: hero chips overhauled to ScoreBadge visual language, overline copy updated.
+Status: Phase 18, 19, 20 complete. Phase 21 Plans 01 and 03 complete: hero chips, overline copy, enlarged browser demo, bigger step cards, gradient divider, radial glow CTA with once:false animation.
 
-Progress: [####______] 40%
+Progress: [#####_____] 50%
 
 ## Accumulated Context
 
@@ -53,6 +53,9 @@ Progress: [####______] 40%
 - [Phase 21-01]: TIER_COLORS defined as local const in SectionHero.tsx (not imported across workspaces) to mirror extension ScoreBadge
 - [Phase 21-01]: data-testid="hero-chip" added to animated chip divs for jsdom testability
 - [Phase 21-01]: landing_howit_overline changed to "How to avoid this" (EN) / "So vermeidest du das" (DE) — narrative bridge from Problem to Solution
+- [Phase 21-03]: Gradient bridge divider placed in LandingPageContent (not inside sections) to keep components self-contained
+- [Phase 21-03]: SectionCTA FadeIn replaced with motion.div using viewport: { once: false, amount: 0.3 } for scroll-retriggerable animation
+- [Phase 21-03]: Tailwind bg-hero-bg / text-hero-fg / bg-hero-teal replaced with inline CSS variable styles in SectionCTA — consistent with other landing sections
 
 ### Decisions (added)
 

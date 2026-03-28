@@ -77,7 +77,7 @@ Plans:
 - [x] **Phase 18: Design System & Motion Foundation** — Framer Motion, typography scale, dark/light color split, animation primitives
 - [x] **Phase 19: Landing Page v1** — Initial landing page (superseded by Phase 20 redesign)
 - [x] **Phase 20: Landing Page Redesign** — 5-section whileInView landing page: Hero, Globe (SVG draw-in), Problem, Solution (3 steps), CTA; replaces broken sticky-parallax chapters (completed 2026-03-28)
-- [ ] **Phase 21: Landing Page Polish v2** — Extension-matched score badges, scroll-driven problem highlights, cinematic demo improvements, CTA transition
+- [x] **Phase 21: Landing Page Polish v2** — Extension-matched score badges, scroll-driven problem highlights, cinematic demo improvements, CTA transition (completed 2026-03-28)
 - [ ] **Phase 22: Dashboard UI Alignment** — Propagate design language to dashboard, profiles, analysis pages
 - [ ] **Phase 23: Polish & QA** — Mobile, performance (LCP/CLS), cross-browser, final copy pass
 
@@ -89,7 +89,7 @@ Plans:
 
 **Requirements:** LP-03, LP-04, LP-06
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 21-01-PLAN.md — Hero chips overhaul (7 ScoreBadge-style white chips, TIER_COLORS); Solution overline copy update
