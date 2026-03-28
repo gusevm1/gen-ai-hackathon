@@ -1,47 +1,116 @@
 # Phase 20: Landing Page Redesign — Research
 
 **Researched:** 2026-03-27
-**Domain:** Scroll-driven animation, SVG animation, motion/react v12, Next.js 15 App Router
-**Confidence:** HIGH (core patterns), MEDIUM (SVG globe/isometric math), HIGH (motion API)
+**Domain:** motion/react whileInView, SVG pathLength animation, SaaS landing page structure, Next.js App Router
+**Confidence:** HIGH — codebase read directly; motion/react verified against official docs; all patterns cross-referenced.
+
+---
+
+<user_constraints>
+## User Constraints (from CONTEXT.md)
+
+### Locked Decisions
+
+**Visual aesthetic**
+- Clean SaaS — references: Linear, Vercel, Framer. NOT Apple-minimalist.
+- Animations must be complete, polished, and authentic-feeling — not cinematic experiments
+- Professional and effective copy; not sparse, not overwrought
+- 21dev components welcome where they fit
+- Teal accent retained, existing design token system reused
+
+**Section structure (5 sections, in order)**
+1. **Hero** — HomeMatch logo, problem/outcome headline, single CTA
+2. **Globe** — SVG globe animating in, zooming/panning to pin Switzerland
+3. **Problem** — Pain points with neat scroll-triggered animations
+4. **Solution / Demo** — 3 sequential steps that animate in as you scroll
+   - Step 1: Tell us what you need (AI chat or manual preferences)
+   - Step 2: We search Flatfox and match a score
+   - Step 3: Full analysis so you find the right home
+5. **CTA** — Final call to action
+
+**Animation model**
+- Scroll-triggered entry — sections scroll normally; elements animate in as they enter the viewport
+- No sticky-parallax chapters — that's what broke last time
+- `whileInView` from `motion/react` is the primary pattern
+- Smooth and simple quality — polished, not cinematic
+- Globe section: draws in and pins Switzerland (not complex 3D spin)
+- Solution section: 3 steps sequence in one by one as user scrolls
+
+**Hero section**
+- Layout: centered, full-height or near-full-height
+- Logo mark + headline + optional subline + single primary CTA button
+- Headline angle: problem + outcome combined
+  - Model: "Thousands of listings. One perfect match."
+  - States the scale of the problem, then delivers the outcome
+- CTA: "Get Started" → `/auth`
+- No secondary CTA, no background animation on hero
+
+**Copy approach**
+- Bilingual EN/DE remains required (use existing translations system)
+
+### Claude's Discretion
+- Exact headline and body copy (follow problem/outcome angle, finalize later)
+- Problem section animation specifics (what animates, timing, sequencing)
+- Solution step UI mockup style (icon + text, card, screenshot snippet — planner decides)
+- Footer and navbar — reuse existing `LandingNavbar` and `LandingFooter`
+- Whether to keep or delete existing Chapter components (planner can delete or gut them)
+
+### Deferred Ideas (OUT OF SCOPE)
+- Final production copy / copywriting — later milestone
+- Social proof / testimonials — deferred per PROJECT.md
+- Mobile-specific layout optimisation — Phase 22 (Polish & QA)
+</user_constraints>
 
 ---
 
 ## Summary
 
-This phase replaces the existing `web/src/components/landing/` section stack with a single scroll-driven page of 7 chapters. The pattern is the Apple MacBook/iPhone product page: a tall outer container creates scroll space, a sticky inner canvas stays fixed while animations play based on `scrollYProgress` (0→1 per chapter).
+The existing landing page uses a 7-chapter sticky-parallax approach with `useScroll` + `useTransform` on height-multiplied containers (`h-[300vh]`, `h-[350vh]`, `h-[400vh]`). This approach is being replaced entirely with a simpler, more reliable 5-section scroll-triggered entry model. The core difference: sections occupy their natural height, elements animate in with `whileInView`, and nothing requires sticky containers or scroll-progress tracking.
 
-The project already has `motion` v12.38.0 (import path: `motion/react`), Tailwind v4 CSS-first, all design tokens, and `@base-ui/react` Button. No new dependencies are needed. The entire animation system is built with `useScroll` + `useTransform` — not `whileInView`, not CSS-only scroll-timeline.
+The project already has `motion/react` v12.38.0 installed (the rebranded Framer Motion package), a rich motion token library at `web/src/lib/motion.ts`, and two reusable motion primitives (`FadeIn`, `StaggerGroup`/`StaggerItem`) that implement exactly the pattern this redesign needs. The translation system (`_DeHasAllEnKeys` compile guard), design tokens, navbar (`LandingNavbar`), and footer (`LandingFooter`) are all reusable as-is.
 
-**Primary recommendation:** One `"use client"` file per chapter component. Each chapter receives its own `chapterRef` and creates its own `scrollYProgress` via `useScroll`. Motion values are passed as props to child SVG/text components so they never cause React re-renders.
+The Globe section needs the most careful approach: instead of scroll-driven scale/pan, it uses `whileInView` to trigger a `pathLength: 0 → 1` draw-in animation on SVG strokes, plus a fill/color transition on the Switzerland polygon. This is cleaner, more reliable, and directly supported by `motion/react`'s SVG animation primitives.
+
+One important discovery: `landing-translations.test.ts` already defines the expected translation key set for the new design (different from the old Chapter keys), which means a prior planning pass already defined what the translation keys should be. The plan must align with this test file.
+
+**Primary recommendation:** Replace all Chapter components with 5 new Section components. Consume the existing `FadeIn` and `StaggerGroup` primitives — don't rebuild them. Globe is the only section requiring custom animation logic, using `pathLength` draw-in.
 
 ---
 
 ## Standard Stack
 
-### Core (already installed — no installs needed)
+### Core (all already installed — no new packages needed)
 
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
-| `motion/react` | 12.38.0 | useScroll, useTransform, motion.path, useReducedMotion | The only scroll animation library needed |
-| `next` | 16.1.6 | App Router, "use client" boundaries | Already in place |
-| `tailwindcss` | v4 | CSS tokens, sticky/h-screen utilities | Already in place |
+| `motion/react` | 12.38.0 | All animations — `whileInView`, `motion.*`, variants | Already in project; is the current name of Framer Motion |
+| `next` | 16.1.6 | App Router, Server/Client Components | Project framework |
+| `react` | 19.2.3 | UI rendering | Project runtime |
+| `tailwindcss` | 4.x | Utility CSS | Project styling system |
+| `@base-ui/react` | 1.2.0 | Button primitive (via project `Button` component) | Established in Phase 19 |
+| `lucide-react` | 0.577.0 | Icons for solution steps | Already installed |
 
-### Supporting (already installed)
+### Already-Available Motion Primitives (reuse, do not recreate)
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| `@base-ui/react` | ^1.2.0 | CTA button with render={`<Link />`} | Chapter 7 CTA only |
-| `lucide-react` | ^0.577.0 | Icons in listing cards (Chapter 4) | Re-use existing HeroDemo icons |
+| Component | Import Path | What It Does |
+|-----------|------------|-------------|
+| `FadeIn` | `@/components/motion/FadeIn` | `whileInView="visible"`, `viewport={{ once: true, amount: 0.2 }}`, reduced-motion aware |
+| `StaggerGroup` | `@/components/motion/StaggerGroup` | Container with `staggerChildren: 0.08`, `delayChildren: 0.1` |
+| `StaggerItem` | `@/components/motion/StaggerGroup` | Item that inherits stagger variant from parent |
+| `CountUp` | `@/components/motion/CountUp` | Number counting animation (available if needed for stats) |
 
-### Alternatives Considered
+### Already-Available UI Components
 
-| Instead of | Could Use | Tradeoff |
-|------------|-----------|----------|
-| `motion/react` useScroll | CSS Scroll Timeline API | Native but Safari support lagging; motion abstracts it with GPU acceleration |
-| Hand-rolled word split | `motion-plus` splitText | splitText requires Motion+ paid subscription; manual span-per-word is fine |
-| SVG globe | Three.js or Lottie | Three.js adds ~600kb; Lottie needs a designer; inline SVG is sufficient |
+| Component | Import Path | Relevance to Landing |
+|-----------|------------|---------------------|
+| `ShimmerButton` | `@/components/ui/shimmer-button` | Primary CTA — 21st.dev component already in project |
+| `Button` | `@/components/ui/button` | Use `render={<Link href="..." />}` for routing |
+| `Badge` | `@/components/ui/badge` | Step number labels |
+| `Card` | `@/components/ui/card` | Solution step cards if card-style layout is chosen |
 
-**Installation:** None required. All dependencies already in `package.json`.
+### No Installation Step Required
+
+All required libraries are present in `web/package.json`. No `npm install` needed for this phase.
 
 ---
 
@@ -51,1156 +120,479 @@ The project already has `motion` v12.38.0 (import path: `motion/react`), Tailwin
 
 ```
 web/src/components/landing/
-├── LandingPageContent.tsx        # orchestrator (replaces existing, still "use client")
-├── chapters/
-│   ├── ChapterHook.tsx           # Chapter 1 — 100vh, load animation only
-│   ├── ChapterSwiss.tsx          # Chapter 2 — 300vh sticky, SVG globe
-│   ├── ChapterProblem.tsx        # Chapter 3 — 350vh sticky, isometric home
-│   ├── ChapterMechanism.tsx      # Chapter 4 — 400vh sticky, browser demo
-│   ├── ChapterScore.tsx          # Chapter 5 — 200vh sticky, CountUp
-│   ├── ChapterDream.tsx          # Chapter 6 — 150vh, home lights up
-│   └── ChapterCta.tsx            # Chapter 7 — 100vh, clean CTA
-├── svg/
-│   ├── IsometricHome.tsx         # SVG component, accepts scrollProgress MotionValue
-│   ├── GlobeSwiss.tsx            # SVG globe, accepts scrollProgress MotionValue
-│   └── BrowserDemo.tsx           # Browser chrome + listing cards
-└── LandingNavbar.tsx             # Keep existing
-└── LandingFooter.tsx             # Keep existing
+├── LandingPageContent.tsx   # REWRITE — orchestrates 5 new sections
+├── LandingNavbar.tsx        # KEEP AS-IS (already works)
+├── LandingFooter.tsx        # KEEP AS-IS (already works)
+├── SectionHero.tsx          # NEW
+├── SectionGlobe.tsx         # NEW
+├── SectionProblem.tsx       # NEW
+├── SectionSolution.tsx      # NEW
+├── SectionCTA.tsx           # NEW
+│
+│   ── DELETE after new sections are complete:
+├── ChapterHook.tsx
+├── ChapterSwitzerland.tsx
+├── ChapterProblem.tsx
+├── ChapterMechanism.tsx
+├── ChapterScore.tsx
+├── ChapterDream.tsx
+├── ChapterCTA.tsx
+└── IsometricHome.tsx
 ```
 
-### Pattern 1: The Sticky Scroll Chapter
+### Pattern 1: Standard Scroll-Triggered Entry (whileInView)
 
-This is the core pattern for every chapter with scroll animation:
+**What:** Elements start invisible/offset, animate to visible as they enter the viewport. Fire once only.
+
+**When to use:** All sections and sub-elements: headings, body copy, cards, icons, step rows.
 
 ```typescript
-// Source: https://motion.dev/docs/react-use-scroll
-"use client"
+// Source: motion.dev/docs/react-motion-component (verified) + existing FadeIn.tsx
+import { motion, useReducedMotion } from "motion/react"
+import { fadeUpVariants, duration, ease } from "@/lib/motion"
 
-import { useRef } from "react"
-import { useScroll, useTransform } from "motion/react"
+// Simplest approach — use the existing FadeIn primitive:
+import { FadeIn } from "@/components/motion/FadeIn"
 
-export function ChapterSwiss() {
-  const chapterRef = useRef<HTMLDivElement>(null)
+<FadeIn delay={0.1}>
+  <h2>Section headline</h2>
+</FadeIn>
 
-  // scrollYProgress goes 0→1 as the user scrolls through the 300vh container
-  const { scrollYProgress } = useScroll({
-    target: chapterRef,
-    offset: ["start start", "end end"],
-  })
+// Direct motion.div if you need more control:
+const prefersReduced = useReducedMotion()
 
-  return (
-    // Outer: creates scroll space. Height = how long the animation lasts.
-    <div ref={chapterRef} className="relative h-[300vh]">
-      {/* Inner: sticks to viewport while outer scrolls */}
-      <div className="sticky top-0 h-screen overflow-hidden">
-        <GlobeSwiss scrollProgress={scrollYProgress} />
-      </div>
-    </div>
-  )
-}
+<motion.div
+  initial="hidden"
+  whileInView="visible"
+  viewport={{ once: true, amount: 0.2 }}
+  variants={prefersReduced ? {} : fadeUpVariants}
+>
+  content
+</motion.div>
 ```
 
-**Key rules:**
-- `ref` goes on the OUTER div (the scroll space), not the sticky inner
-- `offset: ["start start", "end end"]` means: progress starts when the top of the outer div hits the top of the viewport, ends when the bottom of the outer div hits the bottom of the viewport
-- `scrollYProgress` is a `MotionValue<number>` — passing it as a prop to children does NOT cause re-renders
+`viewport.amount: 0.2` means 20% of the element must enter the viewport before the animation fires. This is the safe project default.
 
-### Pattern 2: Child Component Receives MotionValue
+### Pattern 2: Stagger Group (Sequential List / Step Reveal)
 
-Children receive `scrollYProgress` directly as a `MotionValue`:
+**What:** Parent container orchestrates children with a delay between each.
+
+**When to use:** Problem bullet points, Solution 3-step sequence, feature lists.
 
 ```typescript
-// Source: https://motion.dev/docs/react-motion-value
-import { MotionValue, motion, useTransform } from "motion/react"
+// Source: existing StaggerGroup.tsx + @/lib/motion staggerContainerVariants (verified)
+import { StaggerGroup, StaggerItem } from "@/components/motion/StaggerGroup"
 
-interface GlobeSwissProps {
-  scrollProgress: MotionValue<number>
-}
+<StaggerGroup>
+  <StaggerItem>
+    <StepCard number={1} label="Tell us what you need" />
+  </StaggerItem>
+  <StaggerItem>
+    <StepCard number={2} label="We search and score" />
+  </StaggerItem>
+  <StaggerItem>
+    <StepCard number={3} label="See the full analysis" />
+  </StaggerItem>
+</StaggerGroup>
+```
 
-export function GlobeSwiss({ scrollProgress }: GlobeSwissProps) {
-  // Map scroll 0→1 to rotation 0→360
-  const rotation = useTransform(scrollProgress, [0, 0.4], [0, 360])
+`staggerChildren: 0.08` is the default (fast cascade). For Solution steps where deliberate pacing feels better, pass a custom `variants` prop or wrap in a `motion.div` with `staggerChildren: 0.2`.
 
-  // Map scroll 0.2→0.6 to scale 1→8 (zoom into Switzerland)
-  const swissScale = useTransform(scrollProgress, [0.2, 0.6], [1, 8])
+### Pattern 3: SVG Globe Draw-In + Switzerland Pin
 
-  // Map scroll 0.6→0.7 to opacity 0→1 (copy appears)
-  const copyOpacity = useTransform(scrollProgress, [0.6, 0.75], [0, 1])
+**What:** Globe SVG draws in via `pathLength: 0 → 1` on stroke elements. Switzerland polygon highlights via fill color transition. All triggered by `whileInView` — no sticky scroll, no `useTransform`.
+
+**Why this approach:** `motion/react` natively supports `pathLength` (0–1 progress) on `path`, `circle`, `ellipse`, `polygon`, `line`, and `rect` elements. Source: `motion.dev/docs/react-svg-animation` (verified). This eliminates all the fragile scroll-math from the old `ChapterSwitzerland`.
+
+```typescript
+// Source: motion.dev/docs/react-svg-animation (verified)
+import { motion, useReducedMotion } from "motion/react"
+import { ease } from "@/lib/motion"
+
+function SectionGlobe({ lang }: { lang: Language }) {
+  const prefersReduced = useReducedMotion()
+
+  const drawVariant = prefersReduced ? {} : {
+    hidden: { pathLength: 0, opacity: 0 },
+    visible: { pathLength: 1, opacity: 1,
+      transition: { duration: 1.4, ease: ease.enter }
+    },
+  }
+
+  const switzerlandVariant = prefersReduced ? {} : {
+    hidden: { fill: "hsl(220 15% 25%)", opacity: 0.5 },
+    visible: { fill: "hsl(173 65% 52%)", opacity: 1,
+      transition: { delay: 1.6, duration: 0.6 }
+    },
+  }
+
+  const glowRingVariant = prefersReduced ? {} : {
+    hidden: { pathLength: 0, opacity: 0 },
+    visible: { pathLength: 1, opacity: 1,
+      transition: { delay: 1.6, duration: 0.6, ease: ease.enter }
+    },
+  }
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
-      <motion.svg style={{ rotate: rotation }} viewBox="0 0 400 400">
-        {/* ... */}
+    <section className="min-h-screen flex flex-col items-center justify-center bg-hero-bg py-24 px-6">
+      <motion.svg
+        viewBox="0 0 200 200"
+        width="320" height="320"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.3 }}
+        aria-label="Globe showing Switzerland"
+        role="img"
+      >
+        {/* Ocean fill — no pathLength needed, just fade in */}
+        <motion.circle cx="100" cy="100" r="90"
+          fill="hsl(220 30% 8%)"
+          variants={prefersReduced ? {} : {
+            hidden: { opacity: 0 },
+            visible: { opacity: 1, transition: { duration: 0.4 } }
+          }}
+        />
+
+        {/* Outer globe circle — draws in */}
+        <motion.circle cx="100" cy="100" r="90"
+          fill="none"
+          stroke="hsl(220 20% 22%)"
+          strokeWidth="1"
+          variants={drawVariant}
+        />
+
+        {/* Latitude lines */}
+        <motion.ellipse cx="100" cy="55" rx="78" ry="10"
+          fill="none" stroke="hsl(220 20% 18%)" strokeWidth="0.5"
+          variants={{ ...drawVariant,
+            visible: { ...drawVariant.visible,
+              transition: { delay: 0.3, duration: 1.0, ease: ease.enter }
+            }
+          }}
+        />
+
+        {/* Europe silhouette — fade in */}
+        <motion.path
+          d="M 80 40 L 95 38 L 108 42 L 115 50 L 120 60 L 122 70 L 118 75 L 125 80 L 128 88 L 122 95 L 118 100 L 115 108 L 108 112 L 100 118 L 90 115 L 82 110 L 75 102 L 70 95 L 68 88 L 72 80 L 68 72 L 65 65 L 70 55 L 75 48 Z"
+          fill="hsl(220 15% 22%)"
+          stroke="hsl(220 15% 30%)" strokeWidth="0.5"
+          variants={prefersReduced ? {} : {
+            hidden: { opacity: 0 },
+            visible: { opacity: 1, transition: { delay: 0.8, duration: 0.6 } }
+          }}
+        />
+
+        {/* Switzerland polygon — transitions to teal */}
+        <motion.polygon
+          points="112,82 118,80 121,83 120,88 115,90 110,88 109,84"
+          variants={switzerlandVariant}
+        />
+
+        {/* Teal glow ring around Switzerland */}
+        <motion.circle cx="115" cy="85" r="10"
+          fill="none" stroke="hsl(173 65% 52%)" strokeWidth="1.5"
+          variants={glowRingVariant}
+        />
       </motion.svg>
-      <motion.p style={{ opacity: copyOpacity }}>
-        One flat for every 200 applicants.
-      </motion.p>
-    </div>
-  )
-}
-```
 
-**Why this pattern:** Motion values update the DOM directly via the style prop — no React re-render per scroll tick. This is confirmed by the motion docs: "Changes to the motion value will update the DOM without triggering a React re-render."
-
-### Pattern 3: useTransform with Multi-Stop Keyframes
-
-For complex chapter sequences, use multiple keyframe stops in a single `useTransform` call:
-
-```typescript
-// Globe rotation: spin 0→360 in the first 40% of scroll
-const globeRotate = useTransform(
-  scrollProgress,
-  [0,    0.4,  0.4,  1],
-  [0,    360,  360,  360]
-)
-
-// Switzerland glow opacity: appears at 60%, stays
-const swissGlow = useTransform(
-  scrollProgress,
-  [0,   0.5, 0.65, 1],
-  [0,   0,   1,    1]
-)
-
-// Copy Y position: slides up at 70%
-const copyY = useTransform(
-  scrollProgress,
-  [0,   0.7, 0.85, 1],
-  [40,  40,  0,    0]
-)
-```
-
-The input range must be monotonically increasing. Values stay clamped at endpoints by default (`clamp: true`).
-
-### Pattern 4: useTransform with ease option
-
-For scroll animations that should feel physical rather than linear:
-
-```typescript
-import { cubicBezier } from "motion"
-
-// Source: https://motion.dev/docs/react-use-transform
-const scale = useTransform(
-  scrollProgress,
-  [0.2, 0.7],
-  [1, 8],
-  { ease: cubicBezier(0.22, 1, 0.36, 1) }  // same as ease.enter from @/lib/motion
-)
-```
-
-### Anti-Patterns to Avoid
-
-- **Don't use `whileInView` for scroll-driven animation:** `whileInView` is a boolean trigger (in/out). For position-linked animation you must use `useScroll` + `useTransform`.
-- **Don't put `ref` on the sticky inner div:** The `useScroll` target ref must be on the OUTER div that creates scroll height. Putting it on the sticky element gives wrong progress values.
-- **Don't animate SVG geometric attributes (cx, cy, width, height) on every frame:** These trigger repaint (C-tier). Use CSS transform on `<g>` elements and `opacity` for all per-frame animation.
-- **Don't use CSS variables for animated values:** The motion magazine article explicitly flags this: changing CSS variables triggers full style recalculation across the tree.
-- **Don't put `will-change: transform` on everything:** Use it only on elements with many scroll-frame updates, and remove it after animation completes.
-
----
-
-## Section 1: Scroll Chapter Architecture
-
-### useScroll Options Reference
-
-```typescript
-// Source: https://motion.dev/docs/react-use-scroll
-const { scrollYProgress } = useScroll({
-  target: ref,          // Ref to the outer scroll-height container
-  offset: [             // Default: ["start start", "end end"]
-    "start start",      // When: top of target meets top of container (viewport)
-    "end end",          // When: bottom of target meets bottom of container
-  ],
-  axis: "y",            // Default: "y"
-  // container: windowRef   // Only needed for non-window scroll containers
-})
-```
-
-**Offset syntax:** Each offset is `"<target-point> <container-point>"`. Values can be:
-- Named: `"start"` (0%), `"center"` (50%), `"end"` (100%)
-- Numbers: `0` to `1`
-- Pixels: `"100px"`
-- Percent: `"25%"`
-
-**For chapter pattern** use `["start start", "end end"]` — progress starts when chapter enters and ends when chapter exits.
-
-**SSR / hydration note:** `useScroll` requires `"use client"`. The ref must be attached to a native HTML element, not a custom component wrapper. If you get "Container/Target ref is defined but not hydrated", you passed the ref to a custom component without `forwardRef`.
-
-### Chapter Height Guide
-
-| Chapter | Height | Notes |
-|---------|--------|-------|
-| Hook (1) | `h-screen` | No scroll, no sticky. Load animation only. |
-| Swiss (2) | `h-[300vh]` | 200vh of scroll time for globe → zoom → copy sequence |
-| Problem (3) | `h-[350vh]` | 250vh for house construction + 3 pain lines |
-| Mechanism (4) | `h-[400vh]` | 300vh for card reveal + score pop + zoom + analysis |
-| Score (5) | `h-[200vh]` | 100vh for countup + bars |
-| Dream (6) | `h-[150vh]` | 50vh for house lights + copy |
-| CTA (7) | `h-screen` | No sticky needed |
-
----
-
-## Section 2: Isometric SVG Home — Construction Technique
-
-### Isometric Projection Math
-
-Isometric projection uses three visible faces. For a 2D SVG, use polygon coordinates directly:
-
-```
-Isometric coordinate system:
-- X-axis goes right and slightly down  (angle: 30° below horizontal = 150° from left)
-- Y-axis goes left and slightly down   (angle: 210° from top = 30° below horizontal on left)
-- Z-axis goes straight up
-
-For a unit cube with side length S:
-  Top face corners (parallelogram):
-    top-center:     (cx, cy - S)
-    right-center:   (cx + S*0.866, cy - S*0.5)
-    bottom-center:  (cx, cy)
-    left-center:    (cx - S*0.866, cy - S*0.5)
-
-  Left face corners:
-    top-left:   (cx - S*0.866, cy - S*0.5)
-    bottom-left:(cx, cy)
-    bottom-left-floor: (cx, cy + S)
-    top-left-floor:    (cx - S*0.866, cy + S*0.5)
-
-  Right face corners:
-    top-right:  (cx + S*0.866, cy - S*0.5)
-    top-center: (cx, cy)
-    bottom-center-floor: (cx, cy + S)
-    bottom-right-floor:  (cx + S*0.866, cy + S*0.5)
-```
-
-**Color convention (matching hero tokens):**
-- Top face: `hsl(173 65% 62%)` (lighter teal / `--color-hero-teal` + lightness bump)
-- Left face: `hsl(173 65% 42%)` (mid — `--color-hero-teal`)
-- Right face: `hsl(173 65% 28%)` (dark shadow)
-- Or for a neutral home: top=`hsl(210 15% 55%)`, left=`hsl(210 15% 40%)`, right=`hsl(210 15% 28%)`
-
-### SVG House Structure
-
-```typescript
-// Concrete coordinate set for a centered isometric house
-// SVG viewBox="0 0 400 400", house centered at (200, 220)
-// S = 80 (unit size)
-
-const S = 80
-const cx = 200, cy = 220
-
-const house = {
-  // Foundation/floor
-  floorTop:   `${cx},${cy - S}  ${cx + S*0.866},${cy - S*0.5}  ${cx},${cy}  ${cx - S*0.866},${cy - S*0.5}`,
-
-  // Front-right wall (darker)
-  wallRight:  `${cx},${cy}  ${cx + S*0.866},${cy - S*0.5}  ${cx + S*0.866},${cy + S*0.5}  ${cx},${cy + S}`,
-
-  // Front-left wall (medium)
-  wallLeft:   `${cx - S*0.866},${cy - S*0.5}  ${cx},${cy}  ${cx},${cy + S}  ${cx - S*0.866},${cy + S*0.5}`,
-
-  // Roof ridge point
-  roofPeak:   `${cx},${cy - S*1.5}`,
-  // Roof-right triangle
-  roofRight:  `${cx},${cy - S}  ${cx + S*0.866},${cy - S*0.5}  ${cx},${cy - S*1.5}`,
-  // Roof-left triangle
-  roofLeft:   `${cx - S*0.866},${cy - S*0.5}  ${cx},${cy - S}  ${cx},${cy - S*1.5}`,
-}
-```
-
-### Animation Sequence with `pathLength`
-
-Each house element is wrapped in `motion.polygon` or `motion.path` with `pathLength` animated from 0→1. Use `useTransform` to map `scrollProgress` thresholds to each element's `pathLength`:
-
-```typescript
-// Source: https://motion.dev/docs/react-svg-animation
-import { motion, useTransform, MotionValue } from "motion/react"
-
-interface IsometricHomeProps {
-  scrollProgress: MotionValue<number>
-}
-
-export function IsometricHome({ scrollProgress }: IsometricHomeProps) {
-  // Each element draws in at a different scroll segment
-  const floorPath   = useTransform(scrollProgress, [0.00, 0.12], [0, 1])
-  const wallRight   = useTransform(scrollProgress, [0.10, 0.22], [0, 1])
-  const wallLeft    = useTransform(scrollProgress, [0.18, 0.30], [0, 1])
-  const roofRight   = useTransform(scrollProgress, [0.28, 0.38], [0, 1])
-  const roofLeft    = useTransform(scrollProgress, [0.35, 0.44], [0, 1])
-  // Windows, door appear via opacity (faster than pathLength)
-  const windowOp    = useTransform(scrollProgress, [0.44, 0.52], [0, 1])
-  const doorOp      = useTransform(scrollProgress, [0.50, 0.58], [0, 1])
-  const treesOp     = useTransform(scrollProgress, [0.56, 0.65], [0, 1])
-
-  // "Dims" at 70%, pain lines appear
-  const homeDim     = useTransform(scrollProgress, [0.68, 0.76], [1, 0.25])
-  const line1Op     = useTransform(scrollProgress, [0.72, 0.80], [0, 1])
-  const line2Op     = useTransform(scrollProgress, [0.80, 0.87], [0, 1])
-  const line3Op     = useTransform(scrollProgress, [0.87, 0.94], [0, 1])
-
-  return (
-    <svg viewBox="0 0 400 400" className="w-full h-full max-w-md mx-auto">
-      <motion.g style={{ opacity: homeDim }}>
-        {/* Floor */}
-        <motion.polygon
-          points={house.floorTop}
-          fill="hsl(210 15% 55%)"
-          stroke="hsl(210 15% 40%)"
-          strokeWidth={1}
-          style={{ pathLength: floorPath }}
-        />
-        {/* Right wall */}
-        <motion.polygon
-          points={house.wallRight}
-          fill="hsl(210 15% 28%)"
-          stroke="hsl(210 15% 20%)"
-          strokeWidth={1}
-          style={{ pathLength: wallRight }}
-        />
-        {/* Left wall */}
-        <motion.polygon
-          points={house.wallLeft}
-          fill="hsl(210 15% 40%)"
-          stroke="hsl(210 15% 28%)"
-          strokeWidth={1}
-          style={{ pathLength: wallLeft }}
-        />
-        {/* Roof right */}
-        <motion.polygon
-          points={house.roofRight}
-          fill="hsl(210 25% 35%)"
-          style={{ pathLength: roofRight }}
-        />
-        {/* Roof left */}
-        <motion.polygon
-          points={house.roofLeft}
-          fill="hsl(210 25% 45%)"
-          style={{ pathLength: roofLeft }}
-        />
-        {/* Windows */}
-        <motion.g style={{ opacity: windowOp }}>
-          {/* Small window rectangles — use <rect> or simple <polygon> */}
-          <rect x={170} y={195} width={20} height={16}
-            fill="hsl(50 90% 75%)" opacity={0.7} />
-          <rect x={220} y={195} width={20} height={16}
-            fill="hsl(50 90% 75%)" opacity={0.7} />
-        </motion.g>
-        {/* Door */}
-        <motion.rect
-          x={188} y={222} width={24} height={30}
-          fill="hsl(25 50% 35%)"
-          style={{ opacity: doorOp }}
-        />
-        {/* Trees (simple triangles) */}
-        <motion.g style={{ opacity: treesOp }}>
-          <polygon points="140,240 155,200 170,240" fill="hsl(140 40% 35%)" />
-          <polygon points="240,240 255,200 270,240" fill="hsl(140 40% 35%)" />
-        </motion.g>
-      </motion.g>
-
-      {/* Pain lines — appear after home dims */}
-      <motion.text x="50%" y="300" textAnchor="middle"
-        fill="hsl(0 0% 90%)" fontSize={14}
-        style={{ opacity: line1Op }}>
-        You scroll through 40 listings on Sunday.
-      </motion.text>
-      <motion.text x="50%" y="325" textAnchor="middle"
-        fill="hsl(0 0% 90%)" fontSize={14}
-        style={{ opacity: line2Op }}>
-        You request 8 viewings. 6 don't reply.
-      </motion.text>
-      <motion.text x="50%" y="350" textAnchor="middle"
-        fill="hsl(0 0% 90%)" fontSize={14}
-        style={{ opacity: line3Op }}>
-        The good one goes in 48 hours. You saw it too late.
-      </motion.text>
-    </svg>
-  )
-}
-```
-
-**Important:** `pathLength` works on `polygon`, `path`, `circle`, `ellipse`, `line`, `polyline`, `rect`. The element must have a `stroke` to be visible during drawing. Add `fill="none"` during draw phase, then fade the fill in separately using `opacity` if needed.
-
-**Alternative approach — opacity only (simpler, lower performance risk):** Skip `pathLength` for walls/faces (they are filled polygons, not strokes). Instead, just use `opacity: 0 → 1` with staggered `useTransform` thresholds for each face. The "construction" feel comes from the order of appearance, not literal drawing.
-
----
-
-## Section 3: SVG Globe with Zoom to Switzerland
-
-### Layer Structure
-
-```
-<svg viewBox="0 0 400 400">
-  <!-- 1. Ocean circle -->
-  <circle cx="200" cy="200" r="160" fill="hsl(210 50% 20%)" />
-
-  <!-- 2. Rotating latitude/longitude grid -->
-  <g id="grid" style={{ animation: "spin 20s linear infinite" }}>
-    <!-- 5 horizontal ellipses for latitude lines -->
-    <!-- 5 lines through center for longitude -->
-  </g>
-
-  <!-- 3. Europe continent silhouette (simplified path) -->
-  <path id="europe" d="..." fill="hsl(210 30% 35%)" />
-
-  <!-- 4. Switzerland highlight polygon -->
-  <polygon id="switzerland" points="..." fill="hsl(173 65% 52%)" />
-</svg>
-```
-
-### Latitude / Longitude Lines (simplified)
-
-```typescript
-// 5 latitude ellipses — rx scales by cos(lat), ry is constant offset
-// In SVG: each latitude is an ellipse centered at (200, 200)
-// Latitude lines at: 15°, 30°, 45°, 60°, equator (0°)
-const latLines = [
-  { ry: 5,   rx: 158 },  // 60°N approx
-  { ry: 40,  rx: 153 },  // 45°N
-  { ry: 80,  rx: 140 },  // 30°N
-  { ry: 118, rx: 115 },  // 15°N
-  { ry: 150, rx: 0   },  // equator — straight line
-]
-// Render as <ellipse> elements, all centered at (200, 200)
-
-// 6 longitude lines — all go through center, different angles
-const longAngles = [0, 30, 60, 90, 120, 150]
-// Render as <line> from (200-160*cos, 200-160*sin) to opposite
-```
-
-### Rotation Animation
-
-The longitude lines group spins via CSS keyframe (not motion, to avoid JS overhead on a continuous loop):
-
-```css
-@keyframes globe-spin {
-  from { transform: rotateY(0deg); }
-  to   { transform: rotateY(360deg); }
-}
-
-/* In globals.css or module CSS */
-.globe-grid {
-  transform-origin: 200px 200px;
-  animation: globe-spin 20s linear infinite;
-}
-```
-
-**Note:** CSS 3D `rotateY` on an SVG group does not actually create proper 3D longitude-line foreshortening. For a convincing effect, animate `scaleX` between -1 and 1 (mimicking the hemisphere flip):
-
-```css
-@keyframes globe-longitude-sweep {
-  0%   { transform: scaleX(1); }
-  50%  { transform: scaleX(-1); }
-  100% { transform: scaleX(1); }
-}
-```
-
-### Simplified Europe Path
-
-A recognizable-but-rough European continent path (sufficient for visual context):
-
-```
-// Very simplified Europe SVG path — not geographically precise, visually readable
-// Positioned so Switzerland is near center-right of the continent
-// In a 400x400 SVG with ocean circle centered at 200,200
-
-const EUROPE_PATH = `
-  M 145 95
-  L 155 85 L 175 80 L 195 75 L 215 78
-  L 235 72 L 250 80 L 260 90
-  L 265 105 L 270 118 L 265 130
-  L 255 140 L 260 155 L 255 168
-  L 245 175 L 240 185 L 248 195
-  L 252 210 L 245 220 L 235 225
-  L 220 218 L 210 225 L 205 238
-  L 195 240 L 185 235 L 175 228
-  L 165 232 L 155 238 L 148 230
-  L 140 218 L 135 205 L 130 195
-  L 125 182 L 118 170 L 120 155
-  L 115 142 L 118 128 L 130 118
-  L 135 108 L 140 98 Z
-`
-
-// Switzerland — a small polygon at approximately correct relative position
-// (center-right of Europe, slightly above vertical center)
-const SWITZERLAND_POLYGON = "195,165  208,162  215,168  212,175  200,178  193,172"
-```
-
-### Zoom-into-Switzerland via scrollProgress
-
-```typescript
-// Source: https://motion.dev/docs/react-use-transform
-
-export function GlobeSwiss({ scrollProgress }: { scrollProgress: MotionValue<number> }) {
-  // Globe spins while scroll is 0→0.3 (handled by CSS animation, not motion)
-  // At 0.3→0.6 the SVG viewBox zooms into Switzerland's position
-  // Switzerland is at roughly (200, 168) in the 400x400 SVG
-
-  // Approach: animate the viewBox string via motion.svg
-  // OR: scale + translate the whole SVG element
-
-  // Scale approach (simpler, no viewBox string interpolation):
-  const scale = useTransform(scrollProgress, [0.25, 0.65], [1, 6], {
-    ease: cubicBezier(0.22, 1, 0.36, 1)
-  })
-
-  // Translate to keep Switzerland centered after scaling
-  // Switzerland center in SVG coords: (203, 170)
-  // SVG center: (200, 200)
-  // Offset from center: (3, -30)
-  // At scale 6: need to translate by (-3 * 6, 30 * 6) = (-18, 180) to re-center
-  // But with translate-then-scale rule:
-  // translate values = offset * scale = small corrections
-  const translateX = useTransform(scrollProgress, [0.25, 0.65], [0, -18])
-  const translateY = useTransform(scrollProgress, [0.25, 0.65], [0, 180])
-
-  // Switzerland glow appears as zoom reaches it
-  const swissGlow = useTransform(scrollProgress, [0.55, 0.70], [0, 1])
-  // Copy text fades in
-  const copyOp    = useTransform(scrollProgress, [0.72, 0.85], [0, 1])
-  const copyY     = useTransform(scrollProgress, [0.72, 0.85], [20, 0])
-
-  return (
-    <div className="relative w-full h-full flex items-center justify-center bg-hero-bg">
-      <motion.div
-        style={{ scale, x: translateX, y: translateY }}
-        className="origin-center"
-      >
-        <svg
-          viewBox="0 0 400 400"
-          width="400"
-          height="400"
-          className="globe-container"
-        >
-          <circle cx="200" cy="200" r="160" fill="hsl(210 50% 18%)" />
-
-          {/* Grid — CSS animated, not motion */}
-          <g className="globe-grid">
-            <ellipse cx="200" cy="200" rx="153" ry="40"
-              stroke="hsl(210 50% 35%)" strokeWidth="0.5" fill="none" />
-            <ellipse cx="200" cy="200" rx="140" ry="80"
-              stroke="hsl(210 50% 35%)" strokeWidth="0.5" fill="none" />
-            <ellipse cx="200" cy="200" rx="115" ry="118"
-              stroke="hsl(210 50% 35%)" strokeWidth="0.5" fill="none" />
-            <line x1="40" y1="200" x2="360" y2="200"
-              stroke="hsl(210 50% 35%)" strokeWidth="0.5" />
-            <line x1="116" y1="63" x2="284" y2="337"
-              stroke="hsl(210 50% 35%)" strokeWidth="0.5" />
-            <line x1="116" y1="337" x2="284" y2="63"
-              stroke="hsl(210 50% 35%)" strokeWidth="0.5" />
-          </g>
-
-          {/* Europe continent */}
-          <path d={EUROPE_PATH} fill="hsl(210 25% 38%)" stroke="hsl(210 25% 50%)" strokeWidth="0.5" />
-
-          {/* Switzerland highlight */}
-          <motion.polygon
-            points={SWITZERLAND_POLYGON}
-            fill="hsl(173 65% 52%)"
-            style={{ opacity: swissGlow }}
-            filter="url(#swissGlow)"
-          />
-
-          {/* Glow filter */}
-          <defs>
-            <filter id="swissGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-        </svg>
-      </motion.div>
-
-      {/* Copy text — overlaid, not inside SVG */}
-      <motion.div
-        className="absolute bottom-24 text-center px-6"
-        style={{ opacity: copyOp, y: copyY }}
-      >
-        <p className="text-hero-fg text-2xl font-semibold mb-2">
-          One flat for every 200 applicants.
+      {/* Text fades in after globe animation */}
+      <FadeIn delay={2.0} className="text-center mt-10 max-w-md">
+        <p className="text-hero-fg font-semibold" style={{ fontSize: 'var(--text-subheading-size)' }}>
+          {t(lang, 'landing_globe_headline')}
         </p>
-        <p className="text-hero-fg/60 text-lg">
-          The Swiss rental market doesn't wait.
-        </p>
-      </motion.div>
-    </div>
-  )
-}
-```
-
-**Zoom math (translate-then-scale rule):**
-From Jake Archibald's 2025 article on animating zoom: use `translate` before `scale` or use separate CSS properties (`scale` and `translate`). The translate values at the target scale are `offset * scale`, NOT the naive offset. In motion/react, setting `style={{ scale, x, y }}` applies translate first then scale automatically.
-
----
-
-## Section 4: Browser Demo Zoom (Chapter 4)
-
-### Structure
-
-```
-<div class="browser-chrome-wrapper">
-  <div class="browser-chrome">
-    <div class="traffic-lights" />
-    <div class="address-bar">flatfox.ch/listings</div>
-  </div>
-  <div class="browser-content">
-    <div class="card card-1" />   ← score appears at 0.2
-    <div class="card card-2" />   ← score appears at 0.35
-    <div class="card card-3" />   ← score appears at 0.5 (the 87 card)
-  </div>
-</div>
-```
-
-### Score Badge Pop-In
-
-```typescript
-const card1ScoreOp = useTransform(scrollProgress, [0.15, 0.25], [0, 1])
-const card1ScoreScale = useTransform(scrollProgress, [0.15, 0.25], [0.5, 1])
-const card2ScoreOp = useTransform(scrollProgress, [0.30, 0.40], [0, 1])
-const card3ScoreOp = useTransform(scrollProgress, [0.45, 0.55], [0, 1])
-```
-
-### Card Zoom Math
-
-Chapter 4 needs to scale the 87-score card (card3) from its natural position to fill the browser content area (not the viewport — that would be too extreme).
-
-**Approach A (recommended): Scale the browser content area itself, not the card.**
-
-At progress 0.60→0.80, scale the browser chrome + cards group down from 100% to ~70% and simultaneously scale card3 up so it visually fills the screen:
-
-```typescript
-// Shrink whole browser to make zoom feel more cinematic
-const browserScale = useTransform(scrollProgress, [0.58, 0.75], [1, 0.75])
-const browserOp    = useTransform(scrollProgress, [0.72, 0.82], [1, 0])
-
-// Card 3 zoom: scale from 1 to ~5 from its center
-const card3Scale   = useTransform(scrollProgress, [0.60, 0.80], [1, 5])
-// Translate card3 to viewport center (rough, assumes card3 starts at ~bottom-right)
-const card3X       = useTransform(scrollProgress, [0.60, 0.80], [0, -60])
-const card3Y       = useTransform(scrollProgress, [0.60, 0.80], [0, -140])
-```
-
-**Approach B: CSS `transform-origin` trick.**
-
-Set `transformOrigin: "50% 50%"` on the card being zoomed. Set its `scale` via `useTransform`. This scales from the card's own center. Then shift the card to viewport center using `x` and `y` motion values.
-
-Calculate scale needed: if card is 300px wide and viewport is 1200px wide → scale = 4.
-
-```typescript
-// Targeted card zoom — keeps card centered in viewport
-const zoomedCardScale = useTransform(scrollProgress, [0.60, 0.80], [1, 4])
-// Translate to center: card starts at roughly x=+200px from viewport center
-// At scale 4, to keep it centered: translate = -200 (then scale amplifies position)
-// Use separate scale + translate (not combined transform):
-const zoomedCardTX = useTransform(scrollProgress, [0.60, 0.80], [0, -200])
-const zoomedCardTY = useTransform(scrollProgress, [0.60, 0.80], [0, -100])
-
-// Analysis panel slides in from right after zoom completes
-const analysisX  = useTransform(scrollProgress, [0.82, 0.92], [60, 0])
-const analysisOp = useTransform(scrollProgress, [0.82, 0.92], [0, 1])
-```
-
-**Practical implementation note:** The exact pixel offsets depend on the rendered layout. Rather than computing exact offsets at build time, use a `useLayoutEffect` at mount to measure the card's position with `getBoundingClientRect()`, store in state, and derive the `useTransform` output ranges from those measurements. However, this requires careful SSR handling. The simpler approach is to hard-code approximate values and tune visually.
-
-### Browser Chrome Markup Pattern
-
-```typescript
-function BrowserChrome({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-black/40 overflow-hidden shadow-2xl">
-      {/* Window bar */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/5">
-        <div className="flex gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-white/20" />
-          <div className="w-3 h-3 rounded-full bg-white/20" />
-          <div className="w-3 h-3 rounded-full bg-white/20" />
-        </div>
-        <div className="flex-1 mx-4 bg-white/10 rounded px-3 py-1 text-xs text-white/40">
-          flatfox.ch/listings
-        </div>
-      </div>
-      <div className="p-4">{children}</div>
-    </div>
-  )
-}
-```
-
----
-
-## Section 5: Load Animation — Word-by-Word Headline (Chapter 1)
-
-Chapter 1 is NOT scroll-driven — it triggers on page load. Use standard motion animate with stagger delays.
-
-### Pattern
-
-```typescript
-// Source: https://motion.dev/docs/react-animation
-"use client"
-
-import { motion } from "motion/react"
-import { ease, duration } from "@/lib/motion"
-
-const LINE_1 = ["Your", "next", "home."]
-const LINE_2 = ["Already", "found."]
-// Pause between lines achieved by higher delay index on line 2
-
-export function ChapterHook() {
-  const shouldReduceMotion = useReducedMotion()
-
-  return (
-    <section className="h-screen bg-hero-bg flex flex-col items-center justify-center">
-      <div className="text-center">
-        <h1
-          className="text-hero-fg mb-4"
-          style={{
-            fontSize: "var(--text-display-size)",
-            fontWeight: "var(--text-display-weight)",
-            letterSpacing: "var(--text-display-ls)",
-          }}
-        >
-          {/* Screen reader reads the full text; spans are aria-hidden */}
-          <span className="sr-only">Your next home. Already found.</span>
-          <span aria-hidden>
-            {LINE_1.map((word, i) => (
-              <motion.span
-                key={word + i}
-                className="inline-block mr-[0.25em]"
-                initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: i * 0.15,
-                  duration: duration.moderate,
-                  ease: ease.enter,
-                }}
-              >
-                {word}
-              </motion.span>
-            ))}
-          </span>
-          <br />
-          <span aria-hidden>
-            {LINE_2.map((word, i) => (
-              <motion.span
-                key={word + i}
-                className="inline-block mr-[0.25em]"
-                initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  // LINE_1.length * 0.15 = 0.45s base delay, plus 0.4s pause, plus per-word
-                  delay: LINE_1.length * 0.15 + 0.4 + i * 0.15,
-                  duration: duration.moderate,
-                  ease: ease.enter,
-                }}
-              >
-                {word}
-              </motion.span>
-            ))}
-          </span>
-        </h1>
-
-        {/* Logo fades in after all words */}
-        <motion.div
-          initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{
-            delay: (LINE_1.length + LINE_2.length) * 0.15 + 0.6,
-            duration: duration.slow,
-            ease: ease.enter,
-          }}
-        >
-          <span className="text-hero-teal text-xl font-bold tracking-wider">
-            HomeMatch
-          </span>
-        </motion.div>
-      </div>
+      </FadeIn>
     </section>
   )
 }
 ```
 
-**Key notes:**
-- `"use client"` required (useReducedMotion)
-- `inline-block` on each `motion.span` is required — `y` transform does not work on `display: inline`
-- Pause between "Your next home." and "Already found." achieved with `delay: LINE_1.length * 0.15 + PAUSE_DURATION + i * 0.15`
-- `sr-only` span provides accessible text for screen readers; animated spans are `aria-hidden`
-- **splitText is NOT available** in the standard `motion` package — it's in `motion-plus` (paid). Manual word splitting is the correct approach here.
+**Key constraint on pathLength:** `pathLength` only affects the stroke. For the Switzerland polygon (which is filled, not stroked), use a fill/opacity transition — NOT `pathLength`. The glow ring circle has a stroke and works with `pathLength`.
 
----
+### Pattern 4: Hero — Mount-Time Animation (NOT whileInView)
 
-## Section 6: CountUp Integration
+**What:** Hero content animates on page load, not on scroll.
 
-### Current CountUp Behavior
-
-The existing `CountUp.tsx` uses `useInView(ref, { once: true })` internally. For Chapter 5, the CountUp component lives inside a sticky scroll chapter where `isInView` will return `true` as soon as the chapter enters the viewport — which is the entire time the 200vh outer container is visible. This is actually the **correct and desired behavior** for Chapter 5.
-
-**Recommended approach: Keep existing CountUp unchanged, use `useInView` with `margin`.**
+**Why:** The hero is visible immediately; `whileInView` is unreliable for above-the-fold elements because IntersectionObserver may fire before hydration. The existing `ChapterHook.tsx` uses `animate` (not `whileInView`) — this is correct and must be replicated.
 
 ```typescript
-// Chapter 5: CountUp is visible inside the sticky section.
-// The sticky section is always "in view" during the chapter.
-// CountUp's own useInView fires once when the sticky section first appears.
-// This is the right UX — the count starts when the user arrives at Chapter 5.
+// Source: existing ChapterHook.tsx (verified working)
+import { motion, useReducedMotion } from "motion/react"
+import { duration, ease } from "@/lib/motion"
 
-export function ChapterScore() {
-  const chapterRef = useRef<HTMLDivElement>(null)
-  const { scrollYProgress } = useScroll({
-    target: chapterRef,
-    offset: ["start start", "end end"],
-  })
+const prefersReduced = useReducedMotion()
 
-  // Score bars animate via scrollProgress
-  const bar1Width = useTransform(scrollProgress, [0.2, 0.5], ["0%", "92%"])
-  const bar2Width = useTransform(scrollProgress, [0.3, 0.6], ["0%", "88%"])
-  const bar3Width = useTransform(scrollProgress, [0.4, 0.7], ["0%", "75%"])
+// Logo — first element in
+<motion.div
+  initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={prefersReduced ? { duration: 0 } : { delay: 0.1, duration: duration.slow, ease: ease.enter }}
+>
+  <Logo />
+</motion.div>
 
+// Headline — 200ms after logo
+<motion.h1
+  initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={prefersReduced ? { duration: 0 } : { delay: 0.3, duration: duration.slow, ease: ease.enter }}
+>
+  {t(lang, 'landing_hero_headline')}
+</motion.h1>
+
+// Subline — 400ms
+// CTA button — 600ms
+```
+
+### Pattern 5: LandingPageContent Rewrite
+
+```typescript
+// New LandingPageContent.tsx
+'use client'
+
+import { useLanguage } from '@/lib/language-context'
+import type { Language } from '@/lib/translations'
+import { LandingNavbar } from './LandingNavbar'
+import { LandingFooter } from './LandingFooter'
+import { SectionHero } from './SectionHero'
+import { SectionGlobe } from './SectionGlobe'
+import { SectionProblem } from './SectionProblem'
+import { SectionSolution } from './SectionSolution'
+import { SectionCTA } from './SectionCTA'
+
+export function LandingPageContent() {
+  const { language } = useLanguage()
+  const lang = language as Language
   return (
-    <div ref={chapterRef} className="relative h-[200vh]">
-      <div className="sticky top-0 h-screen overflow-hidden flex items-center justify-center">
-        <div className="text-center">
-          {/* CountUp fires when this sticky div enters viewport */}
-          <div className="text-[12rem] font-bold text-hero-teal leading-none">
-            <CountUp target={87} duration={2.0} />
-          </div>
-          <p className="text-hero-fg/60 text-xl mb-12">match score</p>
-
-          {/* Score bars via scrollProgress */}
-          <div className="space-y-4 w-80 mx-auto">
-            {[
-              { label: "Location", motionWidth: bar1Width },
-              { label: "Size",     motionWidth: bar2Width },
-              { label: "Price",    motionWidth: bar3Width },
-            ].map(({ label, motionWidth }) => (
-              <div key={label}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-hero-fg/60">{label}</span>
-                </div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-hero-teal rounded-full"
-                    style={{ width: motionWidth }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+    <div className="bg-hero-bg">
+      <LandingNavbar lang={lang} />
+      <SectionHero lang={lang} />
+      <SectionGlobe lang={lang} />
+      <SectionProblem lang={lang} />
+      <SectionSolution lang={lang} />
+      <SectionCTA lang={lang} />
+      <LandingFooter lang={lang} />
     </div>
   )
 }
 ```
 
-**If scroll-position control is needed (CountUp only fires at 30% through chapter):** Create a new `CountUpControlled` variant that accepts a `trigger: boolean` prop instead of using `useInView` internally. The chapter parent reads `scrollYProgress` via `useMotionValueEvent` and sets trigger state when progress crosses a threshold. This is a minor addition if needed.
+### Anti-Patterns to Avoid
+
+- **Sticky-parallax containers (`h-[300vh]` + `sticky top-0`):** The previous broken approach. All new sections use natural/intrinsic height.
+- **`useScroll` + `useTransform` for entry animations:** Overkill and fragile. Reserve `useScroll` for continuous effects (like the navbar backdrop — which is fine). `whileInView` handles scroll-triggered entry cleanly.
+- **`initial` without `whileInView` or `animate`:** Setting `initial` with no trigger means the element starts hidden and stays hidden. Always pair `initial="hidden"` with either `whileInView="visible"` (scroll) or `animate={{ ... }}` (mount).
+- **`'use client'` on `app/page.tsx`:** Never. The server component renders `<LandingPageContent />` which is the client boundary.
+- **Skipping `useReducedMotion`:** Every animated component must check and use `prefersReduced` — project-wide requirement.
+- **`pathLength` on filled polygon without stroke:** pathLength only affects strokes. The Switzerland polygon uses fill color transitions.
+- **`staggerChildren` on non-variant children:** `StaggerGroup` only staggers children that use `variants`. Always wrap content in `StaggerItem`.
 
 ---
 
-## Section 7: Performance and Accessibility
+## Don't Hand-Roll
 
-### Motion Values: No Re-Render Architecture
+| Problem | Don't Build | Use Instead | Why |
+|---------|-------------|-------------|-----|
+| Scroll-triggered fade-in | Custom IntersectionObserver hook | `FadeIn` (`@/components/motion/FadeIn`) | Already implemented, reduced-motion aware |
+| Sequential stagger | Manual `delay: index * n` arithmetic | `StaggerGroup` + `StaggerItem` | Already in `@/components/motion/StaggerGroup` |
+| SVG draw-in | CSS keyframe + `getTotalLength()` | `motion.path pathLength: 0 → 1` | motion normalizes pathLength; no manual measurement |
+| Reduced motion detection | CSS media query hook | `useReducedMotion()` from `motion/react` | Built-in, SSR-safe |
+| Shimmer CTA button | Custom gradient-border button | `ShimmerButton` (`@/components/ui/shimmer-button`) | 21st.dev component already in project |
+| Link-as-button | `asChild` or wrapper div | `Button render={<Link href="..." />}` | Established pattern (Phase 19), base-ui native |
+| Animation constants | Inline cubic-bezier strings | `ease.enter`, `duration.slow` from `@/lib/motion` | Single source of truth |
 
-```
-scroll event
-    ↓
-motion.dev ScrollTimeline / rAF
-    ↓
-MotionValue.set(newValue)
-    ↓
-useTransform() derived values update
-    ↓
-style.transform / style.opacity written to DOM directly
-    ↓
-Browser compositor (GPU layer) — no React re-render
-```
+**Key insight:** The project already has a complete, working animation infrastructure. New section components are consumers of existing primitives, not new infrastructure.
 
-**Confirmed by motion docs:** "Changes to the motion value will update the DOM without triggering a React re-render." All `style={{ x, y, opacity, scale }}` props on `motion.*` elements bypass React's render cycle entirely.
+---
 
-### useReducedMotion Pattern for Scroll Chapters
+## Common Pitfalls
+
+### Pitfall 1: IntersectionObserver Not Mocked in Tests
+
+**What goes wrong:** `whileInView` uses `IntersectionObserver` internally. jsdom (vitest's environment) doesn't implement it. Tests throw "IntersectionObserver is not defined".
+
+**How to avoid:**
 
 ```typescript
-"use client"
-
-import { useReducedMotion, useTransform } from "motion/react"
-import type { MotionValue } from "motion/react"
-
-export function ChapterSwiss({ scrollProgress }: { scrollProgress: MotionValue<number> }) {
-  const shouldReduceMotion = useReducedMotion()
-
-  // With reduced motion: show final states immediately
-  const swissGlow = shouldReduceMotion
-    ? useTransform(scrollProgress, [0, 1], [1, 1])   // always 1
-    : useTransform(scrollProgress, [0.55, 0.70], [0, 1])
-
-  const copyOp = shouldReduceMotion
-    ? useTransform(scrollProgress, [0, 1], [1, 1])   // always visible
-    : useTransform(scrollProgress, [0.72, 0.85], [0, 1])
-
-  // ... same pattern for all animated values
-}
+// Already established in fade-in.test.tsx and landing-page.test.tsx
+beforeAll(() => {
+  global.IntersectionObserver = class IntersectionObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof IntersectionObserver
+})
 ```
 
-**Alternative (cleaner):** Wrap the entire chapter in a check:
+Every new test file that renders a component using `whileInView` needs this block.
 
-```typescript
-if (shouldReduceMotion) {
-  return <ChapterSwissStatic />  // A simple static layout with final state
-}
-return <ChapterSwissAnimated scrollProgress={scrollProgress} />
-```
+**Warning signs:** `ReferenceError: IntersectionObserver is not defined` in vitest output.
 
-### will-change Guidance
+### Pitfall 2: Translation Key Drift
 
-- Apply `will-change: transform` only to elements that animate on every scroll tick (the SVG globe container, the isometric house group, the card zoom div)
-- Do NOT apply globally or to elements that animate once
-- Remove `will-change` when the chapter's sticky container is no longer in view (use `useMotionValueEvent` to detect scrollProgress reaching 0 or 1)
-- In Tailwind v4: `className="will-change-transform"` (maps to `will-change: transform`)
+**What goes wrong:** New section components reference keys like `landing_hero_headline` that don't yet exist in `translations.ts`. TypeScript's `_DeHasAllEnKeys` guard only validates `en`/`de` symmetry — it does NOT catch references to non-existent keys.
 
-### Performance Tier Summary (from motion.dev/magazine)
+**How to avoid:** Add all new keys to `translations.ts` (both `en` and `de`) in the SAME task that creates the section using them. Remove old chapter keys only after all chapter components are deleted.
 
-| Property | Tier | Notes |
-|----------|------|-------|
-| `transform` (scale, rotate, translate) | S/A | GPU compositor |
-| `opacity` | S/A | GPU compositor |
-| `filter: blur()` | C | Careful with large radii |
-| SVG attribute (`cx`, `cy`, `width`) | C/D | Triggers repaint/layout |
-| CSS custom variables | F | Invalidates entire style tree |
+**Additional gotcha:** If you remove a key from `en` but leave it in `de` (or vice versa), the TypeScript compile guard fails at build time. Remove from both simultaneously.
 
-**Rule:** For per-frame animations (every scroll tick), only animate `transform` and `opacity`. All content changes (showing/hiding text blocks) use `opacity`.
+**Warning signs:** Blank text on live page; `landing-translations.test.ts` failures.
 
-### Sticky Section Layout Concerns
+### Pitfall 3: `viewport.amount` Too High on Tall Sections
 
-- `position: sticky` creates a stacking context. Ensure z-index layering is correct between chapters.
-- The outer scroll-height divs stack vertically in normal flow. Chapters layer naturally.
-- Add `overflow-hidden` to the sticky inner div to prevent animated elements from overflowing into adjacent chapters.
-- `overscroll-behavior: none` on `html` or `body` prevents bounce-scroll on macOS from disrupting chapter boundaries.
+**What goes wrong:** `viewport={{ once: true, amount: 0.5 }}` on a section taller than the viewport means the animation never fires — 50% can never enter if the section is 1.5x the viewport height.
 
-### Next.js 15 App Router SSR Requirements
+**How to avoid:** Use `amount: 0.1` to `0.2` for section-level triggers. `amount: 0.3` is fine for compact elements like the globe. The existing `FadeIn` uses `0.2` as its default — a safe choice for all sections.
 
-- Every chapter component that uses `useScroll`, `useTransform`, `useReducedMotion` MUST be `"use client"`
-- `LandingPageContent.tsx` is already `"use client"` — chapter components can inherit this or be independently marked
-- SVG inline in JSX has no SSR issues — it is pure markup
-- Motion's `useScroll` ref hydration error: ensure `ref` is on a native HTML element, not a React component. All chapter outer divs are `<div ref={chapterRef}>` — correct.
-- `LazyMotion` with `domAnimation` can reduce bundle size from ~34kb to ~4.6kb initial. Recommended if total animation weight matters. Wrap `LandingPageContent` in `<LazyMotion features={domAnimation}>` and use `<m.*>` instead of `<motion.*>`.
+**Warning signs:** Animations never fire on mobile; works on desktop but not smaller viewports.
 
----
+### Pitfall 4: `pathLength` on Filled Polygons
 
-## Section 8: Common Pitfalls
+**What goes wrong:** Animating `pathLength` on `<motion.polygon>` with `fill` but no `stroke` produces no visible effect. `pathLength` manipulates stroke-dasharray/dashoffset — if there's no stroke, nothing draws.
 
-### Pitfall 1: Ref on Sticky Inner Div Instead of Outer Container
+**How to avoid:** Switzerland polygon uses fill/opacity color transition (not `pathLength`). The globe outer circle and glow ring have strokes and work with `pathLength`. See Pattern 3 above.
 
-**What goes wrong:** `scrollYProgress` always reads 0 or 1 immediately; animation plays on first render and freezes.
+**Warning signs:** Switzerland highlight does nothing during animation; no draw-in visible on the polygon.
 
-**Why it happens:** `useScroll` tracks the target element moving through the viewport. A sticky element doesn't move — it stays fixed. The outer div with `h-[300vh]` is what travels through the viewport.
+### Pitfall 5: Hero Uses `whileInView` Instead of `animate`
 
-**How to avoid:** Always attach `chapterRef` to the OUTER div (the tall one creating scroll space), not the `sticky` inner div.
+**What goes wrong:** Using `whileInView` for above-the-fold hero content can cause the animation to be missed if the IntersectionObserver fires before React hydration, or results in the element being invisible on load until scroll.
 
-**Warning signs:** `scrollYProgress` jumps to 1 immediately when chapter enters viewport.
+**How to avoid:** Hero section uses `animate={{ opacity: 1, y: 0 }}` (mount-time), not `whileInView`. The existing `ChapterHook.tsx` demonstrates the correct pattern.
 
----
+**Warning signs:** Hero text flashes invisible on first load, or sits invisible until user scrolls down even slightly.
 
-### Pitfall 2: `motion.polygon`/`motion.rect` pathLength on Filled Shapes
+### Pitfall 6: Stagger Container Without Variant Children
 
-**What goes wrong:** `pathLength: 0→1` appears to do nothing on a filled polygon with no stroke.
+**What goes wrong:** `StaggerGroup` stagger orchestration only applies to children that also use `variants`. If a child uses direct `animate` props, it won't participate in the stagger timing.
 
-**Why it happens:** `pathLength` controls the stroke dash animation. Without a visible `stroke`, nothing appears to change.
-
-**How to avoid:** Either (a) add a stroke to polygons during the "drawing" phase and fade stroke out after, or (b) use `opacity` instead of `pathLength` for filled shapes. The `pathLength` approach is better for `<path>` outlines (house frame lines). For filled faces, use staggered `opacity`.
-
----
-
-### Pitfall 3: useTransform with Duplicate Input Values
-
-**What goes wrong:** `useTransform` with `[0, 0.4, 0.4, 1]` may cause unexpected interpolation at the repeated value.
-
-**Why it happens:** Motion handles "hold" values by snapping at the exact boundary. Values must be monotonically non-decreasing. Repeated values create a step at that point.
-
-**How to avoid:** Use `[0, 0.399, 0.400, 1]` (slightly different) if the behavior at the hold point is important. Or use `clamp: true` (default) and two separate `useTransform` calls.
-
----
-
-### Pitfall 4: Animating CSS Custom Variables via style prop
-
-**What goes wrong:** Slow performance, style invalidation across the entire component tree.
-
-**Why it happens:** CSS variable changes trigger full re-style even on unrelated elements.
-
-**How to avoid:** Never do `style={{ "--my-var": motionValue }}`. Always animate concrete CSS properties: `style={{ opacity, scale, x, y }}`.
-
----
-
-### Pitfall 5: SVG Attribute Animation (attrX / direct attributes) per Frame
-
-**What goes wrong:** Janky scroll animations on mobile, dropped frames.
-
-**Why it happens:** Animating SVG attributes like `cx`, `cy`, `r`, `width`, `height` triggers browser repaint every frame (C/D tier).
-
-**How to avoid:** Use CSS `transform` on `<g>` wrapper elements for all position/scale changes. Reserve SVG attribute animation for one-time transitions (not per-scroll-tick).
-
----
-
-### Pitfall 6: `whileInView` on Scroll-Chapter Children
-
-**What goes wrong:** Elements animate when the chapter first enters view, but then don't respond to scroll position.
-
-**Why it happens:** `whileInView` is boolean (in/out), not position-linked.
-
-**How to avoid:** Use `useTransform(scrollProgress, [...], [...])` with `style={}` prop for everything inside a scroll chapter.
-
----
-
-### Pitfall 7: Large `blur()` Filters on Mobile
-
-**What goes wrong:** Switzerland glow filter causes jank on lower-end devices.
-
-**Why it happens:** `feGaussianBlur` with large stdDeviation recalculates every paint frame.
-
-**How to avoid:** Keep `stdDeviation` ≤ 4. Apply the filter only to the small Switzerland polygon (not the whole SVG). Alternatively, use a pre-blurred color glow via `box-shadow` or `drop-shadow()` which is GPU-accelerated.
-
----
-
-### Pitfall 8: `@base-ui/react` Button Semantics with Links
-
-**What goes wrong:** Attempting `<Button render={<Link href="/auth" />}>` — this works (HeroSection already does it), but the docs warn against it for semantic reasons.
-
-**Why it matters here:** Chapter 7 CTA must use a Link. The correct existing pattern from `HeroSection.tsx` is:
-
-```typescript
-<Button
-  render={<Link href="/auth" />}
-  className="bg-hero-teal text-hero-bg ..."
->
-  Create free account
-</Button>
-```
-
-This is confirmed working in the existing codebase. Do NOT use `asChild` — it does not exist in `@base-ui/react`.
-
----
-
-### Pitfall 9: Hydration Mismatch from window/document Access
-
-**What goes wrong:** `getBoundingClientRect()` called during SSR throws or returns zeros, causing hydration mismatch.
-
-**How to avoid:** All layout measurements must go in `useLayoutEffect` or `useEffect` (which only run client-side). Never call DOM APIs at module scope or in the render body.
+**How to avoid:** Always use `StaggerItem` inside `StaggerGroup`. The `StaggerItem` applies `staggerItemVariants` which propagates correctly through motion's variant tree.
 
 ---
 
 ## Code Examples
 
-### Full Chapter Scaffold (TypeScript)
+### Translation Keys for New 5-Section Structure
 
-```typescript
-// Source: verified against motion.dev/docs/react-use-scroll
-"use client"
+The file `web/src/__tests__/landing-translations.test.ts` already defines exactly which keys are expected (this is authoritative for the plan). The plan must add all of these to `translations.ts` (both `en` and `de`), and remove old chapter keys:
 
-import { useRef } from "react"
-import { useScroll } from "motion/react"
-import type { MotionValue } from "motion/react"
-
-interface ChapterProps {
-  height: string  // e.g. "h-[300vh]"
-}
-
-function Chapter({ height }: ChapterProps) {
-  const chapterRef = useRef<HTMLDivElement>(null)
-  const { scrollYProgress } = useScroll({
-    target: chapterRef,
-    offset: ["start start", "end end"],
-  })
-
-  return (
-    <div ref={chapterRef} className={`relative ${height}`}>
-      <div className="sticky top-0 h-screen overflow-hidden">
-        <ChapterContent scrollProgress={scrollYProgress} />
-      </div>
-    </div>
-  )
-}
-
-function ChapterContent({ scrollProgress }: { scrollProgress: MotionValue<number> }) {
-  // useTransform calls go here — not in parent
-  return <div>...</div>
-}
+**Keys to ADD (from landing-translations.test.ts):**
+```
+landing_hero_overline
+landing_hero_headline
+landing_hero_subtitle
+landing_hero_cta
+landing_problem_overline        (exists — keep or update value)
+landing_problem_headline        (exists — keep or update value)
+landing_problem_bullet1         (NEW — replaces landing_problem_pain1)
+landing_problem_bullet2         (NEW)
+landing_problem_bullet3         (NEW)
+landing_howit_overline
+landing_howit_headline
+landing_howit_step1_label
+landing_howit_step1_body
+landing_howit_step2_label
+landing_howit_step2_body
+landing_howit_step3_label
+landing_howit_step3_body
+landing_features_overline
+landing_features_headline
+landing_feat1_title, landing_feat1_body
+landing_feat2_title, landing_feat2_body
+landing_feat3_title, landing_feat3_body
+landing_cta_overline            (NEW — test expects this)
+landing_cta_headline            (exists)
+landing_cta_subtext             (NEW)
+landing_cta_button              (exists)
+landing_footer_copyright        (exists)
 ```
 
-### useTransform Multi-Stop Pattern
-
-```typescript
-// Source: motion.dev/docs/react-use-transform
-import { useTransform } from "motion/react"
-import type { MotionValue } from "motion/react"
-
-// Element appears, stays, then fades — within a chapter scroll
-function useChapterPhase(
-  scrollProgress: MotionValue<number>,
-  [appearStart, appearEnd, fadeStart, fadeEnd]: [number, number, number, number]
-) {
-  return useTransform(
-    scrollProgress,
-    [appearStart, appearEnd, fadeStart, fadeEnd],
-    [0, 1, 1, 0]
-  )
-}
-
-// Usage:
-const globeOpacity = useChapterPhase(scrollProgress, [0, 0.1, 0.8, 0.95])
+**Keys to REMOVE (old chapter keys no longer referenced):**
+```
+landing_hook_phrase1, landing_hook_phrase2
+landing_ch_line1, landing_ch_line2
+landing_problem_pain1, landing_problem_pain2, landing_problem_pain3
+landing_mech_overline, landing_mech_headline
+landing_score_label
+landing_dream_line1, landing_dream_line2, landing_dream_line3
+landing_cta_signin, landing_cta_signin_link   (check if still used before removing)
 ```
 
-### Score Bar Animation Pattern
+Note: `landing_nav_signin` is used by `LandingNavbar` — keep it.
+
+### Easing — Always Use Tokens
 
 ```typescript
-// Score bars animate width via motion value (not layout animation)
-const barWidth = useTransform(
-  scrollProgress,
-  [0.3, 0.6],
-  ["0%", "87%"],
-  { ease: cubicBezier(0.22, 1, 0.36, 1) }
-)
+// Source: web/src/lib/motion.ts (verified — never inline these)
+import { ease, duration } from "@/lib/motion"
 
-// In JSX:
-<div className="h-2 bg-white/10 rounded-full overflow-hidden">
-  <motion.div
-    className="h-full bg-hero-teal rounded-full"
-    style={{ width: barWidth }}
-  />
-</div>
+transition={{ duration: duration.slow, ease: ease.enter }}
+// NOT: transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+```
+
+Available tokens: `duration.instant/fast/base/moderate/slow/crawl`, `ease.enter/exit/inOut/expressive/linear`, `spring.snappy/gentle/bouncy/stiff`, `fadeUpVariants`, `fadeInVariants`, `slideInLeftVariants`, `slideInRightVariants`, `staggerContainerVariants`, `staggerItemVariants`.
+
+### Button with Link (Established Pattern)
+
+```typescript
+// Source: ChapterCTA.tsx + LandingNavbar.tsx (verified)
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+
+<Button
+  render={<Link href="/auth" />}
+  size="lg"
+  className="bg-hero-teal text-hero-bg hover:opacity-90 px-8 py-3 text-base font-semibold rounded-xl h-auto"
+>
+  {t(lang, 'landing_hero_cta')}
+</Button>
+```
+
+### Reduced Motion — Both Variant and Direct Patterns
+
+```typescript
+// Variant-based (preferred with FadeIn / StaggerGroup):
+variants={prefersReduced ? {} : fadeUpVariants}
+
+// Direct props (when not using variants):
+initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
+animate={{ opacity: 1, y: 0 }}
+transition={prefersReduced ? { duration: 0 } : { duration: duration.moderate, ease: ease.enter }}
 ```
 
 ---
 
 ## State of the Art
 
-| Old Approach | Current Approach | When Changed | Impact |
-|--------------|------------------|--------------|--------|
-| `framer-motion` package | `motion` package, import from `motion/react` | 2024 | Confirmed in this project |
-| `whileInView` for everything | `useScroll`+`useTransform` for position-linked | Framer Motion v6+ | Better precision |
-| CSS scroll-snap sections | Sticky outer + sticky inner pattern | 2023+ | Smoother, more control |
-| `splitText` builtin | Manual span-per-word OR `motion-plus` (paid) | 2024 | motion-plus not available here |
-| GSAP for complex SVG sequences | motion/react `pathLength` + `useTransform` | 2023+ | No extra dep |
-| `will-change` on everything | Selective, remove after animation | Best practice | Prevents memory bloat |
+| Old Approach (Phase 20 v1) | New Approach | Impact |
+|---------------------------|--------------|--------|
+| `h-[300vh]`/`h-[350vh]`/`h-[400vh]` sticky containers | Natural `min-h-screen` sections | No scroll-jank, no height miscalculations |
+| `useScroll` + `useTransform` for every element | `whileInView` + `viewport={{ once: true }}` | Simpler, more reliable, better perf |
+| 7 Chapter components | 5 Section components | Cleaner narrative, fewer files |
+| Globe zoom via CSS scale 1→5 with pan | `pathLength` draw-in + fill color transition | Actually works without scroll-math fragility |
+| Separate chapters for mechanism/score/dream | Single `SectionSolution` with 3-step stagger | Unified narrative, single component |
+| `IsometricHome` SVG (complex, fragile) | Simpler inline SVG or icon-based steps | Less maintenance surface |
 
-**Deprecated/outdated:**
-- `framer-motion` package import: replaced by `motion/react`
-- `AnimateSharedLayout`: removed, replaced by `layoutId`
-- `asChild` on `@base-ui/react` Button: does not exist, use `render={}` prop
+**Deprecated in this redesign:**
+- All Chapter components (`ChapterHook` through `ChapterCTA`) — deleted
+- `IsometricHome.tsx` — deleted
+- Old chapter translation keys — removed from `translations.ts`
 
 ---
 
 ## Open Questions
 
-1. **Exact card zoom pixel offsets (Chapter 4)**
-   - What we know: transform math is correct; exact translate values depend on rendered card position
-   - What's unclear: card3 position at runtime without measuring
-   - Recommendation: Use `useLayoutEffect` + `getBoundingClientRect` on card3 ref to measure position, then compute `useTransform` output range dynamically at mount
+1. **Features section vs Solution section**
+   - What we know: `landing-translations.test.ts` defines both `landing_howit_*` (3 steps) AND `landing_features_*` (3 features with titles/bodies) as separate key groups
+   - What's unclear: Are these two separate sections, or do features collapse into step bodies?
+   - Recommendation: Treat as two sections — `SectionSolution` (3 steps with `howit` keys) + a brief `SectionFeatures` (3-column feature grid with `feat` keys). CTA is section 5. This maps to 6 content blocks total but still reads as "5 sections" if features are visually light (a row of cards below solution steps).
 
-2. **Globe longitude lines 3D foreshortening**
-   - What we know: CSS `scaleX(-1 to 1)` fakes hemisphere flip; it won't perfectly foreshorten
-   - What's unclear: whether the visual result is convincing enough
-   - Recommendation: Start with `scaleX` animation; if it looks wrong, replace with animating SVG ellipse `rx` attribute on each longitude ellipse (lower performance but correct look — acceptable since it's not per-scroll-tick, just a CSS animation)
+2. **Globe section translation keys**
+   - What we know: `landing-translations.test.ts` does NOT include globe-specific keys
+   - Recommendation: Planner adds `landing_globe_headline` and `landing_globe_body` to translations and the test
 
-3. **CountUp scroll trigger timing**
-   - What we know: existing `useInView` fires when sticky section enters viewport
-   - What's unclear: whether firing immediately on chapter enter feels too early
-   - Recommendation: Keep existing CountUp; if timing feels off, add `margin: "-30% 0px"` to `useInView` in CountUp to delay trigger until user is 30% into the chapter
+3. **Hero background treatment**
+   - Locked decision: no background animation on hero
+   - Recommendation: Use existing `bg-hero-bg` (`hsl(0 0% 4%)`) — unchanged from current implementation. A subtle radial gradient overlay is acceptable if static.
 
 ---
 
@@ -1210,76 +602,65 @@ const barWidth = useTransform(
 
 | Property | Value |
 |----------|-------|
-| Framework | Vitest 4.x + Testing Library |
-| Config file | `vitest.config.*` (check web/ directory) |
-| Quick run command | `cd web && npx vitest run --reporter=dot` |
-| Full suite command | `cd web && npx vitest run` |
+| Framework | Vitest 4.0.18 + @testing-library/react 16.3.2 |
+| Config file | `web/vitest.config.ts` |
+| Quick run command | `cd /Users/singhs/gen-ai-hackathon/web && npm test -- --run 2>&1 | tail -30` |
+| Full suite command | `cd /Users/singhs/gen-ai-hackathon/web && npm test -- --run` |
 
 ### Phase Requirements → Test Map
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
-|--------|----------|-----------|-------------------|-------------|
-| LAND-01 | 7 chapters render without crash | unit/smoke | `vitest run components/landing` | ❌ Wave 0 |
-| LAND-02 | ChapterHook word stagger renders correct words | unit | `vitest run ChapterHook` | ❌ Wave 0 |
-| LAND-03 | CountUp renders target value after trigger | unit | `vitest run CountUp` | ❌ Wave 0 |
-| LAND-04 | useReducedMotion shows final state (no animation) | unit | `vitest run --grep reduced-motion` | ❌ Wave 0 |
-| LAND-05 | CTA Button renders as Link | unit | `vitest run ChapterCta` | ❌ Wave 0 |
-| LAND-06 | IsometricHome SVG renders all polygon elements | unit | `vitest run IsometricHome` | ❌ Wave 0 |
-| LAND-07 | LandingPageContent renders all 7 chapters | smoke | `vitest run LandingPageContent` | ❌ Wave 0 |
+|--------|----------|-----------|-------------------|--------------|
+| LP-01 | Landing page renders without auth | unit | `npm test -- --run landing-page` | ✅ `landing-page.test.tsx` |
+| LP-03 | Problem/Solution sections with EN/DE copy | unit | `npm test -- --run landing-translations` | ✅ `landing-translations.test.ts` |
+| LP-05 | Primary CTA button present and links to /auth | unit | extend `landing-page.test.tsx` | ✅ extend existing |
+| LP-06 | Sign In link in navbar | unit | `npm test -- --run landing-page` | ✅ already tested |
+| DS-02 | Dark hero background applied | smoke | visual review | manual |
+| LP-08 | No layout shift from animations | manual | Lighthouse / visual check | manual |
 
-**Note:** scroll animation behavior (scrollYProgress → visual transforms) cannot be meaningfully tested in jsdom since scroll events are not functional. Tests should verify render without crash, correct element presence, and reduced-motion path.
+### Sampling Rate
+- **Per task commit:** `cd /Users/singhs/gen-ai-hackathon/web && npm test -- --run 2>&1 | tail -20`
+- **Per wave merge:** `cd /Users/singhs/gen-ai-hackathon/web && npm test -- --run`
+- **Phase gate:** Full suite green before `/gsd:verify-work`
 
 ### Wave 0 Gaps
 
-- [ ] `web/src/components/landing/__tests__/LandingPageContent.test.tsx` — covers LAND-07
-- [ ] `web/src/components/landing/chapters/__tests__/ChapterHook.test.tsx` — covers LAND-01, LAND-02, LAND-04
-- [ ] `web/src/components/landing/chapters/__tests__/ChapterCta.test.tsx` — covers LAND-05
-- [ ] `web/src/components/landing/svg/__tests__/IsometricHome.test.tsx` — covers LAND-06
-- [ ] `web/src/components/motion/__tests__/CountUp.test.tsx` — covers LAND-03
+The `landing-translations.test.ts` currently **fails** because it references new translation keys (`landing_hero_overline`, `landing_howit_step1_label`, etc.) that do not yet exist in `translations.ts`. This must be fixed in the first task of the plan.
+
+- [ ] `web/src/lib/translations.ts` — add all new `landing_hero_*`, `landing_howit_*`, `landing_features_*`, `landing_cta_overline`, `landing_cta_subtext` keys in both `en` and `de`; remove old chapter keys
+- [ ] `web/src/__tests__/landing-page.test.tsx` — update to import new `SectionHero`, `LandingPageContent` once Chapter components are deleted (test currently imports `LandingPageContent` which imports Chapter files — will break when those are deleted)
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-- `https://motion.dev/docs/react-use-scroll` — useScroll full API, offset syntax, target vs container
-- `https://motion.dev/docs/react-use-transform` — useTransform overloads, clamp, ease option
-- `https://motion.dev/docs/react-use-in-view` — useInView API, options, once/margin
-- `https://motion.dev/docs/react-motion-value` — motion values, no-re-render architecture, useMotionValueEvent
-- `https://motion.dev/docs/react-svg-animation` — pathLength, pathOffset, pathSpacing, attribute animation
-- `https://motion.dev/docs/react-use-reduced-motion` — useReducedMotion API
-- `https://motion.dev/troubleshooting/use-scroll-ref` — SSR hydration error cause and fix
-- `https://motion.dev/magazine/web-animation-performance-tier-list` — GPU tier list, CSS variable trap
-- `https://motion.dev/docs/react-scroll-animations` — sticky chapter code examples, parallax
-- `https://jakearchibald.com/2025/animating-zooming/` — translate-before-scale math for zoom
-- `https://base-ui.com/react/components/button` — render prop API, nativeButton prop
-- Project codebase: `web/src/lib/motion.ts`, `web/src/components/motion/CountUp.tsx`, `web/src/components/landing/HeroSection.tsx`
+- `motion.dev/docs/react-motion-component` — `whileInView`, `viewport` options, props API (fetched directly 2026-03-27)
+- `motion.dev/docs/react-svg-animation` — `pathLength`, `pathOffset`, SVG element support, viewBox animation (fetched directly 2026-03-27)
+- `motion.dev/docs/react-use-in-view` — `useInView` hook, `once`, `amount`, `margin` options (fetched directly 2026-03-27)
+- Codebase read directly: `web/src/lib/motion.ts`, `FadeIn.tsx`, `StaggerGroup.tsx`, `ChapterHook.tsx`, `ChapterSwitzerland.tsx`, `ChapterProblem.tsx`, `ChapterMechanism.tsx`, `ChapterCTA.tsx`, `LandingNavbar.tsx`, `LandingPageContent.tsx`, `shimmer-button.tsx`, `button.tsx`
+- `web/src/lib/translations.ts` — full key set read directly
+- `web/src/__tests__/landing-translations.test.ts` — expected new key set (read directly)
+- `web/package.json` — all version numbers verified
 
 ### Secondary (MEDIUM confidence)
-
-- `https://dev.to/heres/scroll-svg-path-with-framer-motion-54el` — verified pathLength + useScroll pattern
-- `https://blog.olivierlarose.com/tutorials/zoom-parallax` — sticky container scale zoom pattern
-- `https://www.jointjs.com/blog/isometric-diagrams` — isometric SVG matrix math
-- `https://motion.dev/docs/split-text` — confirmed splitText is motion-plus (paid), not in standard `motion`
+- WebSearch results confirming `whileInView` + `viewport.once` are current motion/react API (2025 sources)
+- `css-tricks.com/svg-line-animation-works` — stroke-dasharray technique background (stable reference)
 
 ### Tertiary (LOW confidence)
-
-- SVG globe codepens (ElJefe, bluebie, kgierke) — visual reference only, not used for code patterns
-- Simplified Europe SVG path — hand-crafted approximation, not from geographic data
+- 21st.dev search results — `ShimmerButton` confirmed in project; other 21st.dev landing components browsed via search but not individually fetched
 
 ---
 
 ## Metadata
 
 **Confidence breakdown:**
-- Standard stack: HIGH — project already has all dependencies, confirmed via package.json
-- useScroll/useTransform patterns: HIGH — verified against official motion.dev docs (fetched 2026-03-27)
-- Isometric SVG math: MEDIUM — coordinate formulas derived from isometric projection principles, exact pixel values need visual tuning
-- SVG globe: MEDIUM — approach verified; simplified Europe path is approximate
-- Card zoom math: MEDIUM — translate-before-scale principle is HIGH confidence (Jake Archibald 2025); exact pixel offsets are LOW (require runtime measurement)
-- Pitfalls: HIGH — sourced from official docs, motion magazine, and existing project patterns
-- Performance: HIGH — from motion.dev/magazine performance tier list
+- Standard stack: HIGH — all packages verified from `package.json` directly
+- Animation patterns (whileInView, stagger): HIGH — verified from motion.dev official docs + existing working code
+- Globe SVG animation (pathLength): HIGH — `pathLength` approach verified from `motion.dev/docs/react-svg-animation`
+- Translation key set: HIGH — read directly from test and translations files
+- Architecture: HIGH — based on direct codebase analysis + locked decisions from CONTEXT.md
+- Pitfalls: HIGH — derived from existing code patterns, official docs, and known jsdom limitations
 
 **Research date:** 2026-03-27
-**Valid until:** 2026-06-27 (motion/react v12 API is stable; 90 days)
+**Valid until:** 2026-04-27 (motion/react API is stable; translation keys are codebase-specific — valid indefinitely)
