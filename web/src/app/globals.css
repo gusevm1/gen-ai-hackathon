@@ -148,28 +148,28 @@
   --sidebar-ring: hsl(342 89% 50%);
 }
 
-/* ─── Teal accent + hero section tokens ─────────────────────────────── */
+/* ─── Brand accent + hero section tokens ────────────────────────────── */
 :root {
-  /* Teal on light background — darker for contrast on white */
-  --teal-raw:              hsl(173 80% 32%);
+  /* Brand red on light background — matches primary */
+  --teal-raw:              hsl(342 89% 40%);
   --teal-foreground-raw:   hsl(0 0% 100%);
 
   /* Hero section — always dark regardless of user theme */
   --hero-bg-raw:           hsl(0 0% 4%);
   --hero-fg-raw:           hsl(0 0% 96%);
-  --hero-teal-raw:         hsl(173 65% 52%);
-  --hero-teal-muted-raw:   hsl(173 40% 70%);
+  --hero-teal-raw:         hsl(342 89% 50%);
+  --hero-teal-muted-raw:   hsl(342 60% 70%);
 }
 
 .dark {
-  /* In dark mode, teal lightens to match hero teal */
-  --teal-raw:              hsl(173 65% 52%);
-  --teal-foreground-raw:   hsl(0 0% 4%);
+  /* In dark mode, brand red lightens slightly */
+  --teal-raw:              hsl(342 89% 50%);
+  --teal-foreground-raw:   hsl(0 0% 100%);
 
   --hero-bg-raw:           hsl(0 0% 4%);
   --hero-fg-raw:           hsl(0 0% 96%);
-  --hero-teal-raw:         hsl(173 65% 52%);
-  --hero-teal-muted-raw:   hsl(173 40% 70%);
+  --hero-teal-raw:         hsl(342 89% 50%);
+  --hero-teal-muted-raw:   hsl(342 60% 70%);
 }
 
 /* ─── Typography scale ──────────────────────────────────────────────── */
