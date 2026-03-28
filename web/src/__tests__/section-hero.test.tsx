@@ -47,4 +47,30 @@ describe('SectionHero', () => {
     // The old chip style used: hsl(0 0% 6% / 0.88) — this must NOT appear after the overhaul
     expect(container.innerHTML).not.toContain('hsl(0 0% 6% / 0.88)')
   })
+
+  it('stats row is absent (HERO-01)', () => {
+    const { container } = render(<SectionHero lang="en" />)
+    expect(container.innerHTML).not.toContain('2,400+')
+    expect(container.innerHTML).not.toContain('listings scored daily')
+  })
+
+  it('CTA wrapper is always flex-col, not sm:flex-row (HERO-02)', () => {
+    const { container } = render(<SectionHero lang="en" />)
+    // Find the div containing the CTA button
+    const ctaLink = container.querySelector('a[href="/auth"]')
+    expect(ctaLink).toBeTruthy()
+    // Walk up to the motion.div wrapper — it must not have sm:flex-row
+    const wrapper = ctaLink?.closest('div[class]')
+    expect(wrapper?.className).not.toContain('sm:flex-row')
+  })
+
+  it('poor tier color is #ef4444 (HERO-03)', () => {
+    const { container } = render(<SectionHero lang="en" />)
+    // The poor chip (score 41) renders a score circle span with backgroundColor TIER_COLORS.poor.bg
+    // innerHTML contains the style inline — check for ef4444
+    const chips = container.querySelectorAll('[data-testid="hero-chip"]')
+    // At least one chip must use ef4444 (the poor tier chip)
+    const htmlContent = Array.from(chips).map(c => c.innerHTML).join('')
+    expect(htmlContent).toContain('ef4444')
+  })
 })
