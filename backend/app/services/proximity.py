@@ -31,7 +31,7 @@ _AMENITY_KEYWORDS = re.compile(
     r"|transport|öv|tram|bus|train|zug|bahn|bahnhof|station|haltestelle"
     r"|park|grünfläche|spielplatz|playground"
     r"|hospital|spital|krankenhaus|arzt|doctor|apotheke|pharmacy"
-    r"|restaurant|café|cafe|bar|bakery|bäckerei"
+    r"|restaurant|café|cafe|bar|bakery|bäckerei|coffee|coffeeshop|starbucks"
     r"|kindergarten|kita|daycare|nursery|krippe"
     r"|university|universität|uni|library|bibliothek"
     r"|shop|laden|geschäft|mall|einkaufszentrum"
@@ -59,20 +59,24 @@ class ProximityRequirement(BaseModel):
     importance: ImportanceLevel
 
 
-def _parse_radius_km(value: str) -> float:
-    """Parse radius in km from free-text value string.
+def _parse_radius_km(*texts: str) -> float:
+    """Parse radius in km from any provided text fragments (value, name, etc.).
 
     Handles: "500m", "500 m", "1km", "2 km", "1.5km".
     Returns _DEFAULT_RADIUS_KM if no parseable distance found.
     Caps at _MAX_RADIUS_KM.
     """
-    m = _DISTANCE_RE.search(value)
-    if not m:
-        return _DEFAULT_RADIUS_KM
-    amount = float(m.group(1))
-    unit = m.group(2).lower()
-    km = amount / 1000.0 if unit == "m" else amount
-    return min(km, _MAX_RADIUS_KM)
+    for text in texts:
+        if not text:
+            continue
+        m = _DISTANCE_RE.search(text)
+        if not m:
+            continue
+        amount = float(m.group(1))
+        unit = m.group(2).lower()
+        km = amount / 1000.0 if unit == "m" else amount
+        return min(km, _MAX_RADIUS_KM)
+    return _DEFAULT_RADIUS_KM
 
 
 def extract_proximity_requirements(
@@ -90,11 +94,20 @@ def extract_proximity_requirements(
     requirements: list[ProximityRequirement] = []
     for field in preferences.dynamic_fields:
         text = f"{field.name} {field.value}"
-        if _AMENITY_KEYWORDS.search(text):
+        has_keyword = _AMENITY_KEYWORDS.search(text) is not None
+        has_distance = _DISTANCE_RE.search(text) is not None
+
+        # Gate: accept if keyword OR explicit distance is present
+        if has_keyword or has_distance:
+            # Strip distance tokens/"within" noise from query to keep the search string clean
+            query_clean = _DISTANCE_RE.sub("", field.name)
+            query_clean = re.sub(r"(?i)\b(within|inside|radius|rad)\b", "", query_clean)
+            query_clean = query_clean.strip() or field.name
+
             requirements.append(
                 ProximityRequirement(
-                    query=field.name,
-                    radius_km=_parse_radius_km(field.value),
+                    query=query_clean,
+                    radius_km=_parse_radius_km(field.value, field.name),
                     importance=field.importance,
                 )
             )
