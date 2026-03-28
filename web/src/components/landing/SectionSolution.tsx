@@ -6,6 +6,14 @@ import { ease } from '@/lib/motion'
 import { t } from '@/lib/translations'
 import type { Language } from '@/lib/translations'
 
+// ─── Score color helper ───────────────────────────────────────────────────────
+
+function scoreColor(score: number) {
+  if (score >= 80) return { bg: 'hsl(142 71% 45% / 0.18)', color: '#10b981', border: 'hsl(142 71% 45% / 0.3)' }
+  if (score >= 60) return { bg: 'hsl(38 92% 50% / 0.18)',  color: '#f59e0b', border: 'hsl(38 92% 50% / 0.3)'  }
+  return              { bg: 'hsl(0 72% 51% / 0.18)',       color: '#ef4444', border: 'hsl(0 72% 51% / 0.3)'   }
+}
+
 // ─── Mock data (illustrative, not translated) ────────────────────────────────
 
 const PROFILE_TEXT = '2BR in Zurich, max CHF 2,500, pet-friendly, near a park or lake'
@@ -126,14 +134,14 @@ function AnimatedScore({ score, active }: { score: number; active: boolean }) {
     return () => clearInterval(id)
   }, [active, score])
 
-  const isHigh = score >= 88
+  const colors = scoreColor(score)
   return (
     <span
       className="text-xs font-bold px-2 py-0.5 rounded-md tabular-nums"
       style={{
-        backgroundColor: isHigh ? 'hsl(173 65% 52% / 0.18)' : 'hsl(0 0% 100% / 0.07)',
-        color: isHigh ? 'var(--color-hero-teal)' : 'hsl(0 0% 60%)',
-        border: `1px solid ${isHigh ? 'hsl(173 65% 52% / 0.3)' : 'hsl(0 0% 100% / 0.1)'}`,
+        backgroundColor: colors.bg,
+        color: colors.color,
+        border: `1px solid ${colors.border}`,
       }}
     >
       {display}%
@@ -207,14 +215,17 @@ function SceneAnalysis({ active }: { active: boolean }) {
       {/* Overall score */}
       <div
         className="flex items-center justify-between rounded-xl px-4 py-3"
-        style={{ backgroundColor: 'hsl(173 65% 52% / 0.1)', border: '1px solid hsl(173 65% 52% / 0.2)' }}
+        style={{
+          backgroundColor: scoreColor(94).bg,
+          border: `1px solid ${scoreColor(94).border}`,
+        }}
       >
-        <span className="text-xs font-semibold" style={{ color: 'var(--color-hero-teal)' }}>
+        <span className="text-xs font-semibold" style={{ color: scoreColor(94).color }}>
           Overall Match Score
         </span>
         <motion.span
           className="text-2xl font-black"
-          style={{ color: 'var(--color-hero-teal)' }}
+          style={{ color: scoreColor(94).color }}
           initial={{ opacity: 0 }}
           animate={active ? { opacity: 1 } : { opacity: 0 }}
           transition={{ delay: 0.2 }}
@@ -367,7 +378,7 @@ export function SectionSolution({ lang }: { lang: Language }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.3 }}
           transition={{ duration: 0.7, ease: ease.enter }}
-          className="max-w-2xl mx-auto mb-12"
+          className="max-w-3xl mx-auto mb-12"
         >
           <MockBrowser scene={scene} />
         </motion.div>
@@ -380,7 +391,7 @@ export function SectionSolution({ lang }: { lang: Language }) {
               <button
                 key={num}
                 onClick={() => setScene(i)}
-                className="flex-1 text-left rounded-2xl px-6 py-6 transition-all duration-300"
+                className="flex-1 text-left rounded-2xl px-8 py-8 transition-all duration-300"
                 style={{
                   backgroundColor: active ? 'hsl(173 65% 52% / 0.1)' : 'hsl(0 0% 100% / 0.03)',
                   border: `1px solid ${active ? 'hsl(173 65% 52% / 0.3)' : 'hsl(0 0% 100% / 0.07)'}`,
@@ -412,7 +423,7 @@ export function SectionSolution({ lang }: { lang: Language }) {
                   )}
                 </div>
                 <p
-                  className="text-base font-semibold leading-tight mb-2"
+                  className="text-lg font-semibold leading-tight mb-2"
                   style={{ color: active ? 'var(--color-hero-fg)' : 'hsl(0 0% 50%)' }}
                 >
                   {t(lang, labelKey)}

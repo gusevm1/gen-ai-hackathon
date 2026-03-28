@@ -1,12 +1,18 @@
 'use client'
 
+import { useRef } from 'react'
 import Link from 'next/link'
-import { motion } from 'motion/react'
+import { motion, useInView, useReducedMotion } from 'motion/react'
 import { Button } from '@/components/ui/button'
+import { spring } from '@/lib/motion'
 import { t } from '@/lib/translations'
 import type { Language } from '@/lib/translations'
 
 export function SectionCTA({ lang }: { lang: Language }) {
+  const prefersReduced = useReducedMotion()
+  const headlineRef = useRef<HTMLHeadingElement>(null)
+  const headlineInView = useInView(headlineRef, { once: false, amount: 0.6 })
+
   return (
     <section
       className="relative min-h-[70vh] flex flex-col items-center justify-center text-center px-6 py-24 overflow-hidden"
@@ -17,7 +23,7 @@ export function SectionCTA({ lang }: { lang: Language }) {
         aria-hidden
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 60% 40% at 50% 50%, hsl(173 65% 52% / 0.09) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse 80% 60% at 50% 50%, hsl(173 65% 52% / 0.13) 0%, transparent 70%)',
         }}
       />
 
@@ -34,16 +40,23 @@ export function SectionCTA({ lang }: { lang: Language }) {
         >
           {t(lang, 'landing_cta_overline')}
         </p>
-        <h2
+        <motion.h2
+          ref={headlineRef}
           className="font-bold tracking-tight mb-4"
           style={{
-            fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
-            lineHeight: 1.15,
+            fontSize: 'clamp(2.5rem, 6vw, 4.5rem)',
+            lineHeight: 1.1,
             color: 'var(--color-hero-fg)',
           }}
+          initial={{ opacity: 0, y: 60 }}
+          animate={prefersReduced ? { opacity: 1, y: 0 } : {
+            opacity: headlineInView ? 1 : 0,
+            y: headlineInView ? 0 : 60,
+          }}
+          transition={spring.gentle}
         >
           {t(lang, 'landing_cta_headline')}
-        </h2>
+        </motion.h2>
         <p
           className="text-lg leading-relaxed mb-8"
           style={{ color: 'hsl(0 0% 70%)' }}
@@ -57,6 +70,7 @@ export function SectionCTA({ lang }: { lang: Language }) {
           style={{
             backgroundColor: 'var(--color-hero-teal)',
             color: 'var(--color-hero-bg)',
+            boxShadow: '0 0 32px hsl(173 65% 52% / 0.28)',
           }}
         >
           {t(lang, 'landing_cta_button')}
