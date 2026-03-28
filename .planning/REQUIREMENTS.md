@@ -7,9 +7,9 @@
 
 ### Hero Section
 
-- [ ] **HERO-01**: Stats row removed — "2,400+ listings scored daily", "< 3s per listing", "Free" block no longer shown
-- [ ] **HERO-02**: CTA button is centered on its own row (not paired inline with secondary text on desktop)
-- [ ] **HERO-03**: Poor tier color updated from gray (#6b7280) to red in TIER_COLORS (both landing page and extension `src/types/scoring.ts`)
+- [x] **HERO-01**: Stats row removed — "2,400+ listings scored daily", "< 3s per listing", "Free" block no longer shown
+- [x] **HERO-02**: CTA button is centered on its own row (not paired inline with secondary text on desktop)
+- [x] **HERO-03**: Poor tier color updated from gray (#6b7280) to red in TIER_COLORS (both landing page and extension `src/types/scoring.ts`)
 
 ### Problem Section
 
@@ -70,9 +70,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HERO-01 | Phase 22 | Pending |
-| HERO-02 | Phase 22 | Pending |
-| HERO-03 | Phase 22 | Pending |
+| HERO-01 | Phase 22 | Complete |
+| HERO-02 | Phase 22 | Complete |
+| HERO-03 | Phase 22 | Complete |
 | PROB-01 | Phase 22 | Complete |
 | PROB-02 | Phase 22 | Complete |
 | PROB-03 | Phase 22 | Complete |

@@ -48,6 +48,9 @@ Progress: [█████████░] 92% (11/12 plans complete)
 - CTA headline: clamp(2.5rem, 6vw, 4.5rem) min, animate y: 60 → 0 with spring
 - Credits section: minimal, below CTA, shows ETH + Gen-AI Hackathon logos
 - Swiss photography deferred to v4.2 discussion
+- jsdom normalizes hex colors to rgb() — HERO-03 test checks rgb(239, 68, 68) not #ef4444 for backgroundColor assertions (22-01)
+- Poor tier color unified to #ef4444 (red) across SectionHero and extension TIER_COLORS — traffic-light semantics (22-01)
+- Stats row (2,400+, <3s, Free) removed from hero section — purely subtractive, no replacement needed (22-01)
 - x slide-in uses no initial prop — Framer Motion derives start state from animate value at mount when isInView=false (22-02)
 - jsdom normalizes hsl() to rgba() — PROB-03 test checks both color representations for test reliability (22-02)
 - Card elevation via backgroundColor + border inline style (not Tailwind bg-* classes) — required since hsl() with spaces not supported in Tailwind utilities (22-02)
