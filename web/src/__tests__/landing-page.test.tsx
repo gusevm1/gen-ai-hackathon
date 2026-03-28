@@ -22,6 +22,12 @@ describe('LandingPageContent', () => {
     const { container } = render(<LandingPageContent />)
     expect(container.firstChild).toBeTruthy()
   })
+
+  it('renders a CTA button linking to /auth', () => {
+    const { container } = render(<LandingPageContent />)
+    const ctaLink = container.querySelector('a[href="/auth"]')
+    expect(ctaLink).toBeTruthy()
+  })
 })
 
 describe('LandingNavbar', () => {

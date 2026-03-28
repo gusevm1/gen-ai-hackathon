@@ -6,6 +6,9 @@ import { LandingNavbar } from './LandingNavbar'
 import { LandingFooter } from './LandingFooter'
 import { SectionHero } from './SectionHero'
 import { SectionGlobe } from './SectionGlobe'
+import { SectionProblem } from './SectionProblem'
+import { SectionSolution } from './SectionSolution'
+import { SectionCTA } from './SectionCTA'
 
 export function LandingPageContent() {
   const { language } = useLanguage()
@@ -15,6 +18,9 @@ export function LandingPageContent() {
       <LandingNavbar lang={lang} />
       <SectionHero lang={lang} />
       <SectionGlobe lang={lang} />
+      <SectionProblem lang={lang} />
+      <SectionSolution lang={lang} />
+      <SectionCTA lang={lang} />
       <LandingFooter lang={lang} />
     </div>
   )
