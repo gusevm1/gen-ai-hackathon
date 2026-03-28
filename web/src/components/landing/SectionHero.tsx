@@ -224,8 +224,8 @@ export function SectionHero({ lang }: SectionHeroProps) {
             size="lg"
             className="px-9 py-3 text-base font-semibold rounded-xl h-auto"
             style={{
-              backgroundColor: 'var(--color-hero-teal)',
-              color: 'var(--color-hero-bg)',
+              backgroundColor: 'var(--primary)',
+              color: 'var(--primary-foreground)',
               boxShadow: '0 0 32px hsl(342 89% 50% / 0.28)',
             }}
           >
