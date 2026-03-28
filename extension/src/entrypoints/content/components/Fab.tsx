@@ -162,7 +162,7 @@ export function Fab({ onClick, onLongPress, isScoring, scoredCount, error }: Fab
 
         {/* Scored count badge */}
         {scoredCount > 0 && !isScoring && (
-          <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[11px] font-bold rounded-full w-6 h-6 flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 bg-primary text-white text-[11px] font-bold rounded-full w-6 h-6 flex items-center justify-center">
             {scoredCount}
           </span>
         )}

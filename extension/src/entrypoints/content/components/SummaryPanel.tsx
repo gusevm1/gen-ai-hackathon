@@ -48,7 +48,7 @@ export function SummaryPanel({ score, listingId, isOpen, isStale, staleReason, p
       <ul className="space-y-1.5 mb-3">
         {score.summary_bullets.map((bullet, i) => (
           <li key={i} className="flex items-start gap-1.5 text-[13px] text-gray-700">
-            <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+            <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
             <span>{bullet}</span>
           </li>
         ))}
@@ -57,7 +57,7 @@ export function SummaryPanel({ score, listingId, isOpen, isStale, staleReason, p
       <div className="border-t border-gray-100 pt-2">
         <button
           onClick={() => window.open(`${WEBSITE_URL}/analysis/${listingId}`, '_blank')}
-          className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 font-medium cursor-pointer transition-colors duration-150"
+          className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium cursor-pointer transition-colors duration-150"
         >
           See full analysis
           {/* Small right arrow icon */}
