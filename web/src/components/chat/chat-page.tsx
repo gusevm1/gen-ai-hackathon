@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { ChatInput } from "./chat-input"
+import { ChatInput, type ChatInputHandle } from "./chat-input"
 import { AIAvatar } from "./ai-avatar"
 import { TypingIndicator } from "./typing-indicator"
 import { PreferenceSummaryCard } from "./preference-summary-card"
@@ -26,6 +26,7 @@ export function ChatPage() {
   const [apiMessages, setApiMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
   const [isTyping, setIsTyping] = useState(false)
   const [extractedPreferences, setExtractedPreferences] = useState<Record<string, unknown> | null>(null)
+  const chatInputRef = useRef<ChatInputHandle>(null)
   const greetingFetched = useRef(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -34,6 +35,14 @@ export function ChatPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
+
+  // Auto-focus chat input after AI response completes
+  useEffect(() => {
+    if (!isTyping) {
+      const timer = setTimeout(() => chatInputRef.current?.focus(), 50)
+      return () => clearTimeout(timer)
+    }
+  }, [isTyping])
 
   // Fetch initial AI greeting on mount
   useEffect(() => {
@@ -189,6 +198,7 @@ export function ChatPage() {
         <div ref={bottomRef} />
       </div>
       <ChatInput
+        ref={chatInputRef}
         onSend={handleSendMessage}
         disabled={isTyping || phase === 'summarizing'}
       />
