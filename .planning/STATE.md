@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Extension Download & Install
 status: completed
-last_updated: "2026-03-28T17:11:10.338Z"
+last_updated: "2026-03-28T18:13:00.000Z"
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 7
-  completed_plans: 5
-  percent: 40
+  completed_plans: 6
+  percent: 50
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 
 ## Current Position
 
-Phase: 20-landing-page-redesign (complete)
+Phase: 21-landing-page-polish-v2 (in progress — Plan 01 complete)
 Branch: redesign/v4-landing
-Status: Phase 18, 19, 20 complete. Landing page rebuilt as 7-chapter scroll-driven experience. Ready for Phase 21 (Polish & QA).
+Status: Phase 18, 19, 20 complete. Phase 21 Plan 01 complete: hero chips overhauled to ScoreBadge visual language, overline copy updated.
 
 Progress: [####______] 40%
 
@@ -50,6 +50,9 @@ Progress: [####______] 40%
 - [Phase 20-03]: SectionSolution uses one section element for both How It Works and Features blocks — cohesion over split
 - [Phase 20-03]: stepStaggerVariants defined locally (staggerChildren: 0.15) — specific to 3-step reveal, not reusable
 - [Phase 21-02]: once: false on useInView so highlight re-triggers on scroll back; reduced motion uses empty animate object
+- [Phase 21-01]: TIER_COLORS defined as local const in SectionHero.tsx (not imported across workspaces) to mirror extension ScoreBadge
+- [Phase 21-01]: data-testid="hero-chip" added to animated chip divs for jsdom testability
+- [Phase 21-01]: landing_howit_overline changed to "How to avoid this" (EN) / "So vermeidest du das" (DE) — narrative bridge from Problem to Solution
 
 ### Decisions (added)
 
