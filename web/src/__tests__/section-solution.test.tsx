@@ -21,7 +21,7 @@ describe('SectionSolution', () => {
 
   it('renders howit overline', () => {
     const { getByText } = render(<SectionSolution lang="en" />)
-    expect(getByText('How it works')).toBeTruthy()
+    expect(getByText('How to avoid this')).toBeTruthy()
   })
 
   it('renders howit headline', () => {

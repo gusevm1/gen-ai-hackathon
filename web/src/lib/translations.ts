@@ -52,7 +52,7 @@ export const translations = {
     landing_problem_bullet3: 'The right flat is gone in 48 hours — you saw it too late.',
 
     // Section 4 — How it works
-    landing_howit_overline: 'How it works',
+    landing_howit_overline: 'How to avoid this',
     landing_howit_headline: 'Three steps from search to certainty.',
     landing_howit_step1_label: 'Tell us what you need',
     landing_howit_step1_body: 'Set your criteria once — location, budget, size, must-haves — via chat or a quick form.',
@@ -126,7 +126,7 @@ export const translations = {
     landing_problem_bullet3: 'Die richtige Wohnung ist in 48 Stunden weg — du hast sie zu spät gesehen.',
 
     // Section 4 — How it works
-    landing_howit_overline: 'So funktioniert es',
+    landing_howit_overline: 'So vermeidest du das',
     landing_howit_headline: 'Drei Schritte von der Suche zur Sicherheit.',
     landing_howit_step1_label: 'Sag uns, was du brauchst',
     landing_howit_step1_body: 'Gib deine Kriterien einmal ein — Ort, Budget, Größe, Pflichtanforderungen — per Chat oder kurzem Formular.',

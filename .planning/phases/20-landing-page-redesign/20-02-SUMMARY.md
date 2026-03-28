@@ -129,6 +129,16 @@ completed: "2026-03-28"
 - LandingPageContent currently renders only Hero + Globe sections — Plan 03 will add SectionProblem, SectionSolution, SectionCTA
 - Translation keys for all 5 sections are complete and tested — Plan 03 can proceed immediately
 
+## Self-Check: PASSED
+
+- SectionHero.tsx: FOUND at web/src/components/landing/SectionHero.tsx
+- SectionGlobe.tsx: FOUND at web/src/components/landing/SectionGlobe.tsx
+- 20-02-SUMMARY.md: FOUND at .planning/phases/20-landing-page-redesign/20-02-SUMMARY.md
+- ChapterHook.tsx: CONFIRMED deleted
+- Commit 8b94781: FOUND (Task 1 — delete Chapter files + update translations)
+- Commit 5a6db1d: FOUND (Task 2 — create SectionHero + SectionGlobe)
+- Commit 6f5706f: FOUND (Deviation fix — stub LandingPageContent)
+
 ---
 *Phase: 20-landing-page-redesign*
 *Completed: 2026-03-28*
