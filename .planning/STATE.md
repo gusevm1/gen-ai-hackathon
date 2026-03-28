@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: Landing Page v2 & Hackathon Credits
-status: in_progress
-last_updated: "2026-03-28"
+status: unknown
+last_updated: "2026-03-28T19:31:43.278Z"
 progress:
   total_phases: 2
-  completed_phases: 0
-  total_plans: 12
-  completed_plans: 11
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 3
   percent: 92
 ---
 
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Milestone v4.0 complete and archived. Branch `redesign/v4-landing` active.
-Phase 22 plan 02 (SectionProblem Redesign) complete. Next: 22-03.
+Phase 22 plan 03 (SectionSolution + SectionCTA Redesign) complete. Phase 22 complete.
 
-Progress: [█████████░] 92% (11/12 plans complete)
+Progress: [██████████] 100% (12/12 plans complete)
 
-**Last session:** 2026-03-28 — Completed 22-02-PLAN.md (SectionProblem redesign)
+**Last session:** 2026-03-28T19:31:43.275Z
 
 ## Accumulated Context
 
@@ -54,6 +54,10 @@ Progress: [█████████░] 92% (11/12 plans complete)
 - x slide-in uses no initial prop — Framer Motion derives start state from animate value at mount when isInView=false (22-02)
 - jsdom normalizes hsl() to rgba() — PROB-03 test checks both color representations for test reliability (22-02)
 - Card elevation via backgroundColor + border inline style (not Tailwind bg-* classes) — required since hsl() with spaces not supported in Tailwind utilities (22-02)
+  - scoreColor helper three-tier system: green #10b981 (>=80), yellow #f59e0b (60-79), red #ef4444 (<60) — replaces binary isHigh across AnimatedScore + SceneAnalysis (22-03)
+  - CTA h2 uses useInView + animate prop pattern (not whileInView) to avoid Framer Motion conflict with parent motion.div (22-03)
+  - AnimatePresence mode=wait blocks new scene mount in jsdom — mock it in tests needing scene navigation (22-03)
+  - jsdom normalizes hex #10b981 to rgb(16, 185, 129) in inline color styles — test assertions must use rgb form (22-03)
 
 ### Blockers/Concerns
 

@@ -19,16 +19,16 @@
 
 ### Solution Section
 
-- [ ] **SOLN-01**: Browser demo mock enlarged — max-w-2xl → max-w-3xl (or larger if it fits without crowding step cards)
-- [ ] **SOLN-02**: Step cards (01/02/03 beneath demo) enlarged — more padding, bigger label text, more presence
-- [ ] **SOLN-03**: AnimatedScore in SceneListings uses full tier color system: green (≥80), yellow (60-79), red (<60) — not binary teal/gray
-- [ ] **SOLN-04**: SceneAnalysis overall score badge uses tier color (green at 94) not static teal — matching extension visual language
+- [x] **SOLN-01**: Browser demo mock enlarged — max-w-2xl → max-w-3xl (or larger if it fits without crowding step cards)
+- [x] **SOLN-02**: Step cards (01/02/03 beneath demo) enlarged — more padding, bigger label text, more presence
+- [x] **SOLN-03**: AnimatedScore in SceneListings uses full tier color system: green (≥80), yellow (60-79), red (<60) — not binary teal/gray
+- [x] **SOLN-04**: SceneAnalysis overall score badge uses tier color (green at 94) not static teal — matching extension visual language
 
 ### CTA Section
 
-- [ ] **CTA-01**: Headline font size increased — minimum clamp(2.5rem, 6vw, 4.5rem), bold, commanding
-- [ ] **CTA-02**: Headline animates in from further below (y: 60+) with spring physics — dramatic unveil on scroll
-- [ ] **CTA-03**: CTA section has stronger visual presence — larger glow radius, button with glow shadow matching hero CTA
+- [x] **CTA-01**: Headline font size increased — minimum clamp(2.5rem, 6vw, 4.5rem), bold, commanding
+- [x] **CTA-02**: Headline animates in from further below (y: 60+) with spring physics — dramatic unveil on scroll
+- [x] **CTA-03**: CTA section has stronger visual presence — larger glow radius, button with glow shadow matching hero CTA
 
 ### Hackathon Credits
 
@@ -76,13 +76,13 @@
 | PROB-01 | Phase 22 | Complete |
 | PROB-02 | Phase 22 | Complete |
 | PROB-03 | Phase 22 | Complete |
-| SOLN-01 | Phase 22 | Pending |
-| SOLN-02 | Phase 22 | Pending |
-| SOLN-03 | Phase 22 | Pending |
-| SOLN-04 | Phase 22 | Pending |
-| CTA-01 | Phase 22 | Pending |
-| CTA-02 | Phase 22 | Pending |
-| CTA-03 | Phase 22 | Pending |
+| SOLN-01 | Phase 22 | Complete |
+| SOLN-02 | Phase 22 | Complete |
+| SOLN-03 | Phase 22 | Complete |
+| SOLN-04 | Phase 22 | Complete |
+| CTA-01 | Phase 22 | Complete |
+| CTA-02 | Phase 22 | Complete |
+| CTA-03 | Phase 22 | Complete |
 | CRED-01 | Phase 23 | Pending |
 | CRED-02 | Phase 23 | Pending |
 
