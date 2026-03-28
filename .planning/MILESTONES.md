@@ -1,5 +1,12 @@
 # Milestones
 
+## v4.1 Landing Page v2 & Hackathon Credits (Active: 2026-03-28)
+
+**Phases planned:** 2 phases (22-23)
+**Goal:** Polish all 4 landing sections (Hero/Problem/Solution/CTA), unify tier colors (green/yellow/red), add ETH + Gen-AI Hackathon credits section.
+
+---
+
 ## v4.0 Landing Page & Design System (Shipped: 2026-03-28)
 
 **Phases completed:** 4 phases (18-21), 8 plans

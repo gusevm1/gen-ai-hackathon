@@ -7,7 +7,8 @@
 - ✅ **v2.0 Polish & AI Profile Creation** — Phases 11-16 (shipped 2026-03-17)
 - ✅ **v3.0 Extension Download & Install** — Phase 17 (shipped 2026-03-17)
 - ✅ **v4.0 Landing Page & Design System** — Phases 18-21 (shipped 2026-03-28)
-- 📋 **v4.1 Dashboard Polish & QA** — Phases 22-23 (planned)
+- 📋 **v4.1 Landing Page v2 & Hackathon Credits** — Phases 22-23 (planned)
+- 🔮 **v4.2 Dashboard Alignment & QA** — Phases TBD (deferred)
 
 ## Phases
 
@@ -61,12 +62,51 @@
 
 </details>
 
-### 📋 v4.1 Dashboard Polish & QA (Planned)
+### 📋 v4.1 Landing Page v2 & Hackathon Credits (Planned)
 
-**Milestone Goal:** Complete the v4.0 deferred work — mobile responsiveness, dashboard design alignment, performance, and QA.
+**Milestone Goal:** Polish all 4 landing page sections based on UX review, add hackathon credits, and unify tier color system to traffic-light (green/yellow/red).
 
-- [ ] **Phase 22: Dashboard UI Alignment** — Propagate design language to dashboard, profiles, analysis pages
-- [ ] **Phase 23: Polish & QA** — Mobile, performance (LCP/CLS), cross-browser, final copy pass
+- [ ] **Phase 22: Landing Page Section Redesigns** — Hero cleanup (stats row, CTA centering, tier colors), Problem card slide-in + visual redesign, Solution enlargement + tier color fix, CTA dramatic entrance animation
+- [ ] **Phase 23: Hackathon Credits Section** — ETH Zurich + Gen-AI Hackathon logos section above footer; global QA pass
+
+### Phase 22: Landing Page Section Redesigns
+
+**Goal:** Polish all 4 landing page sections — remove hero stats row and center CTA, redesign problem cards with left slide-in animation, enlarge solution browser demo and fix tier colors, dramatically upgrade CTA headline size and animation.
+
+**Requirements:** HERO-01, HERO-02, HERO-03, PROB-01, PROB-02, PROB-03, SOLN-01, SOLN-02, SOLN-03, SOLN-04, CTA-01, CTA-02, CTA-03
+
+**Plans:**
+- [ ] 22-01-PLAN.md — Hero cleanup + tier color unification
+- [ ] 22-02-PLAN.md — Problem section card redesign (slide-in animation)
+- [ ] 22-03-PLAN.md — Solution enlargement + tier color fix; CTA dramatic entrance
+
+**Success Criteria:**
+1. Hero: stats row gone, CTA button centered on own line, poor tier = red (#ef4444)
+2. Problem: decorative bg numbers removed; each card slides from x:-60→0 on scroll entry
+3. Problem cards: visually elevated (card background, stronger typography, not plain list)
+4. Solution: browser demo max-w-3xl+; step cards larger; scores show green/yellow/red by range
+5. CTA: headline clamp(2.5rem, 6vw, 4.5rem); enters from y:60 with spring physics
+
+### Phase 23: Hackathon Credits Section
+
+**Goal:** Add a minimal ETH Zurich + Gen-AI Hackathon credits section to the landing page above the footer.
+
+**Requirements:** CRED-01, CRED-02
+
+**Plans:**
+- [ ] 23-01-PLAN.md — Credits section component + integration
+
+**Success Criteria:**
+1. New SectionCredits component renders ETH Zurich logo + "Gen-AI Hackathon" branding
+2. Section is minimal, consistent with landing page dark aesthetic
+3. Placed below SectionCTA in LandingPageContent
+
+### 🔮 v4.2 Dashboard Alignment & QA (Deferred)
+
+**Milestone Goal:** Complete v4.0 deferred work — dashboard design language, mobile responsiveness, performance.
+
+- [ ] **Phase 24: Dashboard UI Alignment** — Propagate landing design language to dashboard, profiles, analysis pages
+- [ ] **Phase 25: Polish & QA** — Mobile/tablet responsiveness, LCP < 2.5s, cross-browser, final copy pass
 
 ## Progress
 
@@ -77,4 +117,5 @@
 | v2.0 Polish & AI Profile Creation | ✅ Complete | 2026-03-17 |
 | v3.0 Extension Download & Install | ✅ Complete | 2026-03-17 |
 | v4.0 Landing Page & Design System | ✅ Complete | 2026-03-28 |
-| v4.1 Dashboard Polish & QA | 📋 Planned | — |
+| v4.1 Landing Page v2 & Hackathon Credits | 📋 Planned | — |
+| v4.2 Dashboard Alignment & QA | 🔮 Deferred | — |

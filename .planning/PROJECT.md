@@ -71,10 +71,18 @@ Help users instantly see how well each property listing matches their specific n
 
 ### Active
 
-- [ ] LP-07: Page is fully responsive (mobile, tablet, desktop)
-- [ ] DS-02: Dark hero / light dashboard color split established via CSS variables
-- [ ] DS-03: Typography scale defined (display, headline, body, caption)
-- [ ] UI-02: Animations applied to dashboard where meaningful (not decorative)
+- [ ] HERO-01: Stats row removed from SectionHero
+- [ ] HERO-02: CTA button centered on its own row
+- [ ] HERO-03: Poor tier color updated to red across landing + extension
+- [ ] PROB-01: Decorative background numbers removed from problem cards
+- [ ] PROB-02: Problem cards slide in from left on scroll
+- [ ] PROB-03: Problem cards visually redesigned — elevated, engaging
+- [ ] SOLN-01: Browser demo enlarged (max-w-3xl+)
+- [ ] SOLN-02: Step cards enlarged with more presence
+- [ ] SOLN-03: Score display uses full tier color system (green/yellow/red)
+- [ ] CTA-01: Headline font size increased to clamp(2.5rem, 6vw, 4.5rem)
+- [ ] CTA-02: Headline dramatic bottom-up entrance animation
+- [ ] CRED-01: ETH + Gen-AI Hackathon credits section added
 
 ### Out of Scope
 
@@ -88,15 +96,16 @@ Help users instantly see how well each property listing matches their specific n
 - HIST-01/02: Analysis history across profiles — deferred
 - SEC-01/02: Edge function JWT verification — deferred (auth handled at function level)
 
-## Current Milestone: v4.1 Dashboard Polish & QA
+## Current Milestone: v4.1 Landing Page v2 & Hackathon Credits
 
-**Goal:** Complete the v4.0 deferred work — mobile responsiveness, dashboard design alignment, performance optimization, and QA pass.
+**Goal:** Polish all 4 landing page sections based on UX review, unify tier color system to traffic-light (green/yellow/red), and add ETH/Gen-AI Hackathon credits section.
 
 **Target features:**
-- Dashboard, profiles, and analysis pages aligned with landing page design language
-- Full mobile/tablet responsiveness across all pages
-- LCP < 2.5s, no layout shift, cross-browser verified
-- Final EN/DE copy pass
+- Hero: Remove stats row, center CTA, fix poor tier to red
+- Problem: Slide-in-from-left cards, remove decorative background numbers, more engaging visual design
+- Solution: Larger browser demo, larger step cards, proper tier colors in score display
+- CTA: Bigger headline (clamp up to 4.5rem), dramatic bottom-up entrance animation, stronger glow
+- Credits: New ETH Zurich + Gen-AI Hackathon section above footer
 
 ## Context
 
