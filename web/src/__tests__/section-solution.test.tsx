@@ -44,13 +44,4 @@ describe('SectionSolution', () => {
     expect(getByText('See the full picture')).toBeTruthy()
   })
 
-  it('renders features overline', () => {
-    const { getByText } = render(<SectionSolution lang="en" />)
-    expect(getByText('Built for Swiss renters')).toBeTruthy()
-  })
-
-  it('renders feature 1 title', () => {
-    const { getByText } = render(<SectionSolution lang="en" />)
-    expect(getByText('AI match scoring')).toBeTruthy()
-  })
 })

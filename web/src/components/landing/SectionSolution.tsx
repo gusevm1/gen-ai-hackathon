@@ -287,7 +287,7 @@ function MockBrowser({ scene }: { scene: number }) {
       </div>
 
       {/* Content area */}
-      <div style={{ height: 280, overflow: 'hidden' }}>
+      <div style={{ height: 360, overflow: 'hidden' }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={scene}
@@ -367,7 +367,7 @@ export function SectionSolution({ lang }: { lang: Language }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.3 }}
           transition={{ duration: 0.7, ease: ease.enter }}
-          className="max-w-lg mx-auto mb-10"
+          className="max-w-2xl mx-auto mb-12"
         >
           <MockBrowser scene={scene} />
         </motion.div>
@@ -380,7 +380,7 @@ export function SectionSolution({ lang }: { lang: Language }) {
               <button
                 key={num}
                 onClick={() => setScene(i)}
-                className="flex-1 text-left rounded-2xl px-5 py-4 transition-all duration-300"
+                className="flex-1 text-left rounded-2xl px-6 py-6 transition-all duration-300"
                 style={{
                   backgroundColor: active ? 'hsl(173 65% 52% / 0.1)' : 'hsl(0 0% 100% / 0.03)',
                   border: `1px solid ${active ? 'hsl(173 65% 52% / 0.3)' : 'hsl(0 0% 100% / 0.07)'}`,
@@ -412,13 +412,13 @@ export function SectionSolution({ lang }: { lang: Language }) {
                   )}
                 </div>
                 <p
-                  className="text-sm font-semibold leading-tight mb-1"
+                  className="text-base font-semibold leading-tight mb-2"
                   style={{ color: active ? 'var(--color-hero-fg)' : 'hsl(0 0% 50%)' }}
                 >
                   {t(lang, labelKey)}
                 </p>
                 <p
-                  className="text-xs leading-relaxed"
+                  className="text-sm leading-relaxed"
                   style={{ color: active ? 'hsl(0 0% 58%)' : 'hsl(0 0% 32%)' }}
                 >
                   {t(lang, bodyKey)}
