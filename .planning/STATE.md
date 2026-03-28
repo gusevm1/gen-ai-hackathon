@@ -1,37 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.0
-milestone_name: Extension Download & Install
-status: completed
-last_updated: "2026-03-28T17:22:24.929Z"
+milestone: v4.1
+milestone_name: Dashboard Polish & QA
+status: between_milestones
+last_updated: "2026-03-28"
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
-  percent: 50
+  total_phases: 2
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-27)
+See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website they're already on.
-**Current focus:** Milestone v4.0 — Landing Page & Design System
+**Current focus:** v4.0 shipped. Next: v4.1 Dashboard Polish & QA (Phases 22-23) or merge `redesign/v4-landing` → main.
 
 ## Current Position
 
-Phase: 21-landing-page-polish-v2 (in progress — Plans 01 and 03 complete)
-Branch: redesign/v4-landing
-Status: Phase 18, 19, 20 complete. Phase 21 Plans 01 and 03 complete: hero chips, overline copy, enlarged browser demo, bigger step cards, gradient divider, radial glow CTA with once:false animation.
+Milestone v4.0 complete and archived. Branch `redesign/v4-landing` ready to merge → main.
+Phases 22 (Dashboard UI Alignment) and 23 (Polish & QA) planned for v4.1.
 
-Progress: [#####_____] 50%
+Progress: [__________] 0% (v4.1 not started)
 
 ## Accumulated Context
 
-### Decisions
+### Decisions (v4.0 — archived)
 
 - [v4.0]: Branch `redesign/v4-landing` — all work here, PR → merge to main when milestone complete
 - [v4.0]: Landing page replaces `/` route directly (currently a redirect)
