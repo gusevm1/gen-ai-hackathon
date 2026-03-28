@@ -1,15 +1,95 @@
 'use client'
 
-import { FadeIn } from '@/components/motion/FadeIn'
-import { StaggerGroup, StaggerItem } from '@/components/motion/StaggerGroup'
+import { useRef } from 'react'
+import { motion, useInView, useReducedMotion } from 'motion/react'
+import { ease } from '@/lib/motion'
 import { t } from '@/lib/translations'
 import type { Language } from '@/lib/translations'
 
+const PROBLEM_KEYS = [
+  { num: '01', key: 'landing_problem_bullet1' as const },
+  { num: '02', key: 'landing_problem_bullet2' as const },
+  { num: '03', key: 'landing_problem_bullet3' as const },
+]
+
+function ProblemItem({
+  num,
+  statement,
+}: {
+  num: string
+  statement: string
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const prefersReduced = useReducedMotion()
+  const isInView = useInView(ref, { once: false, amount: 0.5 })
+
+  return (
+    <motion.div
+      ref={ref}
+      animate={prefersReduced ? {} : {
+        opacity: isInView ? 1 : 0.25,
+        scale: isInView ? 1 : 0.99,
+        boxShadow: isInView
+          ? 'inset 0 0 0 1px hsl(173 65% 52% / 0.3), 0 0 28px hsl(173 65% 52% / 0.10)'
+          : 'none',
+      }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="relative flex items-start gap-6 py-12 border-b rounded-xl px-4"
+      style={{ borderColor: 'hsl(0 0% 100% / 0.07)' }}
+    >
+      {/* Decorative background number */}
+      <span
+        aria-hidden
+        className="absolute right-0 top-1/2 -translate-y-1/2 font-black select-none pointer-events-none leading-none"
+        style={{
+          fontSize: 'clamp(5rem, 14vw, 10rem)',
+          color: 'hsl(0 0% 100% / 0.03)',
+          lineHeight: 1,
+        }}
+      >
+        {num}
+      </span>
+
+      {/* Number badge */}
+      <div
+        className="flex-shrink-0 flex items-center justify-center rounded-full text-xs font-bold tabular-nums mt-1"
+        style={{
+          width: 36, height: 36,
+          border: '1px solid hsl(173 65% 52% / 0.3)',
+          color: 'var(--color-hero-teal)',
+          backgroundColor: 'hsl(173 65% 52% / 0.07)',
+        }}
+      >
+        {num}
+      </div>
+
+      {/* Statement */}
+      <p
+        className="font-semibold leading-snug relative z-10"
+        style={{
+          fontSize: 'clamp(1.4rem, 3.2vw, 2.25rem)',
+          color: 'var(--color-hero-fg)',
+          maxWidth: '75%',
+        }}
+      >
+        {statement}
+      </p>
+    </motion.div>
+  )
+}
+
 export function SectionProblem({ lang }: { lang: Language }) {
   return (
-    <section className="py-24 px-6 bg-hero-bg">
-      <div className="max-w-3xl mx-auto">
-        <FadeIn>
+    <section className="py-32 px-6" style={{ backgroundColor: 'var(--color-hero-bg)' }}>
+      <div className="max-w-4xl mx-auto">
+        {/* Section header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.5 }}
+          transition={{ duration: 0.6, ease: ease.enter }}
+          className="mb-24 text-center"
+        >
           <p
             className="text-xs uppercase tracking-widest font-semibold mb-4"
             style={{ color: 'var(--color-hero-teal)' }}
@@ -17,35 +97,23 @@ export function SectionProblem({ lang }: { lang: Language }) {
             {t(lang, 'landing_problem_overline')}
           </p>
           <h2
-            className="font-bold tracking-tight text-hero-fg mb-10"
-            style={{ fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', lineHeight: 1.15 }}
+            className="font-bold tracking-tight"
+            style={{
+              fontSize: 'clamp(2rem, 5vw, 3.5rem)',
+              lineHeight: 1.1,
+              color: 'var(--color-hero-fg)',
+            }}
           >
             {t(lang, 'landing_problem_headline')}
           </h2>
-        </FadeIn>
-        <StaggerGroup className="mt-10 space-y-6">
-          {(
-            [
-              'landing_problem_bullet1',
-              'landing_problem_bullet2',
-              'landing_problem_bullet3',
-            ] as const
-          ).map((key) => (
-            <StaggerItem key={key}>
-              <div className="flex items-start gap-3">
-                <span
-                  className="mt-1 flex-shrink-0 font-bold"
-                  style={{ color: 'var(--color-hero-teal)' }}
-                >
-                  —
-                </span>
-                <p className="text-hero-fg text-lg leading-relaxed opacity-80">
-                  {t(lang, key)}
-                </p>
-              </div>
-            </StaggerItem>
+        </motion.div>
+
+        {/* Problem statements */}
+        <div className="space-y-0">
+          {PROBLEM_KEYS.map(({ num, key }) => (
+            <ProblemItem key={num} num={num} statement={t(lang, key)} />
           ))}
-        </StaggerGroup>
+        </div>
       </div>
     </section>
   )
