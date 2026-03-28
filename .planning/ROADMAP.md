@@ -89,7 +89,7 @@ Plans:
 
 **Requirements:** LP-03, LP-04, LP-06
 
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 21-01-PLAN.md — Hero chips overhaul (7 ScoreBadge-style white chips, TIER_COLORS); Solution overline copy update

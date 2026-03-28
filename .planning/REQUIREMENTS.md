@@ -9,7 +9,7 @@
 - [x] **LP-01**: Public landing page at `/` replaces current redirect — accessible without auth
 - [x] **LP-02**: Hero section with animated product demo (mock Flatfox → FAB → scoring → analysis)
 - [ ] **LP-03**: Problem/Solution sections with Hormozi-structured copy (EN/DE bilingual)
-- [ ] **LP-04**: Features section showcasing scoring, profiles, and analysis
+- [x] **LP-04**: Features section showcasing scoring, profiles, and analysis
 - [x] **LP-05**: Clear primary CTA ("Get Started" / "Sign Up") funneling to auth
 - [ ] **LP-06**: Secondary CTA for existing users ("Sign In" / "Go to Dashboard")
 - [ ] **LP-07**: Page is fully responsive (mobile, tablet, desktop)
