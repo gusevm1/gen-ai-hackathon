@@ -70,17 +70,37 @@ Plans:
 
 ### v4.0 Landing Page & Design System
 
-**Milestone Goal:** Give HomeMatch a front door. A high-conversion landing page with Apple-inspired design, Hormozi-structured copy, and a live product demo animation — plus UI alignment across the dashboard.
+**Milestone Goal:** Give HomeMatch a front door. A high-conversion landing page with clean SaaS design, polished scroll-triggered animations, and bilingual EN/DE copy — plus UI alignment across the dashboard.
 
 **Branch:** `redesign/v4-landing` → PR → merge to main
 
 - [x] **Phase 18: Design System & Motion Foundation** — Framer Motion, typography scale, dark/light color split, animation primitives
 - [x] **Phase 19: Landing Page v1** — Initial landing page (superseded by Phase 20 redesign)
-- [x] **Phase 20: Landing Page Redesign** — Full scroll-driven Apple-style landing page: 7 sticky chapters, isometric SVG home, SVG globe → Switzerland zoom, browser demo with score reveal, Hormozi copy (completed 2026-03-27)
+- [ ] **Phase 20: Landing Page Redesign** — 5-section whileInView landing page: Hero, Globe (SVG draw-in), Problem, Solution (3 steps), CTA; replaces broken sticky-parallax chapters
 - [ ] **Phase 21: Dashboard UI Alignment** — Propagate design language to dashboard, profiles, analysis pages
 - [ ] **Phase 22: Polish & QA** — Mobile, performance (LCP/CLS), cross-browser, final copy pass
 
 **Requirements:** LP-01 → LP-08, DS-01 → DS-04, UI-01 → UI-03
+
+### Phase 20: Landing Page Redesign
+
+**Goal:** Replace the broken 7-chapter sticky-parallax landing page with a clean, complete 5-section scroll-triggered entry experience that feels polished and authentic.
+
+**Requirements:** LP-01, LP-02, LP-03, LP-04, LP-05, LP-06
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 20-01-PLAN.md — Replace chapter translation keys with 5-section key set (EN + DE); fix landing-translations.test.ts
+- [ ] 20-02-PLAN.md — Delete Chapter/IsometricHome files; create SectionHero and SectionGlobe
+- [ ] 20-03-PLAN.md — Create SectionProblem, SectionSolution, SectionCTA; rewrite LandingPageContent; update tests
+
+**Success Criteria:**
+1. Landing page at / renders all 5 sections: Hero → Globe → Problem → Solution → CTA
+2. All animations fire on scroll using whileInView (no sticky-parallax, no useScroll)
+3. Hero animates on mount; globe draws in via pathLength; problem/solution stagger in
+4. Full test suite green; TypeScript compiles without errors
+5. Bilingual EN/DE — all text via translations.ts keys
 
 ## Progress
 
