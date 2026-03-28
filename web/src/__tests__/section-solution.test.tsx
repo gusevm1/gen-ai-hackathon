@@ -44,4 +44,18 @@ describe('SectionSolution', () => {
     expect(getByText('See the full picture')).toBeTruthy()
   })
 
+  it('browser demo wrapper has max-w-3xl class (SOLN-01)', () => {
+    const { container } = render(<SectionSolution lang="en" />)
+    const demo = container.querySelector('.max-w-3xl')
+    expect(demo).toBeTruthy()
+  })
+
+  it('score display uses green color for high scores (SOLN-03)', () => {
+    const { container } = render(<SectionSolution lang="en" />)
+    // Score 94 (Seefeld) should render with green color #10b981
+    // AnimatedScore renders 0 initially (before active animation in jsdom)
+    // But the style is derived from score prop at mount — check color in DOM
+    expect(container.innerHTML).toContain('#10b981')
+  })
+
 })

@@ -44,4 +44,17 @@ describe('SectionCTA', () => {
     const { getByText } = render(<SectionCTA lang="en" />)
     expect(getByText('Create free account')).toBeTruthy()
   })
+
+  it('h2 headline uses large clamp font size (CTA-01)', () => {
+    const { container } = render(<SectionCTA lang="en" />)
+    const h2 = container.querySelector('h2')
+    expect(h2).toBeTruthy()
+    expect(h2?.getAttribute('style') ?? '').toContain('clamp(2.5rem')
+  })
+
+  it('CTA button has glow box shadow (CTA-03)', () => {
+    const { container } = render(<SectionCTA lang="en" />)
+    // Button rendered with boxShadow style
+    expect(container.innerHTML).toContain('0 0 32px hsl(173 65% 52% / 0.28)')
+  })
 })
