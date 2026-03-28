@@ -30,35 +30,52 @@ export const translations = {
     settings_language_en: 'English',
     settings_language_de: 'German',
 
+    // Navbar / Footer (shared)
     landing_nav_signin: 'Sign In',
-    // Chapter 1 - Hook
-    landing_hook_phrase1: 'Your next home.',
-    landing_hook_phrase2: 'Already found.',
-    // Chapter 2 - Switzerland
-    landing_ch_line1: 'One flat for every 200 applicants.',
-    landing_ch_line2: "The Swiss rental market doesn't wait.",
-    // Chapter 3 - Problem
-    landing_problem_overline: 'The problem',
-    landing_problem_headline: 'Finding a flat in Zurich takes weeks.',
-    landing_problem_pain1: 'You scroll through 40 listings on Sunday.',
-    landing_problem_pain2: "You request 8 viewings. 6 don't reply.",
-    landing_problem_pain3: 'The good one goes in 48 hours. You saw it too late.',
-    // Chapter 4 - Mechanism
-    landing_mech_overline: 'How it works',
-    landing_mech_headline: 'HomeMatch reads every listing the way you would — but in seconds.',
-    // Chapter 5 - Score
-    landing_score_label: 'Excellent match.',
-    // Chapter 6 - Dream
-    landing_dream_line1: 'No more guessing.',
-    landing_dream_line2: 'No more wasted evenings.',
-    landing_dream_line3: 'Find the right flat. Not just the next one.',
-    // Chapter 7 - CTA
-    landing_cta_headline: 'Free to use. No credit card. Works on Flatfox today.',
-    landing_cta_button: 'Create free account',
-    landing_cta_signin: 'Already have an account?',
-    landing_cta_signin_link: 'Sign in',
-    // Footer
     landing_footer_copyright: '© 2026 HomeMatch. All rights reserved.',
+
+    // Section 1 — Hero
+    landing_hero_overline: 'Find your perfect flat',
+    landing_hero_headline: 'Thousands of listings. One perfect match.',
+    landing_hero_subtitle: 'HomeMatch scores every Flatfox listing against your exact needs — so you spend time on viewings, not scrolling.',
+    landing_hero_cta: 'Get Started',
+
+    // Section 2 — Globe
+    landing_globe_headline: 'Built for the Swiss market',
+    landing_globe_body: 'HomeMatch works with Flatfox — the leading Swiss rental platform.',
+
+    // Section 3 — Problem
+    landing_problem_overline: 'The problem',
+    landing_problem_headline: 'Finding a flat in Switzerland is exhausting.',
+    landing_problem_bullet1: 'You scroll through 40 listings every Sunday and still feel lost.',
+    landing_problem_bullet2: 'You request viewings. Half never reply. The rest are wrong.',
+    landing_problem_bullet3: 'The right flat is gone in 48 hours — you saw it too late.',
+
+    // Section 4 — How it works
+    landing_howit_overline: 'How it works',
+    landing_howit_headline: 'Three steps from search to certainty.',
+    landing_howit_step1_label: 'Tell us what you need',
+    landing_howit_step1_body: 'Set your criteria once — location, budget, size, must-haves — via chat or a quick form.',
+    landing_howit_step2_label: 'We score every listing',
+    landing_howit_step2_body: 'HomeMatch reads each Flatfox listing and calculates a match score against your profile in seconds.',
+    landing_howit_step3_label: 'See the full picture',
+    landing_howit_step3_body: 'Open any listing to see your score, a breakdown by category, and the AI reasoning behind it.',
+
+    // Section 4b — Features
+    landing_features_overline: 'Built for Swiss renters',
+    landing_features_headline: 'Everything you need to find the right flat faster.',
+    landing_feat1_title: 'AI match scoring',
+    landing_feat1_body: 'Every listing gets a score from 0–100 based on how well it fits your profile. No guessing required.',
+    landing_feat2_title: 'Multiple profiles',
+    landing_feat2_body: 'Switch between search profiles instantly — ideal if you are searching for different locations or budgets.',
+    landing_feat3_title: 'Transparent reasoning',
+    landing_feat3_body: 'See exactly why a listing scored high or low. Category-by-category breakdown with AI explanation.',
+
+    // Section 5 — CTA
+    landing_cta_overline: 'Ready to find your flat?',
+    landing_cta_headline: 'Start matching in minutes.',
+    landing_cta_subtext: 'Free to use. No credit card. Works on Flatfox today.',
+    landing_cta_button: 'Create free account',
   },
   de: {
     nav_ai_search: 'KI-gestützte Suche',
@@ -87,27 +104,52 @@ export const translations = {
     settings_language_en: 'Englisch',
     settings_language_de: 'Deutsch',
 
+    // Navbar / Footer (shared)
     landing_nav_signin: 'Anmelden',
-    landing_hook_phrase1: 'Deine nächste Wohnung.',
-    landing_hook_phrase2: 'Bereits gefunden.',
-    landing_ch_line1: 'Eine Wohnung für 200 Bewerber.',
-    landing_ch_line2: 'Der Schweizer Mietmarkt wartet nicht.',
-    landing_problem_overline: 'Das Problem',
-    landing_problem_headline: 'Eine Wohnung in Zürich zu finden dauert Wochen.',
-    landing_problem_pain1: 'Du scrollst sonntags durch 40 Inserate.',
-    landing_problem_pain2: 'Du fragst 8 Besichtigungen an. 6 antworten nicht.',
-    landing_problem_pain3: 'Die gute Wohnung ist in 48 Stunden weg. Du hast sie zu spät gesehen.',
-    landing_mech_overline: 'So funktioniert es',
-    landing_mech_headline: 'HomeMatch liest jedes Inserat so wie du — aber in Sekunden.',
-    landing_score_label: 'Ausgezeichnete Übereinstimmung.',
-    landing_dream_line1: 'Kein Raten mehr.',
-    landing_dream_line2: 'Keine verschwendeten Abende mehr.',
-    landing_dream_line3: 'Finde die richtige Wohnung. Nicht nur die nächste.',
-    landing_cta_headline: 'Kostenlos. Keine Kreditkarte. Funktioniert auf Flatfox.',
-    landing_cta_button: 'Kostenloses Konto erstellen',
-    landing_cta_signin: 'Bereits ein Konto?',
-    landing_cta_signin_link: 'Anmelden',
     landing_footer_copyright: '© 2026 HomeMatch. Alle Rechte vorbehalten.',
+
+    // Section 1 — Hero
+    landing_hero_overline: 'Finde deine perfekte Wohnung',
+    landing_hero_headline: 'Tausende Inserate. Ein perfektes Match.',
+    landing_hero_subtitle: 'HomeMatch bewertet jedes Flatfox-Inserat anhand deiner genauen Anforderungen — damit du Zeit für Besichtigungen hast, nicht fürs Scrollen.',
+    landing_hero_cta: 'Jetzt starten',
+
+    // Section 2 — Globe
+    landing_globe_headline: 'Für den Schweizer Markt gebaut',
+    landing_globe_body: 'HomeMatch funktioniert mit Flatfox — der führenden Schweizer Mietplattform.',
+
+    // Section 3 — Problem
+    landing_problem_overline: 'Das Problem',
+    landing_problem_headline: 'Eine Wohnung in der Schweiz zu finden ist erschöpfend.',
+    landing_problem_bullet1: 'Du scrollst jeden Sonntag durch 40 Inserate und weißt am Ende nicht weiter.',
+    landing_problem_bullet2: 'Du fragst Besichtigungen an. Die Hälfte antwortet nie. Der Rest passt nicht.',
+    landing_problem_bullet3: 'Die richtige Wohnung ist in 48 Stunden weg — du hast sie zu spät gesehen.',
+
+    // Section 4 — How it works
+    landing_howit_overline: 'So funktioniert es',
+    landing_howit_headline: 'Drei Schritte von der Suche zur Sicherheit.',
+    landing_howit_step1_label: 'Sag uns, was du brauchst',
+    landing_howit_step1_body: 'Gib deine Kriterien einmal ein — Ort, Budget, Größe, Pflichtanforderungen — per Chat oder kurzem Formular.',
+    landing_howit_step2_label: 'Wir bewerten jedes Inserat',
+    landing_howit_step2_body: 'HomeMatch liest jedes Flatfox-Inserat und berechnet in Sekunden einen Match-Score für dein Profil.',
+    landing_howit_step3_label: 'Sieh das gesamte Bild',
+    landing_howit_step3_body: 'Öffne ein Inserat und sieh deinen Score, eine Aufschlüsselung nach Kategorie und die KI-Begründung dahinter.',
+
+    // Section 4b — Features
+    landing_features_overline: 'Für Schweizer Mietende gebaut',
+    landing_features_headline: 'Alles, was du brauchst, um schneller die richtige Wohnung zu finden.',
+    landing_feat1_title: 'KI-gestütztes Matching',
+    landing_feat1_body: 'Jedes Inserat erhält einen Score von 0–100, der zeigt, wie gut es zu deinem Profil passt. Kein Raten mehr.',
+    landing_feat2_title: 'Mehrere Profile',
+    landing_feat2_body: 'Wechsle sofort zwischen Suchprofilen — ideal, wenn du verschiedene Orte oder Budgets im Blick hast.',
+    landing_feat3_title: 'Transparente Begründung',
+    landing_feat3_body: 'Sieh genau, warum ein Inserat hoch oder niedrig bewertet wurde — mit Kategorie-Aufschlüsselung und KI-Erklärung.',
+
+    // Section 5 — CTA
+    landing_cta_overline: 'Bereit, deine Wohnung zu finden?',
+    landing_cta_headline: 'In wenigen Minuten loslegen.',
+    landing_cta_subtext: 'Kostenlos. Keine Kreditkarte. Funktioniert auf Flatfox.',
+    landing_cta_button: 'Kostenloses Konto erstellen',
   },
 } as const
 

@@ -16,6 +16,7 @@ const LANDING_KEYS = [
   'landing_feat3_title', 'landing_feat3_body',
   'landing_cta_overline', 'landing_cta_headline', 'landing_cta_subtext', 'landing_cta_button',
   'landing_footer_copyright',
+  'landing_globe_headline', 'landing_globe_body',
 ] as const
 
 describe('landing page translations', () => {
