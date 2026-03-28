@@ -155,6 +155,13 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
         score_data["listing_title"] = (
             listing.description_title or listing.public_title or listing.short_title or None
         )
+        score_data["listing_address"] = " ".join(filter(None, [
+            listing.street,
+            str(listing.zipcode) if listing.zipcode else None,
+            listing.city,
+        ])) or None
+        score_data["listing_rooms"] = listing.number_of_rooms
+        score_data["listing_object_type"] = listing.object_type
         if nearby_data:
             score_data["nearby_places"] = nearby_data
         await asyncio.to_thread(
