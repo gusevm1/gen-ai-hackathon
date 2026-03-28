@@ -4,7 +4,7 @@ milestone: v3.0
 milestone_name: Extension Download & Install
 status: verifying
 last_updated: "2026-03-27T23:45:52.142Z"
-last_activity: 2026-03-27
+last_activity: 2026-03-28
 progress:
   total_phases: 1
   completed_phases: 1
@@ -53,3 +53,9 @@ Progress: [██████████] 100%
 ### Blockers/Concerns
 
 - Migration 004 not yet applied to DB: requires Supabase personal access token (sbp_...) or manual Studio SQL application at https://supabase.com/dashboard/project/mlhtozdtiorkemamzjjc/sql/new
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260328-ags | Fix chat input auto-focus and listing titles in analyses page | 2026-03-28 | 210ca2a | [260328-ags-fix-chat-input-auto-focus-and-listing-ti](./quick/260328-ags-fix-chat-input-auto-focus-and-listing-ti/) |
