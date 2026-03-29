@@ -1,6 +1,7 @@
 """Shared test fixtures for backend tests."""
 
 import pytest
+from httpx import AsyncClient, ASGITransport
 
 
 def pytest_configure(config):
@@ -241,6 +242,15 @@ SAMPLE_SCORE_RESPONSE = {
     ],
     "language": "de",
 }
+
+
+@pytest.fixture
+async def async_client():
+    """Provide an httpx AsyncClient for FastAPI endpoint tests."""
+    from app.main import app
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client
 
 
 @pytest.fixture
