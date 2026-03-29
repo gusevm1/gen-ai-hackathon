@@ -1,6 +1,7 @@
 'use client'
 
-import { motion, useReducedMotion } from 'motion/react'
+import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { duration, ease } from '@/lib/motion'
@@ -40,6 +41,8 @@ interface SectionHeroProps {
 
 export function SectionHero({ lang }: SectionHeroProps) {
   const prefersReduced = useReducedMotion()
+  const { scrollY } = useScroll()
+  const photoOpacity = useTransform(scrollY, [0, 600], [0.25, 0])
 
   const headline = t(lang, 'landing_hero_headline')
   const dotIndex = headline.indexOf('.')
@@ -51,6 +54,27 @@ export function SectionHero({ lang }: SectionHeroProps) {
       className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 py-24 overflow-hidden"
       style={{ backgroundColor: 'var(--color-hero-bg)' }}
     >
+      {/* Zurich cityscape photo — scroll-fades from 25% to 0% */}
+      <motion.div
+        aria-hidden
+        data-testid="hero-photo"
+        className="absolute inset-0 overflow-hidden pointer-events-none"
+        style={{ opacity: photoOpacity, zIndex: -1 }}
+      >
+        <Image
+          src="/zurich-bg.jpg"
+          alt=""
+          fill
+          className="object-cover"
+          priority
+        />
+        {/* Dark overlay for contrast */}
+        <div
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(to bottom, hsl(0 0% 0% / 0.55), hsl(0 0% 0% / 0.65))' }}
+        />
+      </motion.div>
+
       {/* Dot grid */}
       <div
         aria-hidden

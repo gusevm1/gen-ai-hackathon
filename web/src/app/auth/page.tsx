@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -44,8 +45,23 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm space-y-6">
+    <div className="relative flex min-h-screen items-center justify-center px-4">
+      {/* Zurich cityscape photo background */}
+      <div className="absolute inset-0 overflow-hidden" aria-hidden>
+        <Image
+          src="/zurich-bg.jpg"
+          alt=""
+          fill
+          className="object-cover"
+        />
+        {/* Dark overlay */}
+        <div
+          className="absolute inset-0"
+          style={{ background: 'hsl(0 0% 0% / 0.55)' }}
+        />
+      </div>
+
+      <div className="relative z-10 w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-2">
           <Logo size="lg" />
           <p className="text-sm text-muted-foreground">Your AI-powered Swiss property advisor</p>
@@ -128,6 +144,25 @@ export default function Home() {
             </p>
           </CardFooter>
         </Card>
+      </div>
+
+      {/* Credits strip at bottom */}
+      <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-3 z-10">
+        <p className="text-xs uppercase tracking-widest font-semibold" style={{ color: 'hsl(0 0% 55%)' }}>
+          A project from
+        </p>
+        <div className="flex items-center gap-5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/eth-zurich-white.svg" alt="ETH Zürich" className="h-7 w-auto opacity-90" />
+          <div className="h-7 w-px bg-white/20" aria-hidden />
+          <div
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold"
+            style={{ backgroundColor: '#000000', color: '#50e75f', border: '1px solid #50e75f' }}
+          >
+            <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#50e75f' }} />
+            GenAI Zürich Hackathon 2026
+          </div>
+        </div>
       </div>
     </div>
   )

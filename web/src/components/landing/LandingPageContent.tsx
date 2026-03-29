@@ -8,6 +8,7 @@ import { SectionHero } from './SectionHero'
 import { SectionProblem } from './SectionProblem'
 import { SectionSolution } from './SectionSolution'
 import { SectionCTA } from './SectionCTA'
+import { SectionCredits } from './SectionCredits'
 
 export function LandingPageContent() {
   const { language } = useLanguage()
@@ -27,6 +28,7 @@ export function LandingPageContent() {
         }}
       />
       <SectionCTA lang={lang} />
+      <SectionCredits lang={lang} />
       <LandingFooter lang={lang} />
     </div>
   )
