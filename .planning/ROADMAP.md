@@ -146,7 +146,7 @@ Plans:
 **Goal:** Every user criterion is classified into one of 6 types so the scoring pipeline knows which scorer to route it to.
 **Depends on:** Phase 26
 **Requirements:** DM-01, DM-02, DM-03
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 27-01-PLAN.md — CriterionType enum + DynamicField extension + IMPORTANCE_WEIGHT_MAP update + test scaffold

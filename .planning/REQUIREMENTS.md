@@ -10,9 +10,9 @@
 
 ### Data Model & Classifier
 
-- [ ] **DM-01**: System assigns each DynamicField criterion exactly one of 6 criterion types: `distance`, `price`, `size`, `binary_feature`, `proximity_quality`, `subjective`
+- [x] **DM-01**: System assigns each DynamicField criterion exactly one of 6 criterion types: `distance`, `price`, `size`, `binary_feature`, `proximity_quality`, `subjective`
 - [ ] **DM-02**: Claude LLM classifies each DynamicField to one of the 6 criterion types at profile save time; result stored as `criterion_type` in JSONB; default falls back to `subjective` for ambiguous criteria
-- [ ] **DM-03**: Importance weight map updated to CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1 (replaces legacy 90/70/50/30 scale)
+- [x] **DM-03**: Importance weight map updated to CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1 (replaces legacy 90/70/50/30 scale)
 
 ### Deterministic Scorer
 
