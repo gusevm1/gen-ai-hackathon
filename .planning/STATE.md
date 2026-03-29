@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: Landing Page v2 & Hackathon Credits
-status: unknown
+status: Executing Phase 26
 last_updated: "2026-03-29T13:23:20.268Z"
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 6
+  total_plans: 8
   completed_plans: 6
   percent: 100
 ---
@@ -19,10 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website they're already on.
-**Current focus:** v4.1 — polish landing page sections, unify tier colors, add hackathon credits.
+**Current focus:** Phase 26 — proximity-enhancements-google-ratings-closest-fallback-and-grossmuenster-background-image
 
 ## Current Position
 
+Phase: 26 (proximity-enhancements-google-ratings-closest-fallback-and-grossmuenster-background-image) — EXECUTING
+Plan: 1 of 2
 Milestone v4.0 complete and archived. Branch `redesign/v4-landing` active.
 Phase 22 plan 03 (SectionSolution + SectionCTA Redesign) complete. Phase 22 complete.
 
@@ -31,6 +33,10 @@ Progress: [██████████] 100% (12/12 plans complete)
 **Last session:** 2026-03-29T13:23:20.264Z
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 26 added: Proximity enhancements — Google ratings, closest fallback display, and Grossmünster background image
 
 ### Key decisions carried from v4.0
 

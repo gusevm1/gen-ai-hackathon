@@ -49,7 +49,7 @@ export default function Home() {
       {/* Zurich cityscape photo background */}
       <div className="absolute inset-0 overflow-hidden" aria-hidden>
         <Image
-          src="/zurich-bg.jpg"
+          src="/zurich_bg_grossmuenster.webp"
           alt=""
           fill
           className="object-cover"
@@ -57,7 +57,7 @@ export default function Home() {
         {/* Dark overlay */}
         <div
           className="absolute inset-0"
-          style={{ background: 'hsl(0 0% 0% / 0.55)' }}
+          style={{ background: 'hsl(0 0% 0% / 0.50)' }}
         />
       </div>
 

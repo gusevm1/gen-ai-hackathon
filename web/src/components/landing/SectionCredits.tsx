@@ -16,7 +16,7 @@ export function SectionCredits({ lang }: { lang: Language }) {
       {/* Photo layer */}
       <div className="absolute inset-0" aria-hidden>
         <Image
-          src="/zurich-bg.jpg"
+          src="/zurich_bg_grossmuenster.webp"
           alt=""
           fill
           className="object-cover"
@@ -25,7 +25,7 @@ export function SectionCredits({ lang }: { lang: Language }) {
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(to bottom, hsl(0 0% 0% / 0.65) 0%, hsl(0 0% 0% / 0.75) 100%)',
+              'linear-gradient(to bottom, hsl(0 0% 0% / 0.50) 0%, hsl(0 0% 0% / 0.65) 100%)',
           }}
         />
       </div>
