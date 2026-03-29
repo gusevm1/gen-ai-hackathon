@@ -5,11 +5,24 @@ export const importanceLevelSchema = z
   .enum(['critical', 'high', 'medium', 'low'])
   .default('medium')
 
+/** Criterion type assigned by the classifier at profile save time. */
+export const criterionTypeSchema = z.enum([
+  'distance',
+  'price',
+  'size',
+  'binary_feature',
+  'proximity_quality',
+  'subjective',
+]).optional()
+
+export type CriterionType = z.infer<typeof criterionTypeSchema>
+
 /** A single dynamic preference field with name, value, and importance. */
 export const dynamicFieldSchema = z.object({
   name: z.string().min(1),
   value: z.string().default(''),
   importance: importanceLevelSchema,
+  criterionType: criterionTypeSchema,
 })
 
 /** Inferred DynamicField type. */
