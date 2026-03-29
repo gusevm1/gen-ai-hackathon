@@ -91,5 +91,5 @@ Progress: [██████████] 95%
 ## Session Continuity
 
 Last session: 2026-03-29T22:37:26.900Z
-Stopped at: Completed 27-02 (CriterionClassifier service + /classify-criteria endpoint)
-Resume file: None
+Stopped at: Completed 27-03 (criterionType Zod schema + classify-criteria server action injection)
+Resume file: .planning/phases/27-data-model-criterion-classifier/27-03-SUMMARY.md
