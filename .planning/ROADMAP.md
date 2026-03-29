@@ -146,11 +146,17 @@ Plans:
 **Goal:** Every user criterion is classified into one of 6 types so the scoring pipeline knows which scorer to route it to.
 **Depends on:** Phase 26
 **Requirements:** DM-01, DM-02, DM-03
+**Plans:** 3 plans
+
+Plans:
+- [ ] 27-01-PLAN.md — CriterionType enum + DynamicField extension + IMPORTANCE_WEIGHT_MAP update + test scaffold
+- [ ] 27-02-PLAN.md — CriterionClassifier service + POST /classify-criteria FastAPI endpoint
+- [ ] 27-03-PLAN.md — Zod criterionType schema + server action /classify-criteria injection
+
 **Success Criteria** (what must be TRUE):
   1. Each DynamicField in a saved profile has a `criterion_type` value persisted in its JSONB entry, set to one of: `distance`, `price`, `size`, `binary_feature`, `proximity_quality`, `subjective`
   2. Saving or updating a profile triggers an LLM classification call that assigns criterion types; ambiguous criteria default to `subjective`
   3. The importance weight map uses CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1 everywhere scoring references importance
-**Plans**: TBD
 
 ### Phase 28: Deterministic Scorer
 
