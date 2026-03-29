@@ -71,7 +71,7 @@ export function SectionHero({ lang }: SectionHeroProps) {
         {/* Dark overlay for contrast */}
         <div
           className="absolute inset-0"
-          style={{ background: 'linear-gradient(to bottom, hsl(0 0% 0% / 0.55), hsl(0 0% 0% / 0.65))' }}
+          style={{ background: 'linear-gradient(to bottom, hsl(0 0% 0% / 0.35), hsl(0 0% 0% / 0.50))' }}
         />
       </motion.div>
 
