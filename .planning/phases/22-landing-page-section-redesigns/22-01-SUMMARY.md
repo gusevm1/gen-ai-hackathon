@@ -114,3 +114,13 @@ None - no external service configuration required.
 ---
 *Phase: 22-landing-page-section-redesigns*
 *Completed: 2026-03-28*
+
+## Self-Check: PASSED
+
+- FOUND: web/src/components/landing/SectionHero.tsx
+- FOUND: extension/src/types/scoring.ts
+- FOUND: web/src/__tests__/section-hero.test.tsx
+- FOUND: .planning/phases/22-landing-page-section-redesigns/22-01-SUMMARY.md
+- FOUND commit: cad9170 (test: RED tests)
+- FOUND commit: d02b7f0 (feat: GREEN implementation)
+- FOUND commit: b8846a7 (docs: metadata)

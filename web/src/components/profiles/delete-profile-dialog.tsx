@@ -10,6 +10,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { useLanguage } from '@/lib/language-context'
+import { t } from '@/lib/translations'
 
 interface DeleteProfileDialogProps {
   open: boolean
@@ -24,18 +26,17 @@ export function DeleteProfileDialog({
   profileName,
   onConfirm,
 }: DeleteProfileDialogProps) {
+  const { language } = useLanguage()
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete &ldquo;{profileName}&rdquo;?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will permanently delete this profile and all its preferences.
-            Analyses scored with this profile will remain.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t(language, 'profile_delete')} &ldquo;{profileName}&rdquo;?</AlertDialogTitle>
+          <AlertDialogDescription>{t(language, 'profile_delete_desc')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t(language, 'cancel')}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             onClick={() => {
@@ -43,7 +44,7 @@ export function DeleteProfileDialog({
               onOpenChange(false)
             }}
           >
-            Delete Profile
+            {t(language, 'delete_profile')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

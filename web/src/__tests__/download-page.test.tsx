@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
-import DownloadPage from "@/app/(dashboard)/download/page"
+import DownloadPage from "@/app/download/page"
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({

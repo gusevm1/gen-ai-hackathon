@@ -99,22 +99,45 @@ export default async function AnalysesPage({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {analyses.map((analysis) => {
-            const breakdown = analysis.breakdown as { match_tier?: string } | null
+            const breakdown = analysis.breakdown as {
+              match_tier?: string
+              listing_title?: string
+              listing_address?: string
+              listing_rooms?: string
+              listing_object_type?: string
+            } | null
             const tier = breakdown?.match_tier ?? getTierFromScore(analysis.score)
             const tierStyle = TIER_STYLES[tier] ?? TIER_STYLES.poor
             const profileName = analysis.profile_id ? profileMap.get(analysis.profile_id) : null
             const tierKey = `tier_${tier}` as 'tier_excellent' | 'tier_good' | 'tier_fair' | 'tier_poor'
 
+            const rawTitle = breakdown?.listing_title
+            const constructedTitle = breakdown?.listing_rooms && breakdown?.listing_object_type && breakdown?.listing_address
+              ? `${breakdown.listing_rooms} rooms - ${breakdown.listing_object_type.replace(/_/g, ' ').toLowerCase()} - ${breakdown.listing_address.split(' ').pop()}`
+              : null
+            const primaryTitle = rawTitle || constructedTitle || breakdown?.listing_address || `${t(lang, 'analyses_listing')} ${analysis.listing_id}`
+
+            const secondaryAddress = breakdown?.listing_address && breakdown.listing_address !== primaryTitle
+              ? breakdown.listing_address
+              : null
+
             return (
               <Link key={analysis.id} href={`/analysis/${analysis.listing_id}`}>
                 <Card className="cursor-pointer transition-all hover:ring-2 hover:ring-primary/20 hover:shadow-md h-full">
                   <CardContent className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-foreground truncate">
-                        {t(lang, 'analyses_listing')} {analysis.listing_id}
-                      </span>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0 mr-2">
+                        <span className="text-sm font-medium text-foreground block truncate">
+                          {primaryTitle}
+                        </span>
+                        {secondaryAddress && (
+                          <span className="text-xs text-muted-foreground block truncate">
+                            {secondaryAddress}
+                          </span>
+                        )}
+                      </div>
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${tierStyle.bg} ${tierStyle.text}`}
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold shrink-0 ${tierStyle.bg} ${tierStyle.text}`}
                       >
                         {analysis.score}
                       </span>

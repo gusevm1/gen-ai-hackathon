@@ -210,6 +210,15 @@
   --text-overline-weight:   600;
 }
 
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px 2px hsl(342 89% 40% / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px 8px hsl(342 89% 40% / 0.5);
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

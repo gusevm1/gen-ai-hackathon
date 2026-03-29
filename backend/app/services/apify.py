@@ -1,9 +1,15 @@
 """Apify actor client for geocoding via Nominatim."""
 
+from __future__ import annotations
+
 import logging
 import os
+from typing import TYPE_CHECKING
 
 import httpx
+
+if TYPE_CHECKING:
+    from app.models.listing import FlatfoxListing
 
 logger = logging.getLogger(__name__)
 
@@ -71,4 +77,33 @@ async def _nominatim_fallback(query: str, country_code: str = "ch") -> dict | No
     except Exception as e:
         logger.warning("Nominatim fallback failed for %r: %s", query, e)
 
+    return None
+
+
+async def geocode_listing(listing: "FlatfoxListing") -> dict | None:
+    """Attempt to geocode a FlatfoxListing using its address fields.
+
+    Address priority:
+      1. listing.public_address  (full formatted address from Flatfox API)
+      2. "{street}, {zipcode} {city}, Switzerland"
+      3. "{zipcode} {city}, Switzerland"
+
+    Returns dict with at minimum 'lat' and 'lon' keys, or None if geocoding
+    fails or no address fields are available.
+    """
+    query: str | None = None
+    if listing.public_address:
+        query = listing.public_address
+    elif listing.street and listing.city:
+        query = f"{listing.street}, {listing.zipcode} {listing.city}, Switzerland"
+    elif listing.city:
+        query = f"{listing.zipcode} {listing.city}, Switzerland"
+
+    if not query:
+        logger.warning("Listing %s has no address fields for geocoding", getattr(listing, "pk", "unknown"))
+        return None
+
+    result = await geocode_location(query)
+    if result and "lat" in result and "lon" in result:
+        return result
     return None

@@ -18,12 +18,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useLanguage } from '@/lib/language-context'
+import { t } from '@/lib/translations'
 
 interface LocationTypeSectionProps {
   form: UseFormReturn<Preferences>
 }
 
 export function LocationTypeSection({ form }: LocationTypeSectionProps) {
+  const { language } = useLanguage()
+
   return (
     <div className="space-y-6">
       {/* Location */}
@@ -32,9 +36,9 @@ export function LocationTypeSection({ form }: LocationTypeSectionProps) {
         name="location"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Location</FormLabel>
+            <FormLabel>{t(language, 'location_label')}</FormLabel>
             <FormControl>
-              <Input placeholder="e.g., Zurich, Basel" {...field} />
+              <Input placeholder={t(language, 'location_placeholder')} {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -47,7 +51,7 @@ export function LocationTypeSection({ form }: LocationTypeSectionProps) {
         name="offerType"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Offer Type</FormLabel>
+            <FormLabel>{t(language, 'offer_type_label')}</FormLabel>
             <FormControl>
               <RadioGroup
                 onValueChange={field.onChange}
@@ -57,13 +61,13 @@ export function LocationTypeSection({ form }: LocationTypeSectionProps) {
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="RENT" id="offer-rent" />
                   <label htmlFor="offer-rent" className="text-sm cursor-pointer">
-                    Rent
+                    {t(language, 'offer_type_rent')}
                   </label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="SALE" id="offer-sale" />
                   <label htmlFor="offer-sale" className="text-sm cursor-pointer">
-                    Buy
+                    {t(language, 'offer_type_buy')}
                   </label>
                 </div>
               </RadioGroup>
@@ -79,17 +83,17 @@ export function LocationTypeSection({ form }: LocationTypeSectionProps) {
         name="objectCategory"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Property Type</FormLabel>
+            <FormLabel>{t(language, 'property_type_label')}</FormLabel>
             <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select property type" />
+                  <SelectValue placeholder={t(language, 'property_type_placeholder')} />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="ANY">Any</SelectItem>
-                <SelectItem value="APARTMENT">Apartment</SelectItem>
-                <SelectItem value="HOUSE">House</SelectItem>
+                <SelectItem value="ANY">{t(language, 'property_type_any')}</SelectItem>
+                <SelectItem value="APARTMENT">{t(language, 'property_type_apartment')}</SelectItem>
+                <SelectItem value="HOUSE">{t(language, 'property_type_house')}</SelectItem>
               </SelectContent>
             </Select>
             <FormMessage />

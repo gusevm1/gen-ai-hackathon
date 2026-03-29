@@ -15,6 +15,8 @@ import {
   duplicateProfile,
   setActiveProfile,
 } from '@/app/(dashboard)/profiles/actions'
+import { useLanguage } from '@/lib/language-context'
+import { t } from '@/lib/translations'
 
 interface ProfileListProps {
   profiles: ProfileData[]
@@ -23,6 +25,7 @@ interface ProfileListProps {
 export function ProfileList({ profiles }: ProfileListProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const { language } = useLanguage()
 
   const [createOpen, setCreateOpen] = useState(false)
   const [renameTarget, setRenameTarget] = useState<ProfileData | null>(null)
@@ -91,14 +94,14 @@ export function ProfileList({ profiles }: ProfileListProps) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
         <p className="text-lg text-muted-foreground">
-          You don&apos;t have any profiles yet.
+          {t(language, 'profiles_no_profiles')}
         </p>
         <p className="text-sm text-muted-foreground">
-          Create your first profile to start scoring listings.
+          {t(language, 'profiles_no_profiles_hint')}
         </p>
         <Button onClick={() => setCreateOpen(true)} size="lg">
           <Plus className="size-4" />
-          Create Your First Profile
+          {t(language, 'profiles_create_first')}
         </Button>
         <CreateProfileDialog
           open={createOpen}
@@ -114,7 +117,7 @@ export function ProfileList({ profiles }: ProfileListProps) {
       <div className="mb-4 flex justify-end">
         <Button onClick={() => setCreateOpen(true)}>
           <Plus className="size-4" />
-          New Profile
+          {t(language, 'profiles_new')}
         </Button>
       </div>
 

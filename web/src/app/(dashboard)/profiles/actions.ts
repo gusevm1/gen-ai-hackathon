@@ -200,6 +200,40 @@ export async function setActiveProfile(profileId: string) {
   revalidatePath('/', 'layout')
 }
 
+/**
+ * Update preferences.language for ALL user profiles and mark their analyses stale.
+ * Called when the user changes the UI language in Settings.
+ */
+export async function updateProfilesLanguage(language: 'en' | 'de') {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, preferences')
+    .eq('user_id', user.id)
+
+  if (!profiles?.length) return
+
+  for (const profile of profiles) {
+    const updatedPrefs = { ...(profile.preferences as Record<string, unknown>), language }
+    await supabase
+      .from('profiles')
+      .update({ preferences: updatedPrefs })
+      .eq('id', profile.id)
+
+    // Mark all cached analyses stale so they are re-scored in the new language
+    await supabase
+      .from('analyses')
+      .update({ stale: true })
+      .eq('profile_id', profile.id)
+  }
+
+  revalidatePath('/profiles')
+  revalidatePath('/', 'layout')
+}
+
 export async function saveProfilePreferences(profileId: string, data: Preferences) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
