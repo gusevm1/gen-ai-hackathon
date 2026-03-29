@@ -67,7 +67,7 @@
 **Milestone Goal:** Polish all 4 landing page sections based on UX review, add hackathon credits, and unify tier color system to traffic-light (green/yellow/red).
 
 - [x] **Phase 22: Landing Page Section Redesigns** — Hero cleanup (stats row, CTA centering, tier colors), Problem card slide-in + visual redesign, Solution enlargement + tier color fix, CTA dramatic entrance animation (completed 2026-03-28)
-- [ ] **Phase 23: Hackathon Credits Section** — ETH Zurich + Gen-AI Hackathon logos section above footer; global QA pass
+- [ ] **Phase 23: Hackathon Credits Section** — ETH Zurich + Gen-AI Hackathon logos section above footer; Zurich cityscape photo across hero, credits, and auth page
 
 ### Phase 22: Landing Page Section Redesigns
 
@@ -89,17 +89,20 @@
 
 ### Phase 23: Hackathon Credits Section
 
-**Goal:** Add a minimal ETH Zurich + Gen-AI Hackathon credits section to the landing page above the footer.
+**Goal:** Add ETH Zürich + Gen-AI Hackathon credits section to the landing page and auth page, with a Zurich cityscape photo as visual theme across the hero (dimmed scroll-fade), credits section (full-bleed photo background), and auth page (full-screen background).
 
 **Requirements:** CRED-01, CRED-02
 
 **Plans:**
-- [ ] 23-01-PLAN.md — Credits section component + integration
+1 plan total
+- [ ] 23-01-PLAN.md — Zurich photo assets + SectionCredits component + hero/auth photo integration
 
 **Success Criteria:**
-1. New SectionCredits component renders ETH Zurich logo + "Gen-AI Hackathon" branding
-2. Section is minimal, consistent with landing page dark aesthetic
-3. Placed below SectionCTA in LandingPageContent
+1. New SectionCredits component renders ETH Zürich logo + "GenAI Zürich Hackathon 2026" badge with "A project from" label
+2. SectionCredits placed between SectionCTA and LandingFooter; uses Zurich photo as full-section background
+3. Hero section has Zurich cityscape dimmed to ~25% opacity, fades to 0 as user scrolls
+4. Auth page shows full-screen Zurich photo, login card floats over it, credits strip at bottom
+5. TypeScript build passes — translation key parity maintained
 
 ### 🔮 v4.2 Dashboard Alignment & QA (Deferred)
 
