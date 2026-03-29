@@ -42,7 +42,7 @@ interface SectionHeroProps {
 export function SectionHero({ lang }: SectionHeroProps) {
   const prefersReduced = useReducedMotion()
   const { scrollY } = useScroll()
-  const photoOpacity = useTransform(scrollY, [0, 600], [0.25, 0])
+  const photoOpacity = useTransform(scrollY, [0, 600], [0.45, 0])
 
   const headline = t(lang, 'landing_hero_headline')
   const dotIndex = headline.indexOf('.')
@@ -59,7 +59,7 @@ export function SectionHero({ lang }: SectionHeroProps) {
         aria-hidden
         data-testid="hero-photo"
         className="absolute inset-0 overflow-hidden pointer-events-none"
-        style={{ opacity: photoOpacity, zIndex: -1 }}
+        style={{ opacity: photoOpacity }}
       >
         <Image
           src="/zurich-bg.jpg"

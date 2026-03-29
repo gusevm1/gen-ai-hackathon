@@ -6,24 +6,6 @@ import Image from 'next/image'
 import { t } from '@/lib/translations'
 import type { Language } from '@/lib/translations'
 
-function HackathonBadge() {
-  return (
-    <div
-      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold"
-      style={{
-        backgroundColor: '#000000',
-        color: '#50e75f',
-        border: '1px solid #50e75f',
-      }}
-    >
-      <span
-        className="h-2 w-2 rounded-full flex-shrink-0"
-        style={{ backgroundColor: '#50e75f' }}
-      />
-      GenAI Zürich Hackathon 2026
-    </div>
-  )
-}
 
 export function SectionCredits({ lang }: { lang: Language }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -77,8 +59,13 @@ export function SectionCredits({ lang }: { lang: Language }) {
             {/* Vertical divider */}
             <div className="h-8 w-px bg-white/20" aria-hidden />
 
-            {/* GenAI Hackathon badge */}
-            <HackathonBadge />
+            {/* GenAI Hackathon logo */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/genai-hackathon-logo.svg"
+              alt="GenAI Zürich Hackathon 2026"
+              className="h-10 w-auto opacity-90"
+            />
           </div>
         </motion.div>
       </div>
