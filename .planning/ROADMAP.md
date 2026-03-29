@@ -62,7 +62,7 @@
 
 </details>
 
-### 📋 v4.1 Landing Page v2 & Hackathon Credits (Planned)
+### v4.1 Landing Page v2 & Hackathon Credits (Planned)
 
 **Milestone Goal:** Polish all 4 landing page sections based on UX review, add hackathon credits, and unify tier color system to traffic-light (green/yellow/red).
 
@@ -89,7 +89,7 @@
 
 ### Phase 23: Hackathon Credits Section
 
-**Goal:** Add ETH Zürich + Gen-AI Hackathon credits section to the landing page and auth page, with a Zurich cityscape photo as visual theme across the hero (dimmed scroll-fade), credits section (full-bleed photo background), and auth page (full-screen background).
+**Goal:** Add ETH Zurich + Gen-AI Hackathon credits section to the landing page and auth page, with a Zurich cityscape photo as visual theme across the hero (dimmed scroll-fade), credits section (full-bleed photo background), and auth page (full-screen background).
 
 **Requirements:** CRED-01, CRED-02
 
@@ -98,13 +98,31 @@
 - [ ] 23-01-PLAN.md — Zurich photo assets + SectionCredits component + hero/auth photo integration
 
 **Success Criteria:**
-1. New SectionCredits component renders ETH Zürich logo + "GenAI Zürich Hackathon 2026" badge with "A project from" label
+1. New SectionCredits component renders ETH Zurich logo + "GenAI Zurich Hackathon 2026" badge with "A project from" label
 2. SectionCredits placed between SectionCTA and LandingFooter; uses Zurich photo as full-section background
 3. Hero section has Zurich cityscape dimmed to ~25% opacity, fades to 0 as user scrolls
 4. Auth page shows full-screen Zurich photo, login card floats over it, credits strip at bottom
 5. TypeScript build passes — translation key parity maintained
 
-### 🔮 v4.2 Dashboard Alignment & QA (Deferred)
+### Phase 26: Proximity Enhancements — Closest Fallback + Partial Met Scoring
+
+**Goal:** Add 2x-radius closest-fallback search to the proximity pipeline and importance-based partial-met scoring rules to the LLM prompt, with corresponding amber "partial" state in the frontend checklist UI.
+
+**Requirements:** D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-12, D-13, D-14
+
+**Depends on:** Phase 23
+**Plans:** 2 plans
+
+Plans:
+- [ ] 26-01-PLAN.md — Backend closest-fallback logic in proximity.py + LLM partial-met scoring rules in scoring.py
+- [ ] 26-02-PLAN.md — Frontend "partial" met state in ChecklistSection.tsx (amber indicator)
+
+**Success Criteria:**
+1. When no places found within requested radius, a 2x radius fallback search returns the single nearest result tagged is_fallback=True
+2. LLM prompt instructs scorer to output met="partial" for fallback results when importance is not critical, met=false when critical
+3. ChecklistSection renders met="partial" with amber AlertTriangle icon, own badge count, sorted between met and unmet
+
+### v4.2 Dashboard Alignment & QA (Deferred)
 
 **Milestone Goal:** Complete v4.0 deferred work — dashboard design language, mobile responsiveness, performance.
 
