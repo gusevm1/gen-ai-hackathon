@@ -84,7 +84,7 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
     }>
     checklist?: Array<{
       criterion: string
-      met: boolean | null
+      met: boolean | null | "partial"
       note: string
     }>
   }
