@@ -19,7 +19,7 @@ export function SectionCredits({ lang }: { lang: Language }) {
           src="/zurich_bg_grossmuenster.webp"
           alt=""
           fill
-          className="object-cover"
+          className="object-cover object-top"
         />
         <div
           className="absolute inset-0"
