@@ -155,13 +155,8 @@ export default function Home() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/eth-zurich-white.svg" alt="ETH Zürich" className="h-7 w-auto opacity-90" />
           <div className="h-7 w-px bg-white/20" aria-hidden />
-          <div
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold"
-            style={{ backgroundColor: '#000000', color: '#50e75f', border: '1px solid #50e75f' }}
-          >
-            <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#50e75f' }} />
-            GenAI Zürich Hackathon 2026
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/genai-hackathon-logo.svg" alt="GenAI Zürich Hackathon 2026" className="h-8 w-auto opacity-90" />
         </div>
       </div>
     </div>
