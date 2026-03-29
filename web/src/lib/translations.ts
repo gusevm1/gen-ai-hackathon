@@ -76,6 +76,9 @@ export const translations = {
     landing_cta_headline: 'Start matching in minutes.',
     landing_cta_subtext: 'Free to use. No credit card. Works on Flatfox today.',
     landing_cta_button: 'Create free account',
+
+    // Section Credits
+    landing_credits_label: 'A project from',
   },
   de: {
     nav_ai_search: 'KI-gestützte Suche',
@@ -150,6 +153,9 @@ export const translations = {
     landing_cta_headline: 'In wenigen Minuten loslegen.',
     landing_cta_subtext: 'Kostenlos. Keine Kreditkarte. Funktioniert auf Flatfox.',
     landing_cta_button: 'Kostenloses Konto erstellen',
+
+    // Section Credits
+    landing_credits_label: 'A project from',
   },
 } as const
 

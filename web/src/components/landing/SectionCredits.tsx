@@ -1,0 +1,87 @@
+'use client'
+
+import { useRef } from 'react'
+import { motion, useInView } from 'motion/react'
+import Image from 'next/image'
+import { t } from '@/lib/translations'
+import type { Language } from '@/lib/translations'
+
+function HackathonBadge() {
+  return (
+    <div
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold"
+      style={{
+        backgroundColor: '#000000',
+        color: '#50e75f',
+        border: '1px solid #50e75f',
+      }}
+    >
+      <span
+        className="h-2 w-2 rounded-full flex-shrink-0"
+        style={{ backgroundColor: '#50e75f' }}
+      />
+      GenAI Zürich Hackathon 2026
+    </div>
+  )
+}
+
+export function SectionCredits({ lang }: { lang: Language }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const isInView = useInView(ref, { once: false, amount: 0.3 })
+
+  return (
+    <section className="relative overflow-hidden" style={{ minHeight: '50vh' }}>
+      {/* Photo layer */}
+      <div className="absolute inset-0" aria-hidden>
+        <Image
+          src="/zurich-bg.jpg"
+          alt=""
+          fill
+          className="object-cover"
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(to bottom, hsl(0 0% 0% / 0.65) 0%, hsl(0 0% 0% / 0.75) 100%)',
+          }}
+        />
+      </div>
+
+      {/* Main content */}
+      <div
+        ref={ref}
+        className="relative z-10 flex flex-col items-center justify-center min-h-[50vh] py-16 px-6 text-center"
+      >
+        <motion.div
+          animate={{ opacity: isInView ? 1 : 0, y: isInView ? 0 : 20 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="flex flex-col items-center gap-8"
+        >
+          <p
+            className="text-xs uppercase tracking-widest font-semibold"
+            style={{ color: 'hsl(0 0% 55%)' }}
+          >
+            {t(lang, 'landing_credits_label')}
+          </p>
+
+          <div className="flex items-center gap-6">
+            {/* ETH Zürich logo */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/eth-zurich-white.svg"
+              alt="ETH Zürich"
+              className="h-8 w-auto opacity-90"
+            />
+
+            {/* Vertical divider */}
+            <div className="h-8 w-px bg-white/20" aria-hidden />
+
+            {/* GenAI Hackathon badge */}
+            <HackathonBadge />
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
