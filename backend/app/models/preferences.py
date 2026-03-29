@@ -43,13 +43,29 @@ class ImportanceLevel(str, Enum):
     LOW = "low"
 
 
+class CriterionType(str, Enum):
+    """Criterion routing type for the v5.0 hybrid scorer.
+
+    Determines which deterministic formula (or Claude call) is used to
+    evaluate a DynamicField criterion against a property listing.
+    """
+
+    DISTANCE = "distance"
+    PRICE = "price"
+    SIZE = "size"
+    BINARY_FEATURE = "binary_feature"
+    PROXIMITY_QUALITY = "proximity_quality"
+    SUBJECTIVE = "subjective"
+
+
 # Mapping from importance levels to numeric weights for internal scoring.
-# Used by the scoring pipeline when a numeric weight is needed.
+# Used by the v5.0 weighted aggregation formula (Phase 31).
+# v5.0 scale: CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1
 IMPORTANCE_WEIGHT_MAP: dict[ImportanceLevel, int] = {
-    ImportanceLevel.CRITICAL: 90,
-    ImportanceLevel.HIGH: 70,
-    ImportanceLevel.MEDIUM: 50,
-    ImportanceLevel.LOW: 30,
+    ImportanceLevel.CRITICAL: 5,
+    ImportanceLevel.HIGH: 3,
+    ImportanceLevel.MEDIUM: 2,
+    ImportanceLevel.LOW: 1,
 }
 
 
@@ -78,6 +94,7 @@ class DynamicField(BaseModel):
     name: str
     value: str = ""
     importance: ImportanceLevel = ImportanceLevel.MEDIUM
+    criterion_type: Optional[CriterionType] = None
 
     @field_validator("name")
     @classmethod

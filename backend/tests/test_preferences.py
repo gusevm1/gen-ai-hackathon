@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from app.models.preferences import (
     IMPORTANCE_WEIGHT_MAP,
+    CriterionType,
     DynamicField,
     Importance,
     ImportanceLevel,
@@ -133,11 +134,11 @@ class TestImportanceWeightMap:
     """Tests for the IMPORTANCE_WEIGHT_MAP constant."""
 
     def test_importance_weight_map_values(self):
-        """IMPORTANCE_WEIGHT_MAP maps critical=90, high=70, medium=50, low=30."""
-        assert IMPORTANCE_WEIGHT_MAP[ImportanceLevel.CRITICAL] == 90
-        assert IMPORTANCE_WEIGHT_MAP[ImportanceLevel.HIGH] == 70
-        assert IMPORTANCE_WEIGHT_MAP[ImportanceLevel.MEDIUM] == 50
-        assert IMPORTANCE_WEIGHT_MAP[ImportanceLevel.LOW] == 30
+        """IMPORTANCE_WEIGHT_MAP maps critical=5, high=3, medium=2, low=1 (v5.0 scale)."""
+        assert IMPORTANCE_WEIGHT_MAP[ImportanceLevel.CRITICAL] == 5
+        assert IMPORTANCE_WEIGHT_MAP[ImportanceLevel.HIGH] == 3
+        assert IMPORTANCE_WEIGHT_MAP[ImportanceLevel.MEDIUM] == 2
+        assert IMPORTANCE_WEIGHT_MAP[ImportanceLevel.LOW] == 1
 
     def test_importance_weight_map_covers_all_levels(self):
         """IMPORTANCE_WEIGHT_MAP has an entry for every ImportanceLevel."""
@@ -333,3 +334,36 @@ class TestSoftCriteriaMigration:
         prefs_legacy = UserPreferences.model_validate(LEGACY_PREFERENCES_JSON)
         assert prefs_legacy.location == "Zurich"
         assert prefs_legacy.features == ["balcony", "parking"]
+
+
+class TestCriterionType:
+    """Tests for CriterionType enum and its integration with DynamicField."""
+
+    def test_criterion_type_has_all_six_values(self):
+        """CriterionType enum has exactly the 6 expected string values."""
+        expected_values = {"distance", "price", "size", "binary_feature", "proximity_quality", "subjective"}
+        actual_values = {ct.value for ct in CriterionType}
+        assert actual_values == expected_values
+
+    def test_dynamic_field_criterion_type_defaults_to_none(self):
+        """DynamicField created without criterion_type has criterion_type=None."""
+        field = DynamicField(name="test")
+        assert field.criterion_type is None
+
+    def test_dynamic_field_accepts_all_criterion_types(self):
+        """DynamicField can be created with each CriterionType value without error."""
+        for ct in CriterionType:
+            field = DynamicField(name="test", criterion_type=ct)
+            assert field.criterion_type == ct
+
+    def test_dynamic_field_criterion_type_round_trips_as_camel(self):
+        """DynamicField with criterion_type serializes to criterionType key in camelCase."""
+        field = DynamicField(name="near gym", value="500m", importance=ImportanceLevel.HIGH, criterion_type=CriterionType.DISTANCE)
+        dumped = field.model_dump(by_alias=True)
+        assert "criterionType" in dumped
+        assert dumped["criterionType"] == "distance"
+
+    def test_dynamic_field_without_criterion_type_still_parses(self):
+        """DynamicField from JSON without criterionType key parses with criterion_type=None."""
+        field = DynamicField.model_validate({"name": "near gym", "value": "500m", "importance": "high"})
+        assert field.criterion_type is None
