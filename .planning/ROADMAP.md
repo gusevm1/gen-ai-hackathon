@@ -134,7 +134,7 @@ Plans:
 
 **Milestone Goal:** Replace the all-Claude scoring system with a hybrid deterministic + AI architecture where Claude handles only subjective evaluation and never generates numeric scores.
 
-- [ ] **Phase 27: Data Model & Criterion Classifier** — CriterionType enum, LLM classification at profile save, updated importance weight map
+- [x] **Phase 27: Data Model & Criterion Classifier** — CriterionType enum, LLM classification at profile save, updated importance weight map (completed 2026-03-29)
 - [ ] **Phase 28: Deterministic Scorer** — Pure-function fulfillment formulas for price, distance, size, binary features, proximity quality, and built-in fields
 - [ ] **Phase 29: Subjective Scorer (Claude Refactor)** — New Pydantic response model, batched subjective-only Claude call, fulfillment-based prompt, summary bullets
 - [ ] **Phase 30: Database Schema Prep** — schema_version field in JSONB breakdown, fulfillment_data column; deployed before hybrid scorer ships
@@ -146,7 +146,7 @@ Plans:
 **Goal:** Every user criterion is classified into one of 6 types so the scoring pipeline knows which scorer to route it to.
 **Depends on:** Phase 26
 **Requirements:** DM-01, DM-02, DM-03
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 27-01-PLAN.md — CriterionType enum + DynamicField extension + IMPORTANCE_WEIGHT_MAP update + test scaffold
