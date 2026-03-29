@@ -156,7 +156,7 @@ export default function Home() {
           <img src="/eth-zurich-white.svg" alt="ETH Zürich" className="h-7 w-auto opacity-90" />
           <div className="h-7 w-px bg-white/20" aria-hidden />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/genai-hackathon-logo.svg" alt="GenAI Zürich Hackathon 2026" className="h-8 w-auto opacity-90" />
+          <img src="/genai-hackathon-logo.png" alt="GenAI Zürich Hackathon 2026" className="h-8 w-auto opacity-90" />
         </div>
       </div>
     </div>
