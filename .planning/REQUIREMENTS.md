@@ -1,96 +1,101 @@
-# Requirements: HomeMatch v4.1 — Landing Page v2 & Hackathon Credits
+# Requirements: HomeMatch v5.0 Hybrid Scoring Engine
 
-**Defined:** 2026-03-28
+**Milestone:** v5.0 Hybrid Scoring Engine
+**Date:** 2026-03-29
 **Core Value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website they're already on.
 
-## v4.1 Requirements
+---
 
-### Hero Section
+## Milestone v5.0 Requirements
 
-- [x] **HERO-01**: Stats row removed — "2,400+ listings scored daily", "< 3s per listing", "Free" block no longer shown
-- [x] **HERO-02**: CTA button is centered on its own row (not paired inline with secondary text on desktop)
-- [x] **HERO-03**: Poor tier color updated from gray (#6b7280) to red in TIER_COLORS (both landing page and extension `src/types/scoring.ts`)
+### Data Model & Classifier
 
-### Problem Section
+- [ ] **DM-01**: System assigns each DynamicField criterion exactly one of 6 criterion types: `distance`, `price`, `size`, `binary_feature`, `proximity_quality`, `subjective`
+- [ ] **DM-02**: Claude LLM classifies each DynamicField to one of the 6 criterion types at profile save time; result stored as `criterion_type` in JSONB; default falls back to `subjective` for ambiguous criteria
+- [ ] **DM-03**: Importance weight map updated to CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1 (replaces legacy 90/70/50/30 scale)
 
-- [x] **PROB-01**: Decorative background numbers (huge aria-hidden 01/02/03 at 3% opacity) removed from cards
-- [x] **PROB-02**: Each problem card slides in from the left as it enters the viewport (individual scroll trigger per card)
-- [x] **PROB-03**: Problem cards redesigned to be more visually engaging — elevated card style, stronger visual hierarchy, attention-hooking rather than plain bordered list
+### Deterministic Scorer
 
-### Solution Section
+- [ ] **DS-01**: System computes price fulfillment deterministically: `f=1.0` if `price ≤ budget`, else `f=exp(-2.5 × (price-budget) / budget)`; None/missing price guarded (skip criterion)
+- [ ] **DS-02**: System computes distance fulfillment deterministically: `f=1.0` if `actual ≤ target`, else `f=exp(-1.0 × (actual-target) / target)`; None/missing distance guarded (skip criterion)
+- [ ] **DS-03**: System computes size fulfillment deterministically: `f=min(1.0, (actual/target)^1.5)`; target=0 or None guard returns `f=1.0` or skip
+- [ ] **DS-04**: System computes binary feature fulfillment via slug set-membership check against Flatfox attributes, with a `FEATURE_ALIAS_MAP` for German synonym inputs; `f=1.0` if present, `f=0.0` if absent
+- [ ] **DS-05**: System computes proximity quality fulfillment via `f=min(1.0, exp(-1×Δ/r) + min(0.2, (rating-3)/10))`; fallback results (outside requested radius) use fallback distance in formula
+- [ ] **DS-06**: Built-in preference fields (budget, rooms, living_space) are synthesized as virtual `FulfillmentResult` entries using dealbreaker flags for importance mapping, without migrating them into `dynamic_fields`
 
-- [x] **SOLN-01**: Browser demo mock enlarged — max-w-2xl → max-w-3xl (or larger if it fits without crowding step cards)
-- [x] **SOLN-02**: Step cards (01/02/03 beneath demo) enlarged — more padding, bigger label text, more presence
-- [x] **SOLN-03**: AnimatedScore in SceneListings uses full tier color system: green (≥80), yellow (60-79), red (<60) — not binary teal/gray
-- [x] **SOLN-04**: SceneAnalysis overall score badge uses tier color (green at 94) not static teal — matching extension visual language
+### Subjective Scorer (Claude)
 
-### CTA Section
+- [ ] **SS-01**: New `ClaudeSubjectiveResponse` Pydantic model returns a list of `SubjectiveCriterionResult` entries, each with `criterion: str`, `fulfillment: float` (0.0–1.0), and `reasoning: str`; fulfillment values rounded to 0.1 step post-receipt
+- [ ] **SS-02**: All `subjective`-type criteria are batched into a single `messages.parse()` call; Claude call for criteria is skipped entirely if zero subjective criteria exist
+- [ ] **SS-03**: Updated scoring system prompt instructs Claude to return `fulfillment ∈ {0.0, 0.1, ..., 1.0}` per criterion with reasoning; Claude must never produce an `overall_score` or category-level scores
+- [ ] **SS-04**: Claude always generates 3–5 natural-language `summary_bullets` in the user's preferred language, even when all scored criteria are deterministic; a separate minimal call is made if no subjective criteria triggered a Claude call
 
-- [x] **CTA-01**: Headline font size increased — minimum clamp(2.5rem, 6vw, 4.5rem), bold, commanding
-- [x] **CTA-02**: Headline animates in from further below (y: 60+) with spring physics — dramatic unveil on scroll
-- [x] **CTA-03**: CTA section has stronger visual presence — larger glow radius, button with glow shadow matching hero CTA
+### Hybrid Aggregation Engine
 
-### Hackathon Credits
+- [ ] **HA-01**: System computes final score via weighted average: `score = (Σ weight × fulfillment / Σ weights) × 100`, using the new CRITICAL=5/HIGH=3/MEDIUM=2/LOW=1 weight scale
+- [ ] **HA-02**: Criteria with missing data (None fulfillment) are excluded from both numerator and denominator in the weighted aggregation; score computed over available criteria only
+- [ ] **HA-03**: Any CRITICAL-importance criterion with `fulfillment=0` forces `match_tier="poor"` and caps the numeric score at a maximum of 39
+- [ ] **HA-04**: `ScoreResponse` v2 schema: `overall_score` computed in Python backend (not from Claude), `categories` list removed, `criteria_results: list[CriterionResult]` added, `schema_version: 2` field added; `overall_score`, `match_tier`, and `summary_bullets` field names preserved for backward compatibility
 
-- [x] **CRED-01**: New section added above footer — "Built at" + ETH Zurich logo + Gen-AI Hackathon logo
-- [x] **CRED-02**: Credits section is minimal, elegant — does not distract from primary CTA above it
+### Database & Cache
 
-## v4.2 Requirements (Deferred)
+- [ ] **DB-01**: `schema_version` field added to the `breakdown` JSONB column in the `analyses` table; this migration deploys before any `ScoreResponse` schema changes reach production
+- [ ] **DB-02**: Cache read logic checks `schema_version`; any cached analysis with `schema_version < 2` (or missing `schema_version`) triggers a re-score instead of returning the stale cached entry
+- [ ] **DB-03**: `fulfillment_data` JSONB column added to `analyses` table (additive); existing `breakdown` column and `score` column retained for v1 backward compatibility
 
-### Dashboard Alignment
+### Frontend Consumers
 
-- **DASH-01**: Dashboard pages updated to match landing page design language (sidebar spacing, card radii, teal accent)
-- **DASH-02**: Meaningful animations applied to dashboard (not decorative)
+- [ ] **FE-01**: New `FulfillmentBreakdown` component renders on the analysis page, showing per-criterion name, fulfillment score, weight, and Claude reasoning for each criterion in `criteria_results`
+- [ ] **FE-02**: `ChecklistSection` updated to derive met/partial/not-met display from fulfillment float thresholds: met (≥0.7), partial (0.3–0.69), not-met (<0.3)
+- [ ] **FE-03**: Chrome extension TypeScript types updated to reflect new `ScoreResponse` v2 shape; changes are additive only — `overall_score`, `match_tier`, and `summary_bullets` field names unchanged
+- [ ] **FE-04**: Frontend analysis page branches on `schema_version`: renders legacy category breakdown for v1 cached analyses and new per-criterion fulfillment breakdown for v2 responses
 
-### Design System
+---
 
-- **DS-02**: Dark hero / light dashboard color split via CSS variables
-- **DS-03**: Typography scale defined (display, headline, body, caption)
+## Future Requirements (Deferred)
 
-### Mobile & QA
-
-- **LP-07**: Full mobile/tablet responsiveness across all pages
-- **PERF-01**: LCP < 2.5s, no layout shift from animations
-
-### Photography
-
-- **PHOTO-01**: Swiss/Zurich urban photography integrated into relevant landing page sections (discuss separately)
+- Image-based condition scoring as a formal criterion — deferred (image analysis still occurs via summary bullets but not as a scored criterion)
+- Criterion reclassification UI: allow users to override Claude's assigned `criterion_type` — deferred to v5.1
+- Fulfillment threshold configuration: user-customizable met/partial/not-met thresholds — deferred
+- v4.2 Dashboard Alignment & QA (phases 24-25) — deferred
 
 ## Out of Scope
 
-| Feature | Reason |
-|---------|--------|
-| Social proof / testimonials | No real users yet; deferred post-launch |
-| Video background in hero | Performance cost; chip animations serve same purpose |
-| Dark/light mode toggle on landing | Landing is intentionally dark-only |
-| Automatic scoring | Claude API cost control |
-| Mobile app | Web-first |
+- Removal of the old `Importance` model (per-category: location/price/size/features/condition) — kept through v5.0 for built-in field importance mapping; target removal in v6.0
+- SQL data migration of existing cached analyses — additive strategy used instead (schema_version branching)
+- Per-criterion Claude calls — single batched call enforced
+- Regex-based criterion classifier — Claude LLM classification chosen per user decision
+- New Python packages — stdlib + existing Pydantic + Anthropic SDK sufficient
+
+---
 
 ## Traceability
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| HERO-01 | Phase 22 | Complete |
-| HERO-02 | Phase 22 | Complete |
-| HERO-03 | Phase 22 | Complete |
-| PROB-01 | Phase 22 | Complete |
-| PROB-02 | Phase 22 | Complete |
-| PROB-03 | Phase 22 | Complete |
-| SOLN-01 | Phase 22 | Complete |
-| SOLN-02 | Phase 22 | Complete |
-| SOLN-03 | Phase 22 | Complete |
-| SOLN-04 | Phase 22 | Complete |
-| CTA-01 | Phase 22 | Complete |
-| CTA-02 | Phase 22 | Complete |
-| CTA-03 | Phase 22 | Complete |
-| CRED-01 | Phase 23 | Complete |
-| CRED-02 | Phase 23 | Complete |
+*To be filled by roadmapper.*
 
-**Coverage:**
-- v4.1 requirements: 15 total
-- Mapped to phases: 15
-- Unmapped: 0 ✓
-
----
-*Requirements defined: 2026-03-28*
-*Last updated: 2026-03-28 — v4.1 milestone kickoff*
+| REQ-ID | Phase | Plan |
+|--------|-------|------|
+| DM-01 | — | — |
+| DM-02 | — | — |
+| DM-03 | — | — |
+| DS-01 | — | — |
+| DS-02 | — | — |
+| DS-03 | — | — |
+| DS-04 | — | — |
+| DS-05 | — | — |
+| DS-06 | — | — |
+| SS-01 | — | — |
+| SS-02 | — | — |
+| SS-03 | — | — |
+| SS-04 | — | — |
+| HA-01 | — | — |
+| HA-02 | — | — |
+| HA-03 | — | — |
+| HA-04 | — | — |
+| DB-01 | — | — |
+| DB-02 | — | — |
+| DB-03 | — | — |
+| FE-01 | — | — |
+| FE-02 | — | — |
+| FE-03 | — | — |
+| FE-04 | — | — |
