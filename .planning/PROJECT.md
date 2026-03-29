@@ -96,16 +96,22 @@ Help users instantly see how well each property listing matches their specific n
 - HIST-01/02: Analysis history across profiles — deferred
 - SEC-01/02: Edge function JWT verification — deferred (auth handled at function level)
 
-## Current Milestone: v4.1 Landing Page v2 & Hackathon Credits
+## Current Milestone: v5.0 Hybrid Scoring Engine
 
-**Goal:** Polish all 4 landing page sections based on UX review, unify tier color system to traffic-light (green/yellow/red), and add ETH/Gen-AI Hackathon credits section.
+**Goal:** Replace the LLM-driven scoring system with a hybrid deterministic + AI architecture where Claude handles only subjective evaluation and never generates numeric scores.
 
 **Target features:**
-- Hero: Remove stats row, center CTA, fix poor tier to red
-- Problem: Slide-in-from-left cards, remove decorative background numbers, more engaging visual design
-- Solution: Larger browser demo, larger step cards, proper tier colors in score display
-- CTA: Bigger headline (clamp up to 4.5rem), dramatic bottom-up entrance animation, stronger glow
-- Credits: New ETH Zurich + Gen-AI Hackathon section above footer
+- Deterministic fulfillment formulas for price, distance, size, and binary_feature criteria
+- Proximity quality hybrid formula (distance decay + rating bonus)
+- Claude-only subjective evaluation returning fulfillment ∈ {0.0…1.0} + reasoning
+- Criterion type classification stored on DynamicField at profile save time
+- Weighted aggregation formula (CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1) replacing Claude's overall_score
+- CRITICAL f=0 → force match_tier="poor" (dealbreaker semantics)
+- Missing data → skip criterion in weighted aggregation
+- Binary features normalized mapping layer (deterministic; Claude fallback for fuzzy match)
+- Updated ScoreResponse schema (fulfillment-based, category scores removed)
+- Frontend consumers updated: analysis page, score badge, checklist
+- Score cache version bump for schema migration
 
 ## Context
 
@@ -153,5 +159,22 @@ Help users instantly see how well each property listing matches their specific n
 | `--no-verify-jwt` on edge function | Gateway rejects extension JWTs; function handles auth itself | ⚠️ Revisit |
 | No score caching in v1 | Speed over optimization for hackathon | ⚠️ Revisit |
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd:transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-03-28 after v4.0 Landing Page & Design System milestone*
+*Last updated: 2026-03-29 — Milestone v5.0 Hybrid Scoring Engine started*
