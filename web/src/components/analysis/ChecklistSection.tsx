@@ -1,9 +1,9 @@
-import { Check, X, HelpCircle } from 'lucide-react'
+import { Check, X, HelpCircle, AlertTriangle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
 interface ChecklistItem {
   criterion: string
-  met: boolean | null
+  met: boolean | null | "partial"
   note: string
 }
 
@@ -11,9 +11,12 @@ interface ChecklistSectionProps {
   checklist: ChecklistItem[]
 }
 
-export function getStatusIndicator(met: boolean | null) {
+export function getStatusIndicator(met: boolean | null | "partial") {
   if (met === true) {
     return { icon: Check, color: 'text-emerald-500', label: 'Met' }
+  }
+  if (met === "partial") {
+    return { icon: AlertTriangle, color: 'text-amber-500', label: 'Partially met' }
   }
   if (met === false) {
     return { icon: X, color: 'text-red-500', label: 'Not met' }
@@ -21,8 +24,9 @@ export function getStatusIndicator(met: boolean | null) {
   return { icon: HelpCircle, color: 'text-gray-400', label: 'Unknown' }
 }
 
-function getStatusBg(met: boolean | null): string {
+function getStatusBg(met: boolean | null | "partial"): string {
   if (met === true) return 'bg-emerald-500/10'
+  if (met === "partial") return 'bg-amber-500/10'
   if (met === false) return 'bg-red-500/10'
   return 'bg-gray-500/10'
 }
@@ -31,10 +35,11 @@ export function ChecklistSection({ checklist }: ChecklistSectionProps) {
   if (!checklist || checklist.length === 0) return null
 
   const metItems = checklist.filter((item) => item.met === true)
+  const partialItems = checklist.filter((item) => item.met === "partial")
   const unmetItems = checklist.filter((item) => item.met === false)
   const unknownItems = checklist.filter((item) => item.met === null)
 
-  const sortedItems = [...metItems, ...unmetItems, ...unknownItems]
+  const sortedItems = [...metItems, ...partialItems, ...unmetItems, ...unknownItems]
 
   return (
     <div>
@@ -46,6 +51,12 @@ export function ChecklistSection({ checklist }: ChecklistSectionProps) {
           <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-0">
             <Check className="h-3 w-3 mr-0.5" />
             {metItems.length} met
+          </Badge>
+        )}
+        {partialItems.length > 0 && (
+          <Badge variant="secondary" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-0">
+            <AlertTriangle className="h-3 w-3 mr-0.5" />
+            {partialItems.length} partial
           </Badge>
         )}
         {unmetItems.length > 0 && (
