@@ -162,6 +162,52 @@ describe('preferencesSchema', () => {
   })
 })
 
+describe('criterionTypeSchema', () => {
+  it('criterionTypeSchema is exported from preferences.ts', async () => {
+    const mod = await import('@/lib/schemas/preferences')
+    expect(mod.criterionTypeSchema).toBeDefined()
+  })
+
+  it('criterionTypeSchema accepts all 6 valid values', async () => {
+    const mod = await import('@/lib/schemas/preferences')
+    const schema = mod.criterionTypeSchema
+    const validValues = ['distance', 'price', 'size', 'binary_feature', 'proximity_quality', 'subjective']
+    for (const v of validValues) {
+      expect(schema.parse(v)).toBe(v)
+    }
+  })
+
+  it('criterionTypeSchema rejects unknown values', async () => {
+    const mod = await import('@/lib/schemas/preferences')
+    expect(() => mod.criterionTypeSchema.parse('unknown_type')).toThrow()
+  })
+
+  it('criterionTypeSchema accepts undefined (optional)', async () => {
+    const mod = await import('@/lib/schemas/preferences')
+    expect(mod.criterionTypeSchema.parse(undefined)).toBeUndefined()
+  })
+
+  it('dynamicFieldSchema includes optional criterionType field', () => {
+    const result = dynamicFieldSchema.parse({ name: 'test', importance: 'medium' })
+    expect(result.criterionType).toBeUndefined()
+  })
+
+  it('dynamicFieldSchema round-trips criterionType when provided', () => {
+    const result = dynamicFieldSchema.parse({ name: 'test', importance: 'medium', criterionType: 'distance' })
+    expect(result.criterionType).toBe('distance')
+  })
+
+  it('existing dynamicFields without criterionType still parse (backward compat)', () => {
+    const input = {
+      dynamicFields: [
+        { name: 'near Bahnhof', value: 'within 500m', importance: 'high' as const },
+      ],
+    }
+    const result = preferencesSchema.parse(input)
+    expect(result.dynamicFields[0].criterionType).toBeUndefined()
+  })
+})
+
 describe('dynamicFields', () => {
   it('empty object parse produces dynamicFields=[]', () => {
     const result = preferencesSchema.parse({})
