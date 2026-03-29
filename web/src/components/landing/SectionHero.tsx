@@ -62,7 +62,7 @@ export function SectionHero({ lang }: SectionHeroProps) {
         style={{ opacity: photoOpacity }}
       >
         <Image
-          src="/zurich-bg.jpg"
+          src="/zurich-sunset-bg.jpg"
           alt=""
           fill
           className="object-cover"
