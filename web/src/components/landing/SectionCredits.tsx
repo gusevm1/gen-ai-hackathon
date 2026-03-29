@@ -20,7 +20,7 @@ export function SectionCredits({ lang }: { lang: Language }) {
           alt=""
           fill
           className="object-cover"
-          style={{ objectPosition: '50% 20%' }}
+          style={{ objectPosition: '50% 28%' }}
         />
         <div
           className="absolute inset-0"
