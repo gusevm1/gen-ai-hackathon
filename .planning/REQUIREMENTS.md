@@ -71,31 +71,29 @@
 
 ## Traceability
 
-*To be filled by roadmapper.*
-
 | REQ-ID | Phase | Plan |
 |--------|-------|------|
-| DM-01 | — | — |
-| DM-02 | — | — |
-| DM-03 | — | — |
-| DS-01 | — | — |
-| DS-02 | — | — |
-| DS-03 | — | — |
-| DS-04 | — | — |
-| DS-05 | — | — |
-| DS-06 | — | — |
-| SS-01 | — | — |
-| SS-02 | — | — |
-| SS-03 | — | — |
-| SS-04 | — | — |
-| HA-01 | — | — |
-| HA-02 | — | — |
-| HA-03 | — | — |
-| HA-04 | — | — |
-| DB-01 | — | — |
-| DB-02 | — | — |
-| DB-03 | — | — |
-| FE-01 | — | — |
-| FE-02 | — | — |
-| FE-03 | — | — |
-| FE-04 | — | — |
+| DM-01 | Phase 27 | TBD |
+| DM-02 | Phase 27 | TBD |
+| DM-03 | Phase 27 | TBD |
+| DS-01 | Phase 28 | TBD |
+| DS-02 | Phase 28 | TBD |
+| DS-03 | Phase 28 | TBD |
+| DS-04 | Phase 28 | TBD |
+| DS-05 | Phase 28 | TBD |
+| DS-06 | Phase 28 | TBD |
+| SS-01 | Phase 29 | TBD |
+| SS-02 | Phase 29 | TBD |
+| SS-03 | Phase 29 | TBD |
+| SS-04 | Phase 29 | TBD |
+| HA-01 | Phase 31 | TBD |
+| HA-02 | Phase 31 | TBD |
+| HA-03 | Phase 31 | TBD |
+| HA-04 | Phase 31 | TBD |
+| DB-01 | Phase 30 | TBD |
+| DB-02 | Phase 31 | TBD |
+| DB-03 | Phase 30 | TBD |
+| FE-01 | Phase 32 | TBD |
+| FE-02 | Phase 32 | TBD |
+| FE-03 | Phase 32 | TBD |
+| FE-04 | Phase 32 | TBD |
