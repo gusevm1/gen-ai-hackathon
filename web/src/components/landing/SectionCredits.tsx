@@ -19,7 +19,8 @@ export function SectionCredits({ lang }: { lang: Language }) {
           src="/zurich_bg_grossmuenster.webp"
           alt=""
           fill
-          className="object-cover object-top"
+          className="object-cover"
+          style={{ objectPosition: '50% 20%' }}
         />
         <div
           className="absolute inset-0"
