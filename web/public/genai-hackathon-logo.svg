@@ -1,15 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 68" width="380" height="68">
-  <!-- Green background -->
-  <rect width="300" height="68" fill="#50e75f" rx="3"/>
-  <!-- Black year box -->
-  <rect x="300" y="0" width="80" height="68" fill="#111" rx="3"/>
+  <defs>
+    <!-- Clip to a single rounded rectangle so both fills merge cleanly -->
+    <clipPath id="badge">
+      <rect width="380" height="68" rx="4"/>
+    </clipPath>
+  </defs>
 
-  <!-- "GenAI Zürich" small label, top-left -->
-  <text x="14" y="26" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="500" fill="#000" letter-spacing="0.3">GenAI Zürich</text>
+  <!-- Green left zone -->
+  <rect width="300" height="68" fill="#50e75f" clip-path="url(#badge)"/>
+  <!-- Black right zone -->
+  <rect x="300" width="80" height="68" fill="#111" clip-path="url(#badge)"/>
+  <!-- Outer rounded border to unify -->
+  <rect width="380" height="68" rx="4" fill="none" stroke="#50e75f" stroke-width="0"/>
 
-  <!-- "Hackathon" large bold, filling the green zone -->
+  <!-- "GenAI Zürich" small label -->
+  <text x="14" y="26" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="500" fill="#000">GenAI Zürich</text>
+  <!-- "Hackathon" large bold -->
   <text x="14" y="58" font-family="'Arial Black', 'Arial Bold', Arial, sans-serif" font-size="36" font-weight="900" fill="#000" letter-spacing="-1">Hackathon</text>
 
-  <!-- Year in the black box -->
+  <!-- Year inside black box -->
   <text x="340" y="44" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#fff" text-anchor="middle">2026</text>
 </svg>
