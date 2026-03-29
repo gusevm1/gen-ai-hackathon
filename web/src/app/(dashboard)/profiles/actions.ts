@@ -61,7 +61,24 @@ export async function createProfileWithPreferences(name: string, preferences: Pr
   const isFirst = (count ?? 0) === 0
 
   // Validate preferences through Zod schema (fills any missing defaults)
-  const validated = preferencesSchema.parse(preferences)
+  let validated = preferencesSchema.parse(preferences)
+
+  if (validated.dynamicFields.length > 0) {
+    try {
+      const EC2_URL = process.env.EC2_API_URL
+      const res = await fetch(`${EC2_URL}/classify-criteria`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dynamicFields: validated.dynamicFields }),
+      })
+      if (res.ok) {
+        const { dynamicFields } = await res.json() as { dynamicFields: typeof validated.dynamicFields }
+        validated = { ...validated, dynamicFields }
+      }
+    } catch {
+      // Classification failure must not block profile save (DM-02)
+    }
+  }
 
   const { data, error } = await supabase
     .from('profiles')
@@ -239,7 +256,24 @@ export async function saveProfilePreferences(profileId: string, data: Preference
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  const validated = preferencesSchema.parse(data)
+  let validated = preferencesSchema.parse(data)
+
+  if (validated.dynamicFields.length > 0) {
+    try {
+      const EC2_URL = process.env.EC2_API_URL
+      const res = await fetch(`${EC2_URL}/classify-criteria`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dynamicFields: validated.dynamicFields }),
+      })
+      if (res.ok) {
+        const { dynamicFields } = await res.json() as { dynamicFields: typeof validated.dynamicFields }
+        validated = { ...validated, dynamicFields }
+      }
+    } catch {
+      // Classification failure must not block profile save (DM-02)
+    }
+  }
 
   const { error } = await supabase
     .from('profiles')
