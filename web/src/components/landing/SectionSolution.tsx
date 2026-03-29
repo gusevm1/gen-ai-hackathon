@@ -298,7 +298,7 @@ function MockBrowser({ scene }: { scene: number }) {
       </div>
 
       {/* Content area */}
-      <div style={{ height: 360, overflow: 'hidden' }}>
+      <div style={{ height: 460, overflow: 'hidden' }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={scene}
@@ -378,13 +378,13 @@ export function SectionSolution({ lang }: { lang: Language }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.3 }}
           transition={{ duration: 0.7, ease: ease.enter }}
-          className="max-w-3xl mx-auto mb-12"
+          className="mb-12"
         >
           <MockBrowser scene={scene} />
         </motion.div>
 
         {/* Step tabs */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-3 max-w-3xl mx-auto">
+        <div className="flex flex-col sm:flex-row items-stretch gap-3">
           {STEPS.map(({ num, labelKey, bodyKey }, i) => {
             const active = scene === i
             return (
