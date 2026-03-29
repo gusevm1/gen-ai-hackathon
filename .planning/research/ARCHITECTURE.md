@@ -1,763 +1,482 @@
-# Architecture Patterns: v2.0 Integration
+# Architecture: Hybrid Deterministic + AI Scoring Engine
 
-**Domain:** Chat-based preferences, dynamic schema, parallel scoring, extension distribution
-**Researched:** 2026-03-15
-**Confidence:** HIGH (direct codebase analysis + verified API documentation)
-
----
-
-## Current Architecture (v1.1 Baseline)
-
-```
-Extension (WXT)                 Supabase                    EC2 Backend
-+-----------------+      +--------------------+      +------------------+
-| Content Script  |      | Edge Function:     |      | POST /score      |
-|  FAB --------->-|----->| score-proxy        |----->|  1. flatfox API  |
-|  Badges (Shadow)|      |  - JWT verify      |      |  2. image fetch  |
-|  Summary Panels |      |  - resolve profile |      |  3. Claude call  |
-| Popup           |      |  - proxy to EC2    |      |  4. save analysis|
-|  ProfileSwitcher|      +--------------------+      +------------------+
-+-----------------+      | DB (PostgreSQL)    |
-                         |  profiles (JSONB)  |      Next.js (Vercel)
-                         |  analyses          |      +------------------+
-                         |  RPC: set_active_  |      | /profiles/[id]   |
-                         |    profile         |<-----| PreferencesForm  |
-                         +--------------------+      | /analysis/[id]   |
-                                                     +------------------+
-```
-
-### Key Data Flow for Scoring (current)
-
-1. User clicks FAB on Flatfox.ch
-2. Content script calls `scoreListings()` -- **sequentially**, one listing at a time
-3. Each call: Extension -> score-proxy edge function (JWT auth, resolve active profile, read preferences JSONB) -> EC2 `/score`
-4. Backend: fetch listing from Flatfox API, fetch images, call Claude `messages.parse()`, save to `analyses` table
-5. Badge rendered per listing as each result arrives
-
-### Key Data for Preferences (current)
-
-```
-Zod schema (frontend)  <-->  JSONB in profiles.preferences  <-->  Pydantic model (backend)
-
-Fixed fields: location, offerType, objectCategory, budgetMin/Max, roomsMin/Max,
-              livingSpaceMin/Max, budgetDealbreaker, roomsDealbreaker, livingSpaceDealbreaker,
-              floorPreference, availability, features[], softCriteria[], importance{}, language
-```
-
-The `softCriteria` field is a `list[str]` of free-text tags the user adds manually. The `features` field is a `list[str]` of predefined feature toggles (balcony, elevator, etc.). The `importance` field maps 5 fixed categories to importance levels.
+**Project:** HomeMatch v5.0
+**Researched:** 2026-03-29
+**Confidence:** HIGH (all recommendations derived from reading the live codebase)
 
 ---
 
-## Integration 1: Chat-Based Preference Discovery
+## Design Decisions (Answers to Posed Questions)
 
-### What Changes
+### 1. Claude: One call for all subjective criteria, not per-criterion
 
-Replace the manual `softCriteria` free-text tags and partially the `features` checkboxes with an AI-powered chat that generates structured preference fields from natural language conversation.
+**Decision:** Single Claude call batching all subjective criteria together.
 
-### Architecture Decision: Where to Run the Chat LLM
+**Rationale:**
+- Current `ClaudeScorer.score_listing()` already makes exactly one `messages.parse()` call. The new architecture should preserve this pattern.
+- Per-criterion calls would mean N API round-trips (latency: N x 1-3s) vs one call (1-3s total). For a user with 5 subjective criteria, that is 5-15s vs 1-3s.
+- Claude already receives the full listing context (description, images, nearby places). Sending it N times wastes tokens and money.
+- Atomicity concern is a non-issue: if any single subjective criterion fails to parse, the whole `messages.parse()` call fails and we retry once. There is no partial-success scenario to handle.
 
-**Use the Vercel AI SDK on the Next.js frontend, calling Claude directly from server actions.** Do NOT route chat through the EC2 backend.
+**Implementation:** New Pydantic model `SubjectiveEvaluation` with a `criteria: list[SubjectiveCriterionResult]` field. Claude returns fulfillment (0.0-1.0) + reasoning for each subjective criterion in one structured response. The prompt lists only subjective criteria (deterministic ones are omitted).
 
-Rationale:
-- The chat is a **web-only** feature (users set preferences on the website, not the extension)
-- Vercel AI SDK v6 provides `streamText` + `useChat` with built-in Anthropic provider, streaming, and structured output
-- The EC2 backend is purpose-built for the scoring pipeline (Flatfox fetch + image extraction + Claude scoring); adding a chat endpoint would couple unrelated concerns
-- Server actions eliminate the need for API route boilerplate
+### 2. Criterion type classification: At profile save time, backend-side
 
-### New Component: Chat Preferences Flow
+**Decision:** Backend classifies `criterion_type` when the profile is saved (POST/PUT to profiles endpoint).
 
+**Rationale:**
+- Frontend should not own classification logic because it would drift from the backend's scoring pipeline expectations. The backend is the authority on what "distance" vs "proximity_quality" means.
+- A separate `/classify` endpoint adds a network round-trip on every profile save for no benefit. Classification is cheap (regex + keyword matching on field name/value) and should run inline.
+- The existing `extract_proximity_requirements()` in `proximity.py` already does keyword matching to identify proximity fields. This same pattern extends to classifying price ("CHF", "budget", "Miete"), size ("sqm", "m2", "Zimmer"), and distance fields.
+- `criterion_type` is stored on `DynamicField` in the JSONB, so it travels with the profile everywhere (no extra DB query at score time).
+
+**Implementation:** Add `criterion_type: Optional[CriterionType]` to `DynamicField`. Add a `classify_dynamic_fields()` function called in the profile save endpoint (or as a Pydantic model_validator). Unclassified fields default to `subjective`.
+
+### 3. Analyses table migration: Add columns, do not replace
+
+**Decision:** Add `schema_version` (int, default 2) and `fulfillment_data` (JSONB) columns. Keep existing `breakdown` column intact.
+
+**Rationale:**
+- Existing cached analyses (v1 schema) should not crash the frontend. A version column lets both backend and frontend branch on schema version.
+- The `breakdown` column is used by `save_analysis()` as the full score blob, and `get_analysis()` returns `breakdown` directly. The new `fulfillment_data` stores per-criterion fulfillment details separately from the summary response.
+- Replacing `breakdown` would require a data migration of all existing rows, which is unnecessary for a hackathon project with test data.
+- Old v1 analyses: `schema_version = 1` (or NULL). Frontend renders them with the old CategoryBreakdown component.
+- New v2 analyses: `schema_version = 2`. Frontend renders with new FulfillmentBreakdown component.
+
+**Migration SQL:**
+```sql
+ALTER TABLE analyses ADD COLUMN schema_version int DEFAULT 1;
+ALTER TABLE analyses ADD COLUMN fulfillment_data jsonb;
 ```
-Next.js Frontend                                    Claude API
-+----------------------------------+                (via Vercel AI SDK)
-| /profiles/[id]/chat  (NEW PAGE) |
-|                                  |
-| ChatInterface component         |     streamText()
-|   useChat() hook  ------------->|---> anthropic('claude-haiku-4-5')
-|   - User describes needs        |     System prompt: extract preferences
-|   - AI asks clarifying Qs       |     Multi-turn conversation
-|   - AI generates structured     |<--- Streamed response
-|     preference fields           |
-|                                  |
-| PreferenceReview component (NEW) |
-|   - Shows AI-generated fields   |
-|   - User can edit/remove/add    |
-|   - User confirms and saves     |
-|                                  |
-| On save: merge with standard    |
-|   fields -> update profiles     |
-|   .preferences JSONB            |
-+----------------------------------+
-```
 
-### Implementation Details
+### 4. ScoreResponse versioning: Envelope pattern with schema_version field
 
-**Server Action for Chat (new file: `web/src/app/(dashboard)/profiles/[profileId]/chat/actions.ts`)**
+**Decision:** Add `schema_version: int` to the `breakdown` JSONB blob. Frontend checks version before rendering.
 
+**Rationale:**
+- The frontend already reads `breakdown` as a loosely typed cast (`as { overall_score?: number, ... }`). Adding `schema_version` to this blob is non-breaking.
+- The extension's `ScoreResponse` TypeScript interface needs a `schema_version` field added, but all existing fields become optional with fallback defaults (already the case in the analysis page: `breakdown.overall_score ?? analysis.score ?? 0`).
+- Backend `ScoreResponse` Pydantic model gets `schema_version: int = 2` with a default, so new responses always carry the version.
+- Old cached analyses without `schema_version` are treated as version 1 by convention (undefined = 1).
+
+**Frontend branching:**
 ```typescript
-'use server'
-import { streamText } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
-import { createStreamableValue } from 'ai/rsc'
-
-export async function chatWithPreferences(messages: Message[]) {
-  const stream = createStreamableValue()
-
-  ;(async () => {
-    const result = streamText({
-      model: anthropic('claude-haiku-4-5'),
-      system: PREFERENCE_DISCOVERY_SYSTEM_PROMPT,
-      messages,
-    })
-    // pipe stream to client
-  })()
-
-  return { output: stream.value }
+if (!breakdown.schema_version || breakdown.schema_version === 1) {
+  // Render legacy CategoryBreakdown + ChecklistSection
+} else {
+  // Render new FulfillmentBreakdown
 }
 ```
 
-**Alternatively, use the API route + useChat pattern (simpler):**
+### 5. Binary features normalization: Direct slug matching, no German translation needed
 
-```typescript
-// web/src/app/api/chat/route.ts
-import { anthropic } from '@ai-sdk/anthropic'
-import { streamText } from 'ai'
+**Decision:** Direct string matching between `UserPreferences.features[]` and `FlatfoxListing.attributes[].name`. No normalization layer needed for the common case.
 
-export async function POST(req: Request) {
-  const { messages } = await req.json()
-  const result = streamText({
-    model: anthropic('claude-haiku-4-5'),
-    system: PREFERENCE_DISCOVERY_PROMPT,
-    messages,
-  })
-  return result.toDataStreamResponse()
-}
+**Critical finding:** The Flatfox API returns attribute names as **English-ish slugs** (e.g., `"balconygarden"`, `"petsallowed"`, `"parkingspace"`, `"lift"`, `"dishwasher"`), NOT German strings. The frontend `FEATURE_SUGGESTIONS` in `web/src/lib/constants/features.ts` already uses these exact slugs as values. So user preferences already store the same slug format as the API returns.
 
-// Client: useChat({ api: '/api/chat' })
-```
-
-**Preference Extraction (structured output at end of conversation):**
-
-When the user indicates they are done chatting, a final call uses `generateObject` with a Zod schema to extract structured preferences:
-
-```typescript
-import { generateObject } from 'ai'
-import { z } from 'zod'
-
-const dynamicPreferenceSchema = z.object({
-  fields: z.array(z.object({
-    label: z.string(),           // "Natural light"
-    description: z.string(),     // "Lots of windows, south-facing"
-    importance: z.enum(['critical', 'high', 'medium', 'low']),
-    category: z.enum(['location', 'features', 'condition', 'lifestyle', 'other']),
-  })),
-  suggestedFeatures: z.array(z.string()),  // Map to existing features list
-  suggestedLocation: z.string().optional(),
-  suggestedBudget: z.object({
-    min: z.number().nullable(),
-    max: z.number().nullable(),
-  }).optional(),
-})
-```
-
-### Schema Evolution: Dynamic Preferences
-
-**Current schema** has fixed `softCriteria: string[]` -- unstructured free text.
-
-**New schema** replaces `softCriteria` with `dynamicFields`:
-
-```typescript
-// Added to preferences schema (both Zod and Pydantic)
-dynamicFields: z.array(z.object({
-  id: z.string(),               // UUID for stable identity
-  label: z.string(),            // Human-readable name
-  description: z.string(),      // What the user means
-  importance: importanceLevelSchema,  // critical/high/medium/low
-  category: z.string(),         // grouping for UI/prompt
-})).default([])
-```
-
-**Migration path:** Keep `softCriteria` as an alias. The backend Pydantic model validator already handles migration (see `migrate_legacy_format`). Add a new validator that converts old `softCriteria` strings into `dynamicFields` with `importance: 'medium'`.
-
-**Impact on scoring prompt:** The `build_user_prompt()` function in `backend/app/prompts/scoring.py` currently formats `softCriteria` as:
-```
-**Soft criteria:** criterion1, criterion2
-```
-
-This changes to format each dynamic field with its importance:
-```
-**Custom Criteria:**
-- Natural light (HIGH): Lots of windows, south-facing
-- Quiet neighborhood (CRITICAL): No busy roads nearby
-- Modern kitchen (MEDIUM): Recently renovated kitchen
-```
-
-### New Dependencies
-
-| Package | Where | Purpose |
-|---------|-------|---------|
-| `ai` (Vercel AI SDK) | web | `streamText`, `generateObject`, `useChat` |
-| `@ai-sdk/anthropic` | web | Claude provider for AI SDK |
-
-### Environment Variables
-
-| Variable | Where | Purpose |
-|----------|-------|---------|
-| `ANTHROPIC_API_KEY` | Vercel (web) | Claude API for chat (separate from EC2 backend key) |
-
-### Files Changed
-
-| File | Change Type | What |
-|------|-------------|------|
-| `web/src/lib/schemas/preferences.ts` | MODIFY | Add `dynamicFields` to Zod schema |
-| `web/src/app/api/chat/route.ts` | NEW | API route for streaming chat |
-| `web/src/app/(dashboard)/profiles/[profileId]/chat/page.tsx` | NEW | Chat page |
-| `web/src/components/chat/chat-interface.tsx` | NEW | Chat UI with `useChat` |
-| `web/src/components/chat/preference-review.tsx` | NEW | Review/edit extracted prefs |
-| `web/src/lib/prompts/preference-discovery.ts` | NEW | System prompt for chat |
-| `backend/app/models/preferences.py` | MODIFY | Add `dynamic_fields`, migration |
-| `backend/app/prompts/scoring.py` | MODIFY | Format dynamic fields in prompt |
+**Implementation:**
+- Deterministic matching: `feature_slug in {attr.name for attr in listing.attributes}` -- a simple set membership check.
+- For features NOT in `FEATURE_SUGGESTIONS` (user-typed free text like "Waschmaschine"), add a small alias map: `{"waschmaschine": "washingmachine", "aufzug": "lift", "balkon": "balconygarden", ...}`. This covers the 10-15 most common German synonyms.
+- Claude fallback for fuzzy matching is NOT needed for binary features because the slug set is small and closed. Save Claude for subjective criteria only.
 
 ---
 
-## Integration 2: Parallel Listing Scoring
+## Component Map
 
-### What Changes
+### New Components
 
-Currently `scoreListings()` in `extension/src/lib/api.ts` scores listings **sequentially** in a `for` loop. Change to parallel execution with concurrency control.
+| Component | File | Purpose |
+|-----------|------|---------|
+| `CriterionType` enum | `backend/app/models/preferences.py` | `distance`, `price`, `size`, `binary_feature`, `proximity_quality`, `subjective` |
+| `classify_dynamic_fields()` | `backend/app/services/classifier.py` | Regex-based criterion type assignment |
+| `DeterministicScorer` | `backend/app/services/deterministic.py` | Computes fulfillment for typed criteria (price, size, distance, binary, proximity_quality) |
+| `SubjectiveCriterionResult` | `backend/app/models/scoring.py` | Pydantic model for Claude's per-criterion subjective output |
+| `SubjectiveEvaluation` | `backend/app/models/scoring.py` | Pydantic model wrapping list of SubjectiveCriterionResult (Claude output_format) |
+| `HybridScorer` | `backend/app/services/hybrid.py` | Orchestrates deterministic + subjective scoring, computes weighted overall_score |
+| `FulfillmentResult` | `backend/app/models/scoring.py` | Per-criterion fulfillment (0.0-1.0) + reasoning + source (deterministic/ai) |
+| `FEATURE_ALIAS_MAP` | `backend/app/services/deterministic.py` | German-to-slug mapping for binary features |
+| `FulfillmentBreakdown` | `web/src/components/analysis/FulfillmentBreakdown.tsx` | v2 analysis page component showing per-criterion fulfillment bars |
 
-### Architecture Decision: Where to Parallelize
+### Modified Components
 
-**Parallelize at both the extension client AND the backend.**
+| Component | File | Change |
+|-----------|------|--------|
+| `DynamicField` | `backend/app/models/preferences.py` | Add `criterion_type: Optional[CriterionType]` field |
+| `ScoreResponse` | `backend/app/models/scoring.py` | Replace `categories` with `fulfillments: list[FulfillmentResult]`, add `schema_version`, keep `summary_bullets`/`match_tier`/`checklist` |
+| `score_listing()` router | `backend/app/routers/scoring.py` | Replace `claude_scorer.score_listing()` call with `hybrid_scorer.score()` |
+| `ClaudeScorer` | `backend/app/services/claude.py` | Add `score_subjective()` method returning `SubjectiveEvaluation`; keep old `score_listing()` temporarily |
+| `build_system_prompt()` | `backend/app/prompts/scoring.py` | Remove category scoring instructions, add subjective-only fulfillment instructions |
+| `build_user_prompt()` | `backend/app/prompts/scoring.py` | Only include subjective criteria (not deterministic ones) |
+| `save_analysis()` | `backend/app/services/supabase.py` | Store `schema_version` and `fulfillment_data` alongside `breakdown` |
+| `get_analysis()` | `backend/app/services/supabase.py` | Return `schema_version` so caller can branch |
+| `IMPORTANCE_WEIGHT_MAP` | `backend/app/models/preferences.py` | Update to new weights: CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1 |
+| `ScoreResponse` (TS) | `extension/src/types/scoring.ts` | Add `schema_version`, `fulfillments` field, make `categories` optional |
+| Analysis page | `web/src/app/(dashboard)/analysis/[listingId]/page.tsx` | Branch on schema_version for v1 vs v2 rendering |
+| `CategoryBreakdown` | `web/src/components/analysis/CategoryBreakdown.tsx` | Keep for v1 backward compat |
+| `ChecklistSection` | `web/src/components/analysis/ChecklistSection.tsx` | Adapt to show per-criterion fulfillment bars instead of boolean met/not-met |
+| Profile save endpoint | Edge function or backend endpoint | Call `classify_dynamic_fields()` before persisting |
 
-**Extension side:** Send N requests to the edge function concurrently (with concurrency limit).
-**Backend side:** No changes needed -- FastAPI is already async. Each request is handled independently. The `claude_scorer.score_listing()` already uses `AsyncAnthropic` with `await`, so multiple concurrent requests naturally parallelize.
+### Removed Components
 
-The edge function is stateless and handles each request independently, so concurrent calls from the extension work without modification.
-
-### Rate Limit Analysis
-
-The backend uses `claude-haiku-4-5` (configurable via `CLAUDE_MODEL` env var).
-
-Claude Haiku 4.5 rate limits (from official docs):
-- **Tier 1:** 50 RPM, 50K ITPM, 10K OTPM
-- **Tier 2:** 1,000 RPM, 450K ITPM, 90K OTPM
-
-A typical scoring request: ~2-3K input tokens (listing data + preferences + images), ~1-2K output tokens (ScoreResponse). So at Tier 1, scoring 50 listings concurrently is feasible within RPM but may hit ITPM limits (50 x 3K = 150K > 50K ITPM). A concurrency limit of 5-10 is safe for Tier 1.
-
-**Recommendation: Default concurrency of 5, configurable.** This stays well within Tier 1 limits and provides ~5x speedup over sequential.
-
-### Client-Side Changes (Extension)
-
-```typescript
-// extension/src/lib/api.ts -- MODIFIED
-
-const DEFAULT_CONCURRENCY = 5;
-
-export async function scoreListings(
-  listingIds: number[],
-  jwt: string,
-  onResult?: (id: number, result: ScoreResponse) => void,
-  concurrency: number = DEFAULT_CONCURRENCY,
-): Promise<Map<number, ScoreResponse>> {
-  const results = new Map<number, ScoreResponse>();
-
-  // Process in batches of `concurrency`
-  for (let i = 0; i < listingIds.length; i += concurrency) {
-    const batch = listingIds.slice(i, i + concurrency);
-    const promises = batch.map(async (id) => {
-      try {
-        const result = await scoreListing(id, jwt);
-        results.set(id, result);
-        onResult?.(id, result);
-      } catch (err) {
-        // Individual failure doesn't stop the batch
-        console.error(`Scoring failed for listing ${id}:`, err);
-      }
-    });
-    await Promise.all(promises);
-  }
-
-  return results;
-}
-```
-
-### Alternative: Backend Batch Endpoint
-
-NOT recommended for v2.0. A backend `POST /score/batch` endpoint would:
-- Require a new edge function or edge function modification
-- Add complexity to error handling (partial failures)
-- Lose progressive badge rendering (one badge at a time appearing)
-
-The client-side parallelization preserves the existing per-listing API contract and progressive rendering while being much simpler to implement.
-
-### Files Changed
-
-| File | Change Type | What |
-|------|-------------|------|
-| `extension/src/lib/api.ts` | MODIFY | Add concurrency parameter, batch with `Promise.all` |
-| `extension/src/entrypoints/content/App.tsx` | MODIFY | Pass concurrency to `scoreListings` |
-
-### No Backend Changes Required
-
-The FastAPI backend is already async. Multiple concurrent `POST /score` requests are handled by the event loop. `AsyncAnthropic` handles Claude API calls concurrently. No new endpoints, no batch logic.
-
-### FAB UX Changes
-
-The FAB already shows a scored count badge. For parallel scoring, add a progress indicator:
-
-```
-Current: FAB shows spinner -> done
-New:     FAB shows "3/12" counter -> done
-```
-
-The content script's `handleScore` already calls `onResult` per listing for progressive rendering. The only change is updating the FAB to show progress count.
-
-| File | Change Type | What |
-|------|-------------|------|
-| `extension/src/entrypoints/content/components/Fab.tsx` | MODIFY | Show progress count during scoring |
-| `extension/src/entrypoints/content/App.tsx` | MODIFY | Track total/completed for progress |
+| Component | Reason |
+|-----------|--------|
+| `CategoryScore` model | Replaced by per-criterion `FulfillmentResult` -- no more 5-category breakdown |
+| `Importance` model | Category-level importance replaced by per-criterion importance on `DynamicField` (deprecate, not delete in v5.0) |
+| `_format_importance_section()` | No longer needed -- importance is per-criterion, not per-category |
 
 ---
 
-## Integration 3: Dynamic Preference Schema Changes
-
-### Database Impact
-
-The `profiles.preferences` column is `jsonb NOT NULL DEFAULT '{}'`. No schema migration needed -- JSONB absorbs new fields automatically. The `dynamicFields` array is just new keys in the JSONB blob.
-
-### Schema Synchronization
-
-Three schemas must stay in sync (existing pattern from v1.1):
+## Data Flow (New Architecture)
 
 ```
-Zod (web/src/lib/schemas/preferences.ts)
-  |
-  |-- preferencesSchema adds dynamicFields
-  |-- Used by: PreferencesForm, chat extraction, server actions
+                          Profile Save Flow
+                          ================
 
-Pydantic (backend/app/models/preferences.py)
-  |
-  |-- UserPreferences adds dynamic_fields
-  |-- Used by: scoring pipeline, prompt builder
-  |-- model_validator migrates softCriteria -> dynamicFields
+User edits preferences
+        |
+        v
+Frontend sends profile JSON (with dynamic_fields)
+        |
+        v
+Backend profile endpoint (or edge function)
+        |
+        v
+classify_dynamic_fields(dynamic_fields) -----> Adds criterion_type to each DynamicField
+        |
+        v
+Save to Supabase profiles.preferences JSONB (now includes criterion_type per field)
 
-JSONB (profiles.preferences in Supabase)
-  |
-  |-- Stores whatever the frontend writes
-  |-- Backend reads via edge function proxy
+
+                          Scoring Flow
+                          ============
+
+POST /score (listing_id, user_id, profile_id, preferences)
+        |
+        v
+  [Cache check] -----> Hit? Check schema_version.
+        |                    v1 cached? Return as-is (frontend handles legacy rendering)
+        |                    v2 cached? Return as-is
+        |
+        v (miss)
+  Fetch listing from Flatfox API
+        |
+        v
+  Geocode if needed (existing)
+        |
+        v
+  Fetch proximity data (existing, for proximity_quality criteria)
+        |
+        v
+  Fetch listing images (existing)
+        |
+        v
+  Parse preferences -> UserPreferences (with criterion_type on each DynamicField)
+        |
+        +--------> DeterministicScorer.score(listing, preferences, nearby_data)
+        |               |
+        |               +---> Built-in fields:
+        |               |       price criteria:     fulfillment from budget_min/max vs listing price
+        |               |       size criteria:       fulfillment from rooms_min/max, living_space_min/max
+        |               |       floor_preference:    fulfillment from listing.floor
+        |               |
+        |               +---> Typed dynamic_fields:
+        |               |       distance criteria:   distance_decay(haversine(listing, target), threshold)
+        |               |       binary_feature:      slug in listing.attributes
+        |               |       proximity_quality:   distance_decay * rating_bonus(nearby_data)
+        |               |       price (dynamic):     budget formula
+        |               |       size (dynamic):      range formula
+        |               |
+        |               v
+        |           list[FulfillmentResult] (source="deterministic")
+        |
+        +--------> ClaudeScorer.score_subjective(listing, subjective_criteria, images, nearby_data)
+        |               |
+        |               v (single messages.parse() call)
+        |           SubjectiveEvaluation
+        |               |
+        |               v
+        |           list[FulfillmentResult] (source="ai")
+        |
+        v
+  HybridScorer.aggregate(deterministic_results + subjective_results)
+        |
+        +---> Weighted average: sum(f_i * w_i) / sum(w_i)  (scale 0-100)
+        |         where w_i = {CRITICAL:5, HIGH:3, MEDIUM:2, LOW:1}
+        |
+        +---> CRITICAL override: if any CRITICAL criterion has f=0.0 -> match_tier = "poor"
+        |
+        +---> Missing data: skip criterion (omit from both numerator and denominator)
+        |
+        +---> match_tier from computed score: >=80 excellent, >=60 good, >=40 fair, <40 poor
+        |
+        v
+  Build ScoreResponse v2 (schema_version=2, fulfillments, summary_bullets, match_tier)
+        |
+        v
+  Save to Supabase analyses table
+        |   - breakdown: full ScoreResponse dict (as before)
+        |   - schema_version: 2
+        |   - fulfillment_data: per-criterion details
+        |   - score: overall_score int (for sorting/filtering)
+        |
+        v
+  Return ScoreResponse
 ```
 
-### New Pydantic Model
+---
 
+## Deterministic Fulfillment Formulas
+
+### Price Fulfillment
+```python
+def price_fulfillment(listing_price: int | None, budget_min: int | None, budget_max: int | None) -> float | None:
+    if listing_price is None:
+        return None  # skip -- missing data
+    if budget_max and listing_price > budget_max:
+        overshoot = (listing_price - budget_max) / budget_max
+        return max(0.0, 1.0 - overshoot * 2)  # linear decay, 0 at 50% over
+    if budget_min and listing_price < budget_min:
+        return 0.8  # under budget is still good, slight penalty for suspicion
+    return 1.0  # within range
+```
+
+### Size / Rooms Fulfillment
+```python
+def range_fulfillment(actual: float | None, pref_min: float | None, pref_max: float | None) -> float | None:
+    if actual is None:
+        return None  # skip
+    if pref_min and actual < pref_min:
+        shortfall = (pref_min - actual) / pref_min
+        return max(0.0, 1.0 - shortfall * 2)
+    if pref_max and actual > pref_max:
+        return 0.9  # over max is usually fine for size
+    return 1.0
+```
+
+### Distance Fulfillment
+```python
+def distance_fulfillment(distance_km: float, threshold_km: float) -> float:
+    if distance_km <= threshold_km:
+        return 1.0
+    overshoot = (distance_km - threshold_km) / threshold_km
+    return max(0.0, 1.0 - overshoot)  # linear decay to 0 at 2x threshold
+```
+
+### Binary Feature Fulfillment
+```python
+def binary_feature_fulfillment(feature_slug: str, listing_attributes: set[str]) -> float:
+    normalized = FEATURE_ALIAS_MAP.get(feature_slug.lower(), feature_slug.lower())
+    return 1.0 if normalized in listing_attributes else 0.0
+```
+
+### Proximity Quality Fulfillment
+```python
+def proximity_quality_fulfillment(nearby_places: list[dict], threshold_km: float) -> float:
+    if not nearby_places:
+        return 0.0
+    nearest = min(nearby_places, key=lambda p: p.get("distance_km", float("inf")))
+    dist = nearest.get("distance_km")
+    if dist is None:
+        return 0.5  # found but distance unknown
+    dist_score = distance_fulfillment(dist, threshold_km)
+    rating = nearest.get("rating")
+    rating_bonus = (rating / 5.0) * 0.2 if rating else 0.0  # up to +0.2 for 5-star
+    return min(1.0, dist_score + rating_bonus)
+```
+
+---
+
+## Key Schema Changes
+
+### CriterionType Enum (new)
+```python
+class CriterionType(str, Enum):
+    DISTANCE = "distance"
+    PRICE = "price"
+    SIZE = "size"
+    BINARY_FEATURE = "binary_feature"
+    PROXIMITY_QUALITY = "proximity_quality"
+    SUBJECTIVE = "subjective"
+```
+
+### DynamicField (updated)
 ```python
 class DynamicField(BaseModel):
-    """A single AI-generated preference field."""
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-    id: str = Field(description="Stable UUID for this field")
-    label: str = Field(description="Human-readable field name")
-    description: str = Field(description="What the user means by this")
+    name: str
+    value: str = ""
     importance: ImportanceLevel = ImportanceLevel.MEDIUM
-    category: str = Field(default="other", description="Grouping category")
-
-class UserPreferences(BaseModel):
-    # ... existing fields ...
-
-    # NEW: replaces soft_criteria for AI-generated fields
-    dynamic_fields: list[DynamicField] = Field(default_factory=list)
-
-    @model_validator(mode="before")
-    @classmethod
-    def migrate_legacy_format(cls, data: dict) -> dict:
-        # ... existing migrations ...
-
-        # Migrate softCriteria -> dynamicFields (if only softCriteria exists)
-        if "softCriteria" in data and "dynamicFields" not in data:
-            import uuid
-            data["dynamicFields"] = [
-                {
-                    "id": str(uuid.uuid4()),
-                    "label": criterion,
-                    "description": criterion,
-                    "importance": "medium",
-                    "category": "other",
-                }
-                for criterion in data["softCriteria"]
-                if criterion.strip()
-            ]
-        return data
+    criterion_type: Optional[CriterionType] = None  # NEW -- set at profile save time
 ```
 
-### Prompt Impact
-
-The `build_user_prompt()` in `backend/app/prompts/scoring.py` needs to format dynamic fields:
-
+### FulfillmentResult (new)
 ```python
-def _format_dynamic_fields(prefs: UserPreferences) -> str:
-    if not prefs.dynamic_fields:
-        return "**Custom criteria:** None"
-
-    lines = ["**Custom Criteria:**"]
-    for field in prefs.dynamic_fields:
-        lines.append(
-            f"- {field.label} ({field.importance.value.upper()}): {field.description}"
-        )
-    return "\n".join(lines)
+class FulfillmentResult(BaseModel):
+    criterion: str                    # field name from DynamicField or built-in name
+    criterion_type: CriterionType     # how it was evaluated
+    fulfillment: Optional[float]      # 0.0-1.0, None if data missing (skip in aggregation)
+    importance: ImportanceLevel       # from DynamicField or built-in mapping
+    reasoning: list[str]              # 1-3 bullet points explaining the score
+    source: Literal["deterministic", "ai"]  # who computed this
 ```
 
-This replaces the current `**Soft criteria:** {", ".join(prefs.soft_criteria)}` line.
-
-### Backward Compatibility
-
-- Old profiles with `softCriteria` continue to work via Pydantic migration
-- The `softCriteria` field remains in the Zod schema as optional/deprecated
-- Extension does not need changes -- it never reads preferences directly (edge function resolves them)
-- The scoring prompt adapts: if `dynamic_fields` is empty but `soft_criteria` is present, fall back to old format
-
----
-
-## Integration 4: Chrome Extension Distribution
-
-### The Problem
-
-Currently users must load the extension as an unpacked folder via `chrome://extensions` in developer mode. For the hackathon demo and pilot with Vera, this needs to be easier.
-
-### Options Analysis
-
-| Method | Effort | User Experience | Maintenance |
-|--------|--------|----------------|-------------|
-| Chrome Web Store | High (review process, 5+ days) | Best (1-click install) | Auto-updates |
-| Direct .zip download + sideload instructions | Low | Medium (5-step manual process) | Manual |
-| Self-hosted .crx | Low | BROKEN (Chrome blocks non-CWS CRX since v68) | N/A |
-
-### Architecture Decision: .zip Download with Guided Install Page
-
-**Use a download page on the Next.js website** that provides:
-1. A downloadable .zip of the built extension
-2. Step-by-step visual instructions for sideloading
-3. Optional: start Chrome Web Store review in parallel
-
-Rationale:
-- CRX sideloading no longer works on Chrome for Windows/Mac (blocked since Chrome 68)
-- Chrome Web Store takes 5+ days for initial review -- too slow for hackathon timeline
-- A .zip + developer mode is the only reliable pre-CWS distribution method
-- The guided install page can be replaced with a CWS link once published
-
-### Implementation
-
-**Build pipeline (existing):**
-```bash
-cd extension && npm run build  # -> dist/chrome-mv3/
+### ScoreResponse v2 (updated)
+```python
+class ScoreResponse(BaseModel):
+    schema_version: int = 2
+    overall_score: int               # 0-100, computed by HybridScorer
+    match_tier: Literal["excellent", "good", "fair", "poor"]
+    summary_bullets: list[str]       # from Claude (subjective summary of the full listing)
+    fulfillments: list[FulfillmentResult]  # replaces categories
+    checklist: list[ChecklistItem]   # kept for binary features display
+    language: str
 ```
 
-**New: Package the build output as a .zip in the web app's public directory:**
-```bash
-cd extension && npm run build && cd dist && zip -r ../../web/public/homematch-extension.zip chrome-mv3/
-```
+### SubjectiveEvaluation (Claude output -- new)
+```python
+class SubjectiveCriterionResult(BaseModel):
+    criterion: str                    # must match the criterion name from the prompt
+    fulfillment: float = Field(ge=0.0, le=1.0)
+    reasoning: list[str] = Field(min_length=1, max_length=3)
 
-Add this as a script in the extension's `package.json`:
-```json
-{
-  "scripts": {
-    "build:dist": "npm run build && cd dist && zip -r ../../web/public/homematch-extension.zip chrome-mv3/"
-  }
-}
-```
-
-**New page: `web/src/app/(dashboard)/extension/page.tsx`** (or public, non-auth page):
-
-```
-/extension (or /install-extension)
-  +-----------------------------------------+
-  |  Install HomeMatch Chrome Extension     |
-  |                                         |
-  |  [Download Extension (.zip)]            |
-  |                                         |
-  |  Installation Steps:                    |
-  |  1. Download and unzip the file         |
-  |  2. Open chrome://extensions            |
-  |  3. Enable "Developer mode" toggle      |
-  |  4. Click "Load unpacked"              |
-  |  5. Select the chrome-mv3 folder        |
-  |                                         |
-  |  [Screenshot of each step]              |
-  +-----------------------------------------+
-```
-
-### Considerations
-
-- The .zip must be rebuilt and committed/deployed to Vercel whenever extension code changes
-- Consider making this a public (non-auth) page so prospects can see install instructions before signing up
-- Add a version number to the .zip filename for cache-busting: `homematch-extension-v2.0.zip`
-- Include a note about Chrome Web Store availability coming soon
-
-### Files Changed
-
-| File | Change Type | What |
-|------|-------------|------|
-| `web/public/homematch-extension.zip` | NEW | Built extension archive |
-| `web/src/app/install/page.tsx` | NEW | Download + install guide page |
-| `extension/package.json` | MODIFY | Add `build:dist` script |
-| `web/src/components/top-navbar.tsx` | MODIFY | Add nav link to install page |
-
----
-
-## Component Boundaries
-
-| Component | Responsibility | Communicates With |
-|-----------|---------------|-------------------|
-| Chat Interface (NEW) | Multi-turn conversation for preference discovery | Vercel AI SDK -> Claude API |
-| Preference Review (NEW) | Display/edit AI-generated fields before saving | Supabase (profiles table) |
-| Chat API Route (NEW) | Server-side streaming endpoint for chat | Claude API via `@ai-sdk/anthropic` |
-| Dynamic Fields Schema (MOD) | Extended preference data model | All layers (Zod, JSONB, Pydantic) |
-| Parallel Scorer (MOD) | Concurrent listing scoring from extension | Edge function -> EC2 -> Claude API |
-| Install Page (NEW) | Extension distribution | Static .zip download |
-| Scoring Prompt (MOD) | Formats dynamic fields for Claude evaluation | Backend prompt builder |
-
----
-
-## Data Flow Changes
-
-### New Flow: Chat-Based Preference Creation
-
-```
-1. User navigates to /profiles/[id]/chat
-2. ChatInterface renders with useChat() hook
-3. User types: "I need a quiet 3-room apartment near Zurich HB,
-   max CHF 2500, natural light is very important"
-4. POST /api/chat -> streamText(anthropic('claude-haiku-4-5'), messages)
-5. Claude asks: "What's your budget range? Any must-have features?"
-6. ... multi-turn conversation (2-5 turns) ...
-7. User clicks "Generate Preferences"
-8. generateObject() with dynamicPreferenceSchema extracts structured fields
-9. PreferenceReview component shows:
-   - Standard fields auto-populated (location: "Zurich", budgetMax: 2500, roomsMin: 3)
-   - Dynamic fields: [{label: "Natural light", importance: "critical", ...},
-                       {label: "Quiet location", importance: "high", ...}]
-10. User reviews, edits if needed, confirms
-11. Server action: merge into profiles.preferences JSONB
-12. Profile ready for scoring
-```
-
-### Modified Flow: Parallel Scoring
-
-```
-1. User clicks FAB on Flatfox.ch
-2. Content script extracts N listing PKs from DOM (existing)
-3. Loading skeletons injected for all N listings (existing)
-4. scoreListings(pks, jwt, onResult, concurrency=5) -- MODIFIED
-5. Batch 1: 5 concurrent requests -> edge function -> EC2 -> Claude
-   Each result triggers onResult -> badge appears immediately
-6. Batch 2: next 5 concurrent requests
-   ...
-7. All N badges rendered
-```
-
-### Unchanged Flows
-
-- Profile CRUD on web app (no changes)
-- Profile switching in extension popup (no changes)
-- Stale badge detection (no changes)
-- Analysis page viewing (no changes, but will render dynamic fields in checklist)
-- Edge function score-proxy (no changes -- already handles concurrent requests)
-
----
-
-## Patterns to Follow
-
-### Pattern 1: Vercel AI SDK Server Action Chat
-
-**What:** Use the Vercel AI SDK `useChat` hook + API route pattern for streaming chat.
-**When:** Any time the web app needs multi-turn Claude conversation.
-**Why:** Built-in streaming, message management, error handling. No custom WebSocket or SSE code needed.
-
-```typescript
-// API route (server)
-import { anthropic } from '@ai-sdk/anthropic'
-import { streamText } from 'ai'
-
-export async function POST(req: Request) {
-  const { messages } = await req.json()
-  const result = streamText({
-    model: anthropic('claude-haiku-4-5'),
-    system: '...',
-    messages,
-  })
-  return result.toDataStreamResponse()
-}
-
-// Component (client)
-import { useChat } from '@ai-sdk/react'
-
-export function ChatInterface() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat()
-  // render chat UI
-}
-```
-
-### Pattern 2: Structured Extraction at Conversation End
-
-**What:** After multi-turn chat, use `generateObject` with Zod schema for guaranteed structured output.
-**When:** Converting free-form conversation into structured preference data.
-**Why:** Claude's structured output mode guarantees schema compliance. No parsing errors.
-
-```typescript
-import { generateObject } from 'ai'
-
-const { object } = await generateObject({
-  model: anthropic('claude-haiku-4-5'),
-  schema: dynamicPreferenceSchema,
-  prompt: `Based on this conversation, extract structured preferences:\n${conversationText}`,
-})
-```
-
-### Pattern 3: Batched Concurrency with Progressive Results
-
-**What:** Process N items in batches of K, calling a callback as each completes.
-**When:** Parallel API calls with rate limit awareness.
-**Why:** `Promise.all` on the full list could overwhelm rate limits; sequential is too slow.
-
-```typescript
-async function processBatch<T, R>(
-  items: T[],
-  fn: (item: T) => Promise<R>,
-  onResult: (item: T, result: R) => void,
-  concurrency: number = 5,
-): Promise<Map<T, R>> {
-  const results = new Map<T, R>();
-  for (let i = 0; i < items.length; i += concurrency) {
-    const batch = items.slice(i, i + concurrency);
-    await Promise.all(batch.map(async (item) => {
-      const result = await fn(item);
-      results.set(item, result);
-      onResult(item, result);
-    }));
-  }
-  return results;
-}
+class SubjectiveEvaluation(BaseModel):
+    criteria: list[SubjectiveCriterionResult]
+    summary_bullets: list[str] = Field(min_length=3, max_length=5)
 ```
 
 ---
 
-## Anti-Patterns to Avoid
+## Handling Built-in Preferences (budget, rooms, living_space)
 
-### Anti-Pattern 1: Routing Chat Through EC2 Backend
+The current architecture has a subtle gap: `budget_min/max`, `rooms_min/max`, and `living_space_min/max` are top-level fields on `UserPreferences`, NOT `DynamicField` entries. They need to participate in the new per-criterion fulfillment system.
 
-**What:** Adding a `/chat` endpoint to the FastAPI backend for preference discovery.
-**Why bad:** Couples unrelated concerns (scoring pipeline vs. preference chat), adds latency (extra hop through edge function), and the backend lacks streaming infrastructure.
-**Instead:** Use Vercel AI SDK directly from Next.js server actions or API routes. The web app already has direct access to Supabase for saving results.
+**Recommendation:** The `HybridScorer` synthesizes virtual `FulfillmentResult` entries for these built-in fields:
 
-### Anti-Pattern 2: Full-List Promise.all for Parallel Scoring
+| Built-in Field | Criterion Name | Type | Importance Source |
+|---------------|----------------|------|-------------------|
+| budget_min/max | "Price/Budget" | `price` | `budget_dealbreaker=true` -> CRITICAL, else `preferences.importance.price` |
+| rooms_min/max | "Room Count" | `size` | `rooms_dealbreaker=true` -> CRITICAL, else `preferences.importance.size` |
+| living_space_min/max | "Living Space" | `size` | `living_space_dealbreaker=true` -> CRITICAL, else `preferences.importance.size` |
+| floor_preference | "Floor" | `binary_feature` | LOW (minor preference unless user adds a dynamic field with higher importance) |
 
-**What:** `await Promise.all(allListingIds.map(id => scoreListing(id, jwt)))` -- firing all requests simultaneously.
-**Why bad:** 20+ concurrent Claude API calls will hit RPM/ITPM rate limits. At Tier 1, 50 RPM with token bucket means burst is possible but sustained 20+ concurrent requests with image content will hit ITPM.
-**Instead:** Batch with concurrency limit (5-10). Use the batched concurrency pattern above.
-
-### Anti-Pattern 3: Storing Chat History in Database
-
-**What:** Saving every chat message to Supabase for the preference discovery conversation.
-**Why bad:** The chat is ephemeral -- its purpose is to generate structured preferences. Once preferences are extracted and saved, the conversation has no value. Storing it adds schema complexity and storage cost.
-**Instead:** Keep chat history in React state only. The output (dynamicFields) is what gets persisted.
-
-### Anti-Pattern 4: Two Separate Preference Edit UIs
-
-**What:** Having the chat generate preferences that bypass the form, creating two disconnected editing paths.
-**Why bad:** Users lose the ability to fine-tune AI-generated preferences. Creates data inconsistency risk.
-**Instead:** Chat outputs structured data that populates the existing form. The form is always the final editing UI. Chat is an alternative to manual entry, not a replacement for it.
-
-### Anti-Pattern 5: CRX Self-Hosting
-
-**What:** Hosting a .crx file on the website for direct extension install.
-**Why bad:** Chrome blocks .crx installs from non-Chrome-Web-Store sources since Chrome 68 (2018) on Windows and Mac. Users would see an error.
-**Instead:** Distribute as .zip with developer mode sideload instructions. Plan for Chrome Web Store submission in parallel.
+This avoids migrating built-in fields into dynamic_fields (which would break the frontend preferences form). The built-in fields are evaluated deterministically without being dynamic_fields.
 
 ---
 
-## Scalability Considerations
+## Suggested Build Order
 
-| Concern | Current (v1.1) | v2.0 Changes | Future Scale |
-|---------|----------------|--------------|--------------|
-| Scoring throughput | Sequential (1 req/time) | 5 concurrent/user | Rate limit tiers or batch API |
-| Chat API cost | N/A | ~2-5K tokens per chat session | Negligible -- Haiku is $0.80/M input |
-| DB storage | JSONB preferences ~1KB | +dynamicFields ~2KB | No concern, still small JSONB |
-| Edge function concurrency | 1 request/user | 5 concurrent/user | Supabase auto-scales edge functions |
-| Extension distribution | Manual sideload | .zip download page | Chrome Web Store |
-| Claude API key exposure | EC2 only (safe) | Also Vercel env (safe) | Both server-side, never client |
+Dependencies flow downward. Each phase can be built and tested independently.
+
+### Phase 1: Data Model + Classifier
+**Files:** `models/preferences.py`, `services/classifier.py`
+**What:**
+- Add `CriterionType` enum and `criterion_type` field to `DynamicField`
+- Write `classify_dynamic_fields()` function with regex/keyword patterns
+- Wire into profile save flow (so new/updated profiles get criterion_type on each dynamic field)
+- Write unit tests for classifier (price keywords, distance patterns, amenity keywords, subjective fallback)
+- Update `IMPORTANCE_WEIGHT_MAP` to new weights: CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1
+
+**Why first:** Everything downstream depends on criterion_type being present on dynamic fields. This is the foundation.
+
+### Phase 2: Deterministic Scorer + New Models
+**Files:** `services/deterministic.py`, `models/scoring.py`
+**What:**
+- Add `FulfillmentResult`, `SubjectiveCriterionResult`, `SubjectiveEvaluation` Pydantic models
+- Implement `DeterministicScorer` with the five fulfillment formulas
+- Implement built-in field fulfillment (budget, rooms, living_space, floor)
+- Add `FEATURE_ALIAS_MAP` for German synonyms
+- Unit tests: price over/under/within budget, size range, distance decay, binary feature matching, proximity quality
+
+**Why second:** Can be fully tested without touching Claude or the API. Pure functions.
+
+### Phase 3: Subjective Scorer (Claude refactor)
+**Files:** `services/claude.py`, `prompts/scoring.py`
+**What:**
+- Add `score_subjective()` method to `ClaudeScorer` accepting only subjective criteria
+- Rewrite system/user prompts: remove category scoring instructions, instruct Claude to return fulfillment (0.0-1.0) per criterion
+- Keep existing `score_listing()` method temporarily for rollback safety
+- Integration test with mock Claude response
+
+**Why third:** Depends on models from Phase 2. Can test with mocked Claude responses.
+
+### Phase 4: Hybrid Scorer + Router Integration
+**Files:** `services/hybrid.py`, `routers/scoring.py`, `models/scoring.py`
+**What:**
+- Implement `HybridScorer.score()` orchestrating deterministic + subjective
+- Weighted aggregation formula with CRITICAL f=0 override
+- Missing data skip logic
+- Update `ScoreResponse` to v2 schema (add `schema_version`, `fulfillments`)
+- Update `score_listing()` router to call `HybridScorer`
+- Update `save_analysis()` / `get_analysis()` for new columns
+- End-to-end integration test
+
+**Why fourth:** Depends on both deterministic and subjective scorers being ready.
+
+### Phase 5: Database Migration + Cache Versioning
+**Files:** Supabase SQL migration, `services/supabase.py`
+**What:**
+- ALTER TABLE to add `schema_version` and `fulfillment_data` columns
+- Old v1 analyses coexist with new v2 analyses (no data migration needed)
+- Frontend can still display old v1 cached scores via backward-compat rendering
+
+**Why fifth:** The SQL is independent but testing requires Phase 4 to produce v2 responses.
+
+### Phase 6: Frontend Consumers
+**Files:** Web analysis page, extension types, new FulfillmentBreakdown component
+**What:**
+- Add `schema_version` check to analysis page rendering
+- Build `FulfillmentBreakdown` component (per-criterion bars with fulfillment %, source badge, importance indicator)
+- Update extension `ScoreResponse` TypeScript interface
+- Keep `CategoryBreakdown` for v1 backward compat
+
+**Why last:** Pure consumer of backend changes. No blocking dependencies except the final v2 response shape.
 
 ---
 
-## Build Order (Dependency-Aware)
+## What Claude Still Does vs What It Does Not
 
-The four features have minimal inter-dependencies. Recommended build order based on what unblocks what:
-
-### Phase 1: Dynamic Preference Schema
-**Why first:** Every other feature touches the preferences schema. Get the schema right before building UI or modifying scoring.
-- Add `dynamicFields` to Zod schema
-- Add `DynamicField` + `dynamic_fields` to Pydantic model
-- Add migration validator for `softCriteria` -> `dynamicFields`
-- Update `build_user_prompt()` to format dynamic fields
-- Update scoring prompt instructions for dynamic fields
-
-### Phase 2: Chat-Based Preference Discovery
-**Why second:** Depends on Phase 1 schema. The biggest new feature surface area.
-- Install Vercel AI SDK + Anthropic provider
-- Create API route for streaming chat
-- Build ChatInterface component with `useChat`
-- Build PreferenceReview component for editing extracted fields
-- Create preference discovery system prompt
-- Wire chat output into profile preferences form
-- Integration test: chat -> extract -> save -> score
-
-### Phase 3: Parallel Scoring
-**Why third:** Independent of schema changes, but lower effort. Quick win.
-- Modify `scoreListings()` with concurrency parameter
-- Add progress counter to FAB component
-- Update content script to track scoring progress
-- Test with 10+ listings on a Flatfox search page
-
-### Phase 4: UI Redesign + Extension Distribution
-**Why last:** Pure UX, no architectural dependencies on other phases. Can be split across phases.
-- Flatfox-inspired color scheme (CSS/Tailwind changes only)
-- Extension download page with install instructions
-- Build script for .zip packaging
-- Chrome Web Store submission (parallel, async)
+| Responsibility | Before (v1) | After (v2) |
+|---------------|-------------|------------|
+| Overall score (0-100) | Claude generates | Python computes from weighted fulfillments |
+| match_tier | Claude assigns | Python derives from score + CRITICAL override |
+| Category scores (5 categories) | Claude generates | REMOVED -- replaced by per-criterion fulfillments |
+| Subjective criteria evaluation | Claude (as part of full scoring) | Claude (isolated, returns fulfillment 0.0-1.0 per criterion) |
+| Summary bullets | Claude generates | Claude generates (kept -- valuable for UX) |
+| Price evaluation | Claude compares numbers | Python deterministic formula |
+| Size evaluation | Claude compares numbers | Python deterministic formula |
+| Binary feature matching | Claude checks listing text | Python set membership check |
+| Proximity evaluation | Claude reads injected data section | Python distance_decay + rating_bonus formula |
+| Image analysis for condition | Claude with vision | Claude (still needed, via subjective scorer if user has condition-related criteria) |
 
 ---
 
-## Environment Variable Summary
+## Open Questions Resolved
 
-| Variable | Service | Purpose | Exists? |
-|----------|---------|---------|---------|
-| `ANTHROPIC_API_KEY` | EC2 Backend | Claude API for scoring | YES |
-| `ANTHROPIC_API_KEY` | Vercel (web) | Claude API for chat | NEW |
-| `SUPABASE_URL` | All | Database | YES |
-| `SUPABASE_ANON_KEY` | Web, Extension | Client-side Supabase | YES |
-| `SUPABASE_SERVICE_ROLE_KEY` | EC2 Backend | Server-side DB writes | YES |
-| `BACKEND_URL` | Edge Function | EC2 address | YES |
-| `CLAUDE_MODEL` | EC2 Backend | Model selection | YES |
+1. **"Should Claude be called once or per-criterion?"** -- Once. See Decision 1.
+2. **"Where does criterion_type live?"** -- On DynamicField, classified at profile save time. See Decision 2.
+3. **"How to migrate analyses table?"** -- Add columns, don't replace. See Decision 3.
+4. **"How to version ScoreResponse?"** -- schema_version field in breakdown JSONB. See Decision 4.
+5. **"How to normalize binary features?"** -- Direct slug matching (Flatfox uses English slugs). Small alias map for German free-text. See Decision 5.
 
-Note: The `ANTHROPIC_API_KEY` for Vercel can be the same key as the backend, or a separate key for cost tracking. Vercel environment variables are set in the project settings dashboard and are never exposed to the client.
+## Remaining Open Questions
 
----
-
-## Risk Assessment
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Chat generates incorrect preference structure | Medium | Low | `generateObject` with Zod schema guarantees structure; user reviews before saving |
-| Parallel scoring hits rate limits | Medium | Medium | Concurrency limit of 5; exponential backoff on 429; monitor via response headers |
-| Schema migration breaks old profiles | Low | High | Pydantic `model_validator` handles migration; test with real v1.1 JSONB data |
-| Vercel AI SDK version incompatibility | Low | Low | Pin to specific version; AI SDK is mature and stable |
-| Extension .zip download blocked by browser | Low | Low | .zip is not .crx; browsers do not block .zip downloads |
+- **Summary bullets when zero subjective criteria:** Should Claude still be called? Recommendation: Yes -- pass deterministic results as context and ask Claude for a natural-language summary. The UX value of human-readable bullets justifies one cheap API call even when all scoring is deterministic.
+- **Existing `Importance` model deprecation:** The per-category importance (location/price/size/features/condition) is superseded by per-criterion importance on DynamicField. Keep through v5.0 for built-in field importance mapping (price importance -> budget fulfillment weight). Remove in v6.0 after full frontend migration to per-criterion importance.
+- **Floor preference + availability:** These built-in preferences should be scored as binary/range deterministic checks in HybridScorer, similar to budget/rooms/living_space handling. Low complexity, high completeness.
 
 ---
 
 ## Sources
 
-- [Anthropic Rate Limits (official docs)](https://platform.claude.com/docs/en/api/rate-limits) -- Tier-specific RPM, ITPM, OTPM for all models. HIGH confidence.
-- [Anthropic Structured Outputs (official docs)](https://platform.claude.com/docs/en/build-with-claude/structured-outputs) -- Schema-guaranteed JSON output. HIGH confidence.
-- [Vercel AI SDK - Anthropic Provider](https://ai-sdk.dev/providers/ai-sdk-providers/anthropic) -- `@ai-sdk/anthropic` installation, supported functions, model IDs. HIGH confidence.
-- [Vercel AI SDK 6 announcement](https://vercel.com/blog/ai-sdk-6) -- Server actions, `streamText`, `useChat` patterns. HIGH confidence.
-- [Chrome Extension Sideloading](https://webkul.com/blog/how-to-install-the-unpacked-extension-in-chrome/) -- Developer mode + load unpacked process. HIGH confidence.
-- [Chrome CRX restrictions](https://www.chromium.org/developers/extensions-deployment-faq/) -- CRX blocked from non-CWS sources since Chrome 68. HIGH confidence.
-- [FastAPI Concurrency](https://fastapi.tiangolo.com/async/) -- Async concurrency model, `asyncio.gather` patterns. HIGH confidence.
+- Direct codebase analysis (HIGH confidence):
+  - `backend/app/models/scoring.py` -- current ScoreResponse, CategoryScore, ChecklistItem models
+  - `backend/app/models/preferences.py` -- DynamicField, UserPreferences, ImportanceLevel, IMPORTANCE_WEIGHT_MAP
+  - `backend/app/services/claude.py` -- ClaudeScorer.score_listing(), messages.parse() pattern
+  - `backend/app/services/proximity.py` -- extract_proximity_requirements(), distance computation, keyword matching
+  - `backend/app/routers/scoring.py` -- full scoring pipeline orchestration
+  - `backend/app/prompts/scoring.py` -- system/user prompt templates, dealbreaker rules
+  - `backend/app/models/listing.py` -- FlatfoxListing.attributes, FlatfoxAttribute.name
+  - `backend/app/services/supabase.py` -- get_analysis(), save_analysis(), breakdown JSONB storage
+  - `web/src/lib/constants/features.ts` -- FEATURE_SUGGESTIONS with Flatfox slug values
+  - `web/src/app/(dashboard)/analysis/[listingId]/page.tsx` -- frontend breakdown consumption pattern
+  - `extension/src/types/scoring.ts` -- TypeScript ScoreResponse interface, TIER_COLORS
+  - `backend/tests/conftest.py` -- sample listing attributes: "garage", "balconygarden", "parkingspace", etc.

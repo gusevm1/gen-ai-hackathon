@@ -1,476 +1,317 @@
-# Technology Stack
+# Technology Stack: Hybrid Scoring Engine (v5.0)
 
-**Project:** HomeMatch v2.0 -- Smart Preferences & UX Polish
-**Researched:** 2026-03-15
+**Project:** HomeMatch
+**Researched:** 2026-03-29
+**Overall confidence:** HIGH
 
-## Scope
+## Executive Summary
 
-This document covers stack ADDITIONS and CHANGES for the v2.0 milestone only. The existing validated stack is unchanged:
+The hybrid scoring engine requires **zero new library additions** to the Python backend. All deterministic formulas (price ratio, distance decay, size range, binary matching) use Python stdlib arithmetic. The existing Pydantic v2.12.5 handles the new response schemas. The existing Anthropic SDK v0.85.0 supports structured outputs on Haiku 4.5 via `messages.parse()`. The frontend needs only TypeScript type changes -- no new packages.
 
-- Next.js 16.1.6 + React 19 + TypeScript 5 on Vercel
-- shadcn/ui v4 (`base-nova` style) with Tailwind CSS v4
-- Supabase auth + PostgreSQL + edge functions
-- WXT Chrome extension (MV3, Shadow DOM)
-- FastAPI on EC2 + Python `anthropic` SDK (AsyncAnthropic)
-- Claude Haiku 4.5 for scoring
-- `next-themes`, `react-hook-form`, `zod` v4, `lucide-react`
+The main work is **schema evolution**, not library addition: a new `ScoreResponse` shape (per-criterion fulfillment list replacing 5-category breakdown), a `criterion_type` field on `DynamicField`, updated `IMPORTANCE_WEIGHT_MAP` values (5/3/2/1 replacing 90/70/50/30), and a `schema_version` field for cache invalidation.
 
-Research focuses on four new capabilities:
+## Recommended Stack Changes
 
-1. Chat-based preference discovery (frontend + backend routing)
-2. Flatfox-esque UI theming (CSS variables only)
-3. Parallel listing scoring (backend concurrency + extension API changes)
-4. Chrome extension distribution (static content + CWS publishing)
+### Summary Table
 
----
+| Library/Tool | Version | Purpose | Rationale |
+|-------------|---------|---------|-----------|
+| Python stdlib (`math`, `round`, `max`) | 3.x | Deterministic fulfillment formulas | All formulas are 5-15 lines of basic arithmetic. `max(0, 1 - x/y)` and `round(x, 1)` need no external library. |
+| Pydantic v2 (existing) | 2.12.5 | New `ScoreResponse` + `CriterionResult` + `ClaudeSubjectiveResponse` models | Already installed. Supports `float` fields with `ge=0.0, le=1.0`, `Literal` union types, `model_validator` for JSONB migration. |
+| Anthropic SDK (existing) | 0.85.0 | `messages.parse()` with new `ClaudeSubjectiveResponse` schema | Already installed. Structured outputs GA on Haiku 4.5. `output_format` parameter still works in `.parse()` helper. |
+| TypeScript types (code change) | -- | Update `ScoreResponse` interface in extension + web | No new npm packages. Shape change from `categories[]` + `checklist[]` to `criteria[]`. |
 
-## Recommended Stack Additions
+### No New Libraries Needed
 
-### 1. Chat-Based Preference Discovery
-
-#### Frontend: Vercel AI SDK (`useChat`)
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `ai` | ^6.x (latest 6.0.x) | AI SDK core -- streaming primitives, message types, `DefaultChatTransport`, `streamText`, `convertToModelMessages`, `generateObject` | De facto standard for AI chat UIs in Next.js. Over 20M monthly downloads. Handles SSE streaming, message state management, status machine. Built by Vercel for the Vercel platform we already deploy on. |
-| `@ai-sdk/react` | ^3.x (latest 3.0.118) | React hooks: `useChat` for conversational UI | Provides `useChat` hook with built-in streaming state machine (`ready` / `submitted` / `streaming` / `error`), `sendMessage()`, `messages` array with typed parts, abort/regenerate, transport abstraction. Eliminates all custom SSE parsing and state management code. |
-| `@ai-sdk/anthropic` | ^3.x (latest 3.0.58) | Anthropic provider for AI SDK server-side route handler | Unified provider wrapping the Anthropic Messages API. Supports Claude Haiku 4.5 (our scoring model) and all current Claude models. Works with `streamText()` and `generateObject()` for structured output extraction. |
-
-**Confidence:** HIGH -- verified via official AI SDK docs at ai-sdk.dev (introduction, chatbot guide, useChat reference, Anthropic provider page, migration guide 6.0), npm registry version numbers, and Vercel AI SDK 6 release blog post.
-
-**Why AI SDK instead of raw `fetch` + `EventSource`:**
-- `useChat` manages message history, streaming state, error states, and abort -- all things we would hand-build otherwise
-- `streamText()` server-side returns `toUIMessageStreamResponse()` purpose-built for the `useChat` transport
-- `generateObject()` with a Zod schema provides type-safe structured preference extraction after the conversational turns
-- The Anthropic provider wraps the same Claude API our backend uses, so zero surface gap
-- Tight Next.js App Router integration (Route Handlers, RSC-compatible)
-
-**Architecture: Next.js Route Handler, NOT Supabase Edge Function**
-
-The chat endpoint lives as a Next.js API route (`app/api/chat/route.ts`) because:
-- AI SDK's `streamText()` + `toUIMessageStreamResponse()` is designed for Next.js route handlers
-- Vercel handles SSE streaming natively with configurable `maxDuration`
-- The preference chat is a web-app-only feature (extension does not use it)
-- Chat produces preferences saved directly to Supabase via the existing client -- no EC2 involvement needed
-- Routing through FastAPI would add an unnecessary hop and require SSE infrastructure on EC2
-
-**Usage pattern:**
-
-Client component (`app/(dashboard)/profiles/[profileId]/chat/page.tsx`):
-```typescript
-'use client';
-import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
-
-const { messages, sendMessage, status } = useChat({
-  transport: new DefaultChatTransport({ api: '/api/chat' }),
-});
-```
-
-Route handler (`app/api/chat/route.ts`):
-```typescript
-import { anthropic } from '@ai-sdk/anthropic';
-import { streamText, convertToModelMessages, UIMessage } from 'ai';
-
-export async function POST(req: Request) {
-  const { messages }: { messages: UIMessage[] } = await req.json();
-  const result = streamText({
-    model: anthropic('claude-haiku-4-5-20251001'),
-    system: 'You are a property preference assistant...',
-    messages: await convertToModelMessages(messages),
-  });
-  return result.toUIMessageStreamResponse();
-}
-```
-
-Preference extraction (`app/api/chat/extract/route.ts`):
-```typescript
-import { anthropic } from '@ai-sdk/anthropic';
-import { generateObject } from 'ai';
-import { z } from 'zod';
-
-export async function POST(req: Request) {
-  const { conversationHistory } = await req.json();
-  const result = await generateObject({
-    model: anthropic('claude-haiku-4-5-20251001'),
-    schema: z.object({
-      generatedCriteria: z.array(z.object({
-        label: z.string(),
-        importance: z.enum(['critical', 'high', 'medium', 'low']),
-        description: z.string(),
-      })),
-      suggestedLocation: z.string().optional(),
-      suggestedBudgetMax: z.number().optional(),
-      suggestedRoomsMin: z.number().optional(),
-    }),
-    prompt: `Extract structured preferences from: ${JSON.stringify(conversationHistory)}`,
-  });
-  return Response.json(result.object);
-}
-```
-
-**What NOT to add:**
-- Do NOT add `@anthropic-ai/sdk` to the web app -- the AI SDK Anthropic provider wraps it internally. Adding both creates version conflicts.
-- Do NOT add `assistant-ui` or `@assistant-ui/react-ai-sdk` -- over-engineered for a single-purpose preference chat. Our UI is custom.
-- Do NOT add `openai` or other AI providers -- we use Claude exclusively.
-- Do NOT route chat through FastAPI -- the chat result is a preference object that goes directly to Supabase. Adding a FastAPI hop creates unnecessary latency (Next.js -> EC2 -> Claude -> EC2 -> Next.js -> Supabase vs. Next.js -> Claude -> Supabase).
+| Question | Answer | Rationale |
+|----------|--------|-----------|
+| Python math/formula libraries? | **No. Use stdlib.** | `price_fulfillment = max(0, 1 - (price - budget_max) / budget_max)` is basic arithmetic. Distance decay `max(0, 1 - dist/radius)` is the same. `math.exp()` available in stdlib if exponential decay is ever preferred. No NumPy/SciPy warranted for 5-10 simple formulas. |
+| Schema migration tools for Supabase JSONB? | **No. Use Pydantic model_validator migration pattern (already established).** | `DynamicField` already has a `model_validator(mode="before")` migration path in `preferences.py`. Adding `criterion_type` with a default value means old JSONB rows auto-migrate on read. No Alembic or SQL migration tool needed -- the JSONB column is schemaless by design. |
+| Pydantic v2 upgrade? | **No. Already on v2.12.5.** | Current version supports all needed patterns: `Literal` types, `Field(ge=0, le=1)` for fulfillment floats, `model_validator` for migration, `ConfigDict` with `alias_generator`. |
+| Anthropic SDK upgrade? | **No.** | SDK v0.85.0 supports `messages.parse()` with `output_format`. Structured outputs are GA on Haiku 4.5. The deprecated `output_format` parameter still works in the `.parse()` helper (SDK translates to `output_config.format` internally). |
+| Frontend data fetching libraries? | **No. Update TypeScript types only.** | The Next.js analysis page and extension already fetch `ScoreResponse` as JSON from Supabase. Only the TypeScript interface shape changes. |
 
 ---
 
-### 2. Flatfox-esque UI Theming
+## Specific Implementation Patterns
 
-#### No new packages needed -- CSS variable changes only
+### 1. New ScoreResponse Schema (Pydantic v2)
 
-The theming overhaul is a pure CSS change to `globals.css` custom properties. The existing stack (Tailwind CSS v4, shadcn/ui with CSS variables, `next-themes` for dark mode) fully supports this without additions.
+**Confidence: HIGH** (verified against existing codebase + Pydantic v2 docs + Anthropic structured output docs)
 
-| What Changes | Current Value | New Value (Flatfox-esque) | Rationale |
-|-------------|---------------|---------------------------|-----------|
-| `--primary` | `hsl(342 89% 40%)` (rose/magenta) | `hsl(168 76% 36%)` (teal-green, approx `#16a085`) | Flatfox uses a teal/turquoise-green primary. DEPT Agency describes the brand as "light and agile" with "fresh, bold colors." |
-| `--primary` (dark) | `hsl(342 89% 50%)` | `hsl(168 76% 46%)` | Lighter teal for dark mode contrast |
-| `--ring` | Same rose | Same teal | Focus rings match primary |
-| `--sidebar-primary` | Same rose | Same teal | Sidebar active states match |
-| `--chart-*` | Purple/indigo spectrum | Teal/green spectrum | Score visualization colors match brand |
-
-**Flatfox Visual Identity (MEDIUM confidence):**
-Flatfox uses a teal/turquoise-green primary color with a clean, light interface. Their brand redesign by DEPT agency aimed for a "youthful appearance while maintaining seriousness and professionalism." Floor-plan-inspired shapes are a key brand element. The exact hex values are not publicly documented -- colors should be fine-tuned by visual comparison with the live site during implementation.
-
-**Confidence on color values:** MEDIUM -- Flatfox has no public style guide or design tokens. Values are approximated from visual inspection and the DEPT case study description. The implementer should eyeball against flatfox.ch and adjust.
-
-**Implementation approach:**
-1. Update CSS custom properties in `globals.css` `:root` and `.dark` blocks
-2. No component-level changes -- all shadcn/ui components read from CSS variables
-3. Extension theming is NOT affected (extension has its own `tailwind.config.js` and Shadow DOM isolation)
-4. Keep typography as system sans-serif (Flatfox uses custom fonts not worth importing)
-
-**What NOT to add:**
-- Do NOT import Flatfox CSS or fonts -- we are adopting their color palette, not cloning their design
-- Do NOT add CSS-in-JS (styled-components, emotion) -- Tailwind + CSS variables is the correct approach
-- Do NOT add a design token system (Style Dictionary, etc.) -- overkill for a single theme with ~15 variables
-
----
-
-### 3. Parallel Listing Scoring
-
-#### Backend: `asyncio.gather` + `asyncio.Semaphore` (Python stdlib, no new packages)
-
-The backend already uses `AsyncAnthropic` and `async def` route handlers. Parallel scoring requires only code changes -- zero new dependencies.
-
-| Pattern | Implementation | Purpose |
-|---------|---------------|---------|
-| `asyncio.gather(*tasks)` | Wrap multiple `claude_scorer.score_listing()` calls | Run N scoring requests concurrently instead of sequentially |
-| `asyncio.Semaphore(N)` | Limit concurrent Claude API calls | Respect Anthropic rate limits, prevent 429 errors |
-
-**Concurrency limit: N=3 (recommended)**
-
-Rationale based on verified Anthropic rate limits:
-
-| Tier | RPM (Haiku 4.5) | ITPM | OTPM |
-|------|-----------------|------|------|
-| Tier 1 | 50 | 50,000 | 10,000 |
-| Tier 2 | 1,000 | 450,000 | 90,000 |
-| Tier 3 | 2,000 | 1,000,000 | 200,000 |
-
-- A Flatfox search page shows up to ~20 listings
-- Each scoring request: ~2,000-4,000 input tokens (listing data + images + preferences + system prompt)
-- At N=3 concurrent: 20 listings complete in ~7 batches vs 20 sequential -- roughly 3x speedup
-- N=3 stays safely within Tier 1 limits (3 concurrent << 50 RPM)
-- Each request also downloads 3-5 listing images, adding I/O time. Higher concurrency amplifies this.
-- Primary UX bottleneck is Claude response time (~2-4s per call), not connection overhead
-
-**Why not N=5 or higher?**
-- Risk of hitting concurrent connection limits on lower API tiers
-- Diminishing returns: with ~3s per Claude call, N=3 already overlaps requests efficiently
-- Can increase to N=5 after confirming API tier and monitoring 429 error rates
-
-**New endpoint: `POST /score/batch`**
+The new `ScoreResponse` replaces `categories: list[CategoryScore]` and `checklist: list[ChecklistItem]` with a unified `criteria: list[CriterionResult]`.
 
 ```python
-@router.post("/batch", response_model=list[BatchScoreResult])
-async def score_batch(request: BatchScoreRequest):
-    """Score multiple listings in parallel with concurrency control."""
-    semaphore = asyncio.Semaphore(3)
+class CriterionResult(BaseModel):
+    """Result for a single scored criterion."""
+    name: str = Field(description="Criterion name matching DynamicField.name or built-in label")
+    criterion_type: Literal["price", "distance", "size", "binary_feature", "proximity_quality", "subjective"]
+    fulfillment: float = Field(ge=0.0, le=1.0, description="0.0 to 1.0 in 0.1 steps")
+    importance: Literal["critical", "high", "medium", "low"]
+    reasoning: str = Field(description="One-line explanation with data citation")
+    source: Literal["deterministic", "llm"] = Field(description="How fulfillment was computed")
 
-    async def score_one(listing_id: int) -> BatchScoreResult:
-        async with semaphore:
-            try:
-                listing = await flatfox_client.get_listing(listing_id)
-                preferences = UserPreferences.model_validate(request.preferences)
-                image_urls = await flatfox_client.get_listing_image_urls(
-                    listing.slug, listing.pk
-                )
-                result = await claude_scorer.score_listing(
-                    listing, preferences, image_urls
-                )
-                await asyncio.to_thread(
-                    supabase_service.save_analysis,
-                    request.user_id, request.profile_id,
-                    str(listing_id), result.model_dump()
-                )
-                return BatchScoreResult(
-                    listing_id=listing_id, score=result, error=None
-                )
-            except Exception as e:
-                return BatchScoreResult(
-                    listing_id=listing_id, score=None, error=str(e)
-                )
-
-    tasks = [score_one(lid) for lid in request.listing_ids]
-    results = await asyncio.gather(*tasks)
-    return results
+class ScoreResponse(BaseModel):
+    """Hybrid scoring response -- deterministic + LLM."""
+    overall_score: int = Field(ge=0, le=100)
+    match_tier: Literal["excellent", "good", "fair", "poor"]
+    summary_bullets: list[str] = Field(min_length=3, max_length=5)
+    criteria: list[CriterionResult]
+    language: str
+    schema_version: int = Field(default=2)
 ```
 
-**Confidence:** HIGH -- `asyncio.gather` and `asyncio.Semaphore` are Python stdlib (no install). Rate limits verified from official docs at platform.claude.com/docs/en/api/rate-limits.
+**Key design decisions:**
 
-#### Supabase Edge Function: Extend or add batch proxy
+- `fulfillment` as `float` with `ge=0.0, le=1.0`: Pydantic v2 validates this natively. The 0.1-step constraint is enforced via `round(x, 1)` in deterministic formulas and via prompt instruction for Claude. Structured outputs support `float` but not step enumeration in the JSON schema.
+- `source` field: Enables frontend to distinguish deterministic vs LLM-evaluated criteria. Useful for transparency ("computed" vs "AI assessed" badges).
+- `criterion_type` on the result: Lets the frontend group and display criteria by type without re-classifying.
+- `categories` and `checklist` removed: The weighted aggregation formula replaces Claude's `overall_score`. No separate category scores -- every criterion is scored equally via fulfillment x weight.
 
-Two options (implementation detail, not stack decision):
+### 2. Claude-Only Response Schema (Separate from Full ScoreResponse)
 
-1. **New `score-batch-proxy` edge function** -- separate request/response shape, cleaner separation
-2. **Extend existing `score-proxy`** -- accept `listing_ids` array alongside `listing_id`, branch internally
+**Confidence: HIGH**
 
-Either approach uses the same `@supabase/supabase-js` already in the project. No new packages.
+Claude no longer returns the full `ScoreResponse`. It returns only subjective evaluations. The scoring pipeline assembles the final response.
 
-#### Extension: Single batch request replaces sequential loop
+```python
+class SubjectiveCriterionResult(BaseModel):
+    """Claude's evaluation of a single subjective criterion."""
+    name: str = Field(description="Criterion name, must match exactly one of the provided criterion names")
+    fulfillment: float = Field(ge=0.0, le=1.0, description="How well the listing meets this criterion")
+    reasoning: str = Field(description="One-line explanation citing listing data")
 
-The extension's `lib/api.ts` currently loops sequentially:
-```typescript
-// CURRENT: Sequential -- scores one at a time
-for (const id of listingIds) {
-  const result = await scoreListing(id, jwt);
-  onResult?.(id, result);
+class ClaudeSubjectiveResponse(BaseModel):
+    """What Claude returns -- only subjective evaluations + summary."""
+    criteria: list[SubjectiveCriterionResult]
+    summary_bullets: list[str] = Field(min_length=3, max_length=5)
+    language: str
+```
+
+This is the model passed to `client.messages.parse(output_format=ClaudeSubjectiveResponse)`. It is much smaller than the current `ScoreResponse`, reducing token usage and Claude's cognitive load.
+
+### 3. DynamicField.criterion_type (JSONB Schema Evolution)
+
+**Confidence: HIGH** (verified against existing `model_validator` migration pattern in `preferences.py`)
+
+```python
+class CriterionType(str, Enum):
+    PRICE = "price"
+    DISTANCE = "distance"
+    SIZE = "size"
+    BINARY_FEATURE = "binary_feature"
+    PROXIMITY_QUALITY = "proximity_quality"
+    SUBJECTIVE = "subjective"
+
+class DynamicField(BaseModel):
+    # ... existing fields (name, value, importance) ...
+    criterion_type: CriterionType = CriterionType.SUBJECTIVE  # default = subjective
+```
+
+**No SQL migration needed.** Existing JSONB rows without `criterion_type` deserialize with the default `"subjective"` via Pydantic's default mechanism. The existing `model_validator(mode="before")` pattern in `UserPreferences` already handles missing fields.
+
+Classification logic runs at **profile save time** in the web app's preferences API endpoint, NOT at scoring time. The classifier examines the field name/value and assigns the appropriate type. This keeps the scoring hot path simple.
+
+### 4. Weight Map Update
+
+**Confidence: HIGH** (specified in milestone requirements)
+
+```python
+# OLD (used as prompt hints for Claude's internal weighting)
+IMPORTANCE_WEIGHT_MAP = {
+    ImportanceLevel.CRITICAL: 90,
+    ImportanceLevel.HIGH: 70,
+    ImportanceLevel.MEDIUM: 50,
+    ImportanceLevel.LOW: 30,
+}
+
+# NEW (used in actual weighted aggregation formula)
+IMPORTANCE_WEIGHT_MAP = {
+    ImportanceLevel.CRITICAL: 5,
+    ImportanceLevel.HIGH: 3,
+    ImportanceLevel.MEDIUM: 2,
+    ImportanceLevel.LOW: 1,
 }
 ```
 
-Change to a single batch request:
+Same dict location, different values. The old values were arbitrary numbers passed to Claude. The new values are the actual weights in the aggregation formula: `score = (sum(weight * fulfillment) / sum(weights)) * 100`.
+
+### 5. Score Cache Version Bump
+
+**Confidence: HIGH**
+
+Currently there is NO cache version field. Old cached analyses have the v1 `ScoreResponse` shape (with `categories`, `checklist`, Claude-generated `overall_score`). The new shape is incompatible.
+
+**Approach:** Add `schema_version` to the `breakdown` JSONB when saving:
+
+```python
+score_data["schema_version"] = 2  # v5.0 hybrid scoring
+```
+
+On cache read in the scoring router, check `schema_version`. If absent or < 2, treat as cache miss (force re-score). This avoids the complexity of migrating old cached analyses, which have low value anyway.
+
+The `save_analysis` method in `supabase.py` also references `score_data["overall_score"]` for the top-level `score` column in the `analyses` table. This still works because `overall_score` remains a field in the new schema (just computed deterministically instead of by Claude).
+
+### 6. Frontend TypeScript Type Changes
+
+**Confidence: HIGH** (verified against `extension/src/types/scoring.ts` and web components)
+
 ```typescript
-// NEW: Single batch request
-export async function scoreListingsBatch(
-  listingIds: number[],
-  jwt: string,
-): Promise<BatchScoreResult[]> {
-  const res = await fetch(EDGE_FUNCTION_BATCH_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${jwt}`,
-      apikey: SUPABASE_ANON_KEY,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ listing_ids: listingIds }),
-  });
-  return (await res.json()) as BatchScoreResult[];
+// NEW -- replaces CategoryScore + ChecklistItem
+interface CriterionResult {
+  name: string;
+  criterion_type: 'price' | 'distance' | 'size' | 'binary_feature' | 'proximity_quality' | 'subjective';
+  fulfillment: number; // 0.0 - 1.0
+  importance: 'critical' | 'high' | 'medium' | 'low';
+  reasoning: string;
+  source: 'deterministic' | 'llm';
+}
+
+interface ScoreResponse {
+  overall_score: number;
+  match_tier: 'excellent' | 'good' | 'fair' | 'poor';
+  summary_bullets: string[];
+  criteria: CriterionResult[];  // replaces categories[] + checklist[]
+  language: string;
+  schema_version?: number;
 }
 ```
 
-**Why single batch request over N parallel edge function calls?**
-- 1 HTTP request instead of 20 from the extension
-- Backend controls concurrency (Semaphore), not the client
-- Better error aggregation (partial failures in one response)
-- Fewer cold starts on the edge function
+**Affected frontend files (verified by grep):**
 
-**Progressive rendering consideration:** With a single batch request, results arrive all-at-once (not progressively as they do today). Two approaches:
-1. **Accept all-at-once:** Simpler. Loading skeletons show for all badges, then all populate when batch completes. For ~20 listings at N=3 concurrency, total wait is ~20-25 seconds.
-2. **Server-Sent Events from backend:** Stream individual results as they complete. Better UX but more complex. Requires `StreamingResponse` on FastAPI and SSE parsing in the edge function/extension.
+| File | Change Needed |
+|------|---------------|
+| `extension/src/types/scoring.ts` | Replace `CategoryScore`, `ChecklistItem`, `ScoreResponse` interfaces |
+| `web/src/components/analysis/CategoryBreakdown.tsx` | Rewrite to render `CriterionResult[]` grouped by type |
+| `web/src/components/analysis/ChecklistSection.tsx` | Merge into criterion list display (or remove, since checklist is now part of criteria) |
+| `web/src/app/(dashboard)/analysis/[listingId]/page.tsx` | Adapt to new `ScoreResponse.criteria` shape |
+| `extension/src/entrypoints/content/components/SummaryPanel.tsx` | Adapt to new shape |
+| `extension/src/entrypoints/content/components/ScoreBadge.tsx` | **No change** -- uses `overall_score` and `match_tier` which are unchanged |
+| `web/src/app/(dashboard)/analyses/page.tsx` | **No change** -- reads top-level `score` column, not `breakdown` JSONB |
 
-Recommendation: Start with approach 1, upgrade to SSE if wait time proves frustrating in testing.
-
-**No new npm packages needed in extension.**
-
-**Confidence:** HIGH -- standard JavaScript/Python patterns, no new dependencies.
+No new npm packages needed. No new data fetching patterns. The same Supabase query returns the `breakdown` JSONB, which now has a different internal shape.
 
 ---
 
-### 4. Chrome Extension Distribution
+## Deterministic Formula Functions (stdlib only)
 
-#### No new packages needed -- static content + Chrome Web Store
+All formulas are pure Python, no dependencies. Each is a standalone function returning `float` in [0.0, 1.0]:
 
-| Approach | Recommendation | Why |
-|----------|---------------|-----|
-| Chrome Web Store (Unlisted) | PRIMARY | Unlisted extensions get a CWS install URL but do not appear in search. Users install via direct link shared on our website. One-time $5 developer registration fee. Same review process as public (1-3 business days). |
-| Developer mode sideloading | FALLBACK | For hackathon demo or users who cannot wait for CWS review. Requires enabling developer mode, downloading ZIP, loading unpacked. Instruction page on website. |
-| Self-hosted CRX | DO NOT USE | Chrome blocks CRX installs from non-CWS sources on Windows and macOS. Only works on Linux. Not viable for B2B pilot (target user likely on Windows/macOS). |
+| Formula | Inputs | Logic | Notes |
+|---------|--------|-------|-------|
+| `price_fulfillment` | listing price, budget_min, budget_max | Within range = 1.0; over budget = linear decay `max(0, 1 - overshoot/budget_max)` | Uses basic arithmetic only |
+| `distance_fulfillment` | listing distance to target, max_radius | `max(0, 1 - dist/radius)` | Linear decay. `math.exp()` available if exponential preferred later. |
+| `size_fulfillment` | listing sqm/rooms, user min/max | Within range = 1.0; outside = linear decay based on shortfall | Same pattern as price |
+| `binary_feature_fulfillment` | listing attributes, required feature | 1.0 if present, 0.0 if absent | Lookup in `listing.attributes[].name` |
+| `proximity_quality_fulfillment` | distance + rating from nearby_places cache | `distance_decay * (1 + rating_bonus)` clamped to [0, 1] | Combines two existing data sources |
 
-**Website implementation:**
-- New page at `app/(marketing)/extension/page.tsx` or `app/(dashboard)/download/page.tsx`
-- Static content: hero section, feature bullets, install instructions, CWS link button
-- No new npm packages -- use existing shadcn/ui components (Button, Card, etc.)
-- Include a "For Developers" accordion/section with sideloading instructions as fallback
-- Optionally host the `.zip` file in `public/` for direct download (sideloading fallback)
-
-**CWS Publishing workflow:**
-1. `cd extension && pnpm run zip` -- WXT produces uploadable `.zip` in `dist/`
-2. Upload to Chrome Web Store Developer Dashboard
-3. Set visibility to "Unlisted"
-4. Submit for review (1-3 business days)
-5. Receive direct install URL, embed on website download page
-
-**Confidence:** HIGH -- CWS unlisted publishing documented at developer.chrome.com. WXT `zip` command produces the correct format.
+Using `round(x, 1)` snaps results to 0.1 steps. Using `max(0.0, ...)` clamps to non-negative. All stdlib.
 
 ---
 
-## Summary: What to Install
+## What NOT to Add
 
-### Web App (Next.js)
+| Library/Tool | Why NOT |
+|--------------|---------|
+| **NumPy / SciPy** | The formulas are 5 lines of arithmetic each. `max(0, 1 - x/y)` does not need a 30MB dependency. |
+| **Alembic / SQL migration tools** | The DB schema (SQL columns) does not change. JSONB content evolves via Pydantic defaults. Alembic for a hackathon project with schemaless JSONB is over-engineering. |
+| **Redis / caching layer** | Score caching already works via Supabase `analyses` table with `schema_version` check. Adding Redis adds infrastructure with no benefit at current scale. |
+| **Celery / task queues** | Scoring is synchronous request-response. The user clicks FAB and waits. No background processing needed. |
+| **Instructor library** | Already using Anthropic's native `messages.parse()` with Pydantic. Instructor adds an abstraction layer over something that works. |
+| **JSON Schema migration libraries** | `schema_version` check + re-score is simpler than migrating old JSONB. |
+| **Pandas** | No tabular data processing needed. Weighted average is one list comprehension. |
+| **jsonschema / fastjsonschema** | Pydantic handles all validation. Adding a separate JSON schema validator is redundant. |
+| **New Anthropic SDK version** | v0.85.0 works. The `output_format` -> `output_config.format` migration is handled internally by the SDK's `.parse()` helper. No breaking change until Anthropic removes the convenience parameter. |
+
+---
+
+## Integration Notes
+
+### Anthropic SDK: `output_format` Status
+
+The existing code uses `client.messages.parse(output_format=ScoreResponse)`. Per official Anthropic docs (verified 2026-03-29):
+
+- `output_format` has moved to `output_config.format` at the raw API level
+- The SDK's `.parse()` **helper method still accepts `output_format` as a convenience parameter** and translates internally
+- The old beta header `structured-outputs-2025-11-13` is no longer needed -- structured outputs are GA
+- Haiku 4.5 is confirmed supported for structured outputs
+
+**Action:** Continue using `output_format` in `.parse()`. Optionally migrate to `output_config` syntax, but not required or urgent.
+
+### Structured Output Schema Change = Automatic API Cache Bust
+
+From Anthropic docs: "Changing the `output_config.format` parameter will invalidate any prompt cache for that conversation thread." Since the Pydantic model sent to Claude changes (from `ScoreResponse` to `ClaudeSubjectiveResponse`), Anthropic's server-side prompt cache is automatically invalidated. No manual cache-busting needed on the API side.
+
+### Application-Level Cache Invalidation
+
+The `schema_version` field in the `breakdown` JSONB handles cache invalidation for stored scores in the `analyses` table. The scoring router's cache lookup (lines 43-54 of `backend/app/routers/scoring.py`) should add a version check:
+
+```python
+if cached:
+    if cached.get("schema_version", 1) >= 2:
+        return ScoreResponse.model_validate(cached)
+    # else: cache miss, re-score with new pipeline
+```
+
+### Scoring Pipeline Architecture Change
+
+The current pipeline is a single Claude call that returns everything. The new pipeline splits into three phases:
+
+1. **Classify** -- separate criteria into deterministic vs subjective (using `criterion_type` from `DynamicField`)
+2. **Compute** -- run deterministic formulas for price/distance/size/binary/proximity criteria
+3. **Evaluate** -- send only subjective criteria to Claude via `messages.parse(output_format=ClaudeSubjectiveResponse)`
+4. **Aggregate** -- combine all `CriterionResult`s, compute weighted `overall_score`, determine `match_tier`
+
+This reduces Claude's workload significantly (fewer criteria to evaluate, no numeric score generation) and makes deterministic criteria instantly reproducible.
+
+### DynamicField Classification Timing
+
+Classification happens at **profile save time**, not scoring time:
+1. Web app preferences form submits to API
+2. API classifies each `DynamicField.name`/`DynamicField.value` to set `criterion_type`
+3. Classification stored in JSONB alongside the field
+4. Scoring pipeline reads `criterion_type` and routes accordingly
+
+This means the classifier logic lives in the preferences save endpoint (or a shared utility), not in the scoring service.
+
+### Built-in Criteria (Not from DynamicField)
+
+Some criteria are always present from the structured `UserPreferences` fields (budget, rooms, living_space) rather than from `dynamic_fields`. These are treated as implicit criteria:
+- `budget_max` / `budget_min` -> always generates a `price` criterion
+- `rooms_min` / `rooms_max` -> always generates a `size` criterion (rooms)
+- `living_space_min` / `living_space_max` -> always generates a `size` criterion (sqm)
+
+The `importance` for these comes from `UserPreferences.importance.price`, `.size`, etc. The `dealbreaker` booleans map to `CRITICAL` importance with `fulfillment=0 -> force match_tier="poor"`.
+
+---
+
+## Installation
 
 ```bash
-cd /Users/maximgusev/workspace/gen-ai-hackathon/web
+# Backend (Python) -- NO NEW PACKAGES
+# All formulas use stdlib math/arithmetic
+# Pydantic 2.12.5 already installed
+# Anthropic SDK 0.85.0 already installed
 
-# Chat-based preference discovery (3 packages, 1 feature)
-pnpm add ai @ai-sdk/react @ai-sdk/anthropic
+# Frontend (Next.js) -- NO NEW PACKAGES
+# TypeScript type changes only
+
+# Extension (WXT) -- NO NEW PACKAGES
+# TypeScript type changes only
 ```
-
-That is the ONLY install needed across the entire project.
-
-### Backend (FastAPI)
-
-```bash
-# No new packages
-# asyncio.gather and asyncio.Semaphore are Python stdlib
-```
-
-### Extension (WXT)
-
-```bash
-# No new packages
-# API client changes are code-only
-```
-
-### Supabase Edge Functions
-
-```bash
-# No new packages
-# New/modified edge function uses same @supabase/supabase-js
-```
-
----
-
-## New Environment Variables
-
-### Vercel (web app) -- NEW
-
-| Variable | Value | Purpose |
-|----------|-------|---------|
-| `ANTHROPIC_API_KEY` | Same API key used on EC2 backend | AI SDK Anthropic provider reads this automatically. Required for the chat route handler. |
-
-**Important note:** The web app currently has NO direct Anthropic API key -- it communicates with Claude only through the EC2 backend (via Supabase edge function proxy). The chat feature introduces a direct Claude connection from the Vercel-hosted Next.js route handler. This is architecturally correct because:
-- Chat generates preferences (saved to Supabase), not scores (saved via backend)
-- No listing data or images involved (unlike scoring)
-- Vercel route handlers support streaming natively
-
-### Existing (unchanged)
-
-| Service | Variables |
-|---------|-----------|
-| EC2 Backend | `ANTHROPIC_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` |
-| Supabase Edge | `BACKEND_URL`, auto-set `SUPABASE_URL`, auto-set `SUPABASE_ANON_KEY` |
-
----
-
-## Alternatives Considered
-
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Chat UI framework | AI SDK `useChat` | Raw `fetch` + `EventSource` | Manual SSE parsing, state management, error handling, abort controller -- reinventing what `useChat` provides. ~200 lines of custom code replaced by ~10 lines. |
-| Chat UI framework | AI SDK `useChat` | `@assistant-ui/react-ai-sdk` | Full-featured chat component library with pre-built UI. Over-abstracted for our use case -- we need a custom preference-specific chat UI, not a generic chatbot. |
-| Chat backend | Next.js Route Handler | FastAPI endpoint | No streaming infrastructure on EC2, adds unnecessary network hop, chat result goes to Supabase not EC2. |
-| Chat model | Claude Haiku 4.5 | Claude Sonnet 4.x | Preference extraction is conversational NLU, not complex reasoning. Haiku is ~10x cheaper and faster. Sonnet only if Haiku quality proves insufficient. |
-| Chat SDK | AI SDK | LangChain.js | Overkill for multi-turn chat. Massive dependency tree. AI SDK is purpose-built for this exact use case and far lighter. |
-| Parallel scoring | `asyncio.gather` + Semaphore | Celery / RQ job queue | Massive overkill. Scoring 20 listings is a 30-second burst, not a long-running job. No Redis, worker processes, or persistence needed. |
-| Parallel scoring | Single batch endpoint | N parallel edge function calls | 1 HTTP request better than 20. Backend controls concurrency. Simpler error handling. Fewer cold starts. |
-| Extension distribution | CWS Unlisted | Self-hosted CRX | Chrome blocks non-CWS installs on Windows/macOS. Not viable for B2B pilot. |
-| Extension distribution | CWS Unlisted | CWS Public | Extension is niche (Flatfox.ch only, requires HomeMatch account). Public listing invites irrelevant installs and support burden. |
-| Theming | CSS variable update in globals.css | New design system / design tokens | Over-engineering. shadcn/ui already uses CSS variables. Changing ~15 values accomplishes the entire rebrand. |
-
----
-
-## Version Compatibility Matrix
-
-| Package | Version | Requires | Compatible With |
-|---------|---------|----------|-----------------|
-| `ai` | ^6.x | Node 18+ | Next.js 16.1.6 (current), React 19.2.3 (current) |
-| `@ai-sdk/react` | ^3.x | `ai` ^6.x, React 18+ | React 19.2.3 (current), Next.js 16 App Router |
-| `@ai-sdk/anthropic` | ^3.x | `ai` ^6.x | Claude Haiku 4.5 (`claude-haiku-4-5-20251001`), all current Claude models |
-| `zod` | ^4.x | -- | Already at ^4.3.6 -- `generateObject` schema parameter compatible |
-
-**No conflicts with existing dependencies.** The AI SDK packages are purely additive. They do not overlap with or replace any existing package. The `@ai-sdk/anthropic` provider uses `@anthropic-ai/sdk` internally but does not expose it as a peer dependency.
-
----
-
-## Integration Points
-
-### Chat Output -> Existing Preferences Schema
-
-The chat produces AI-generated criteria that extend the existing preference model. Schema evolution approach:
-
-**Current `softCriteria` field:**
-```typescript
-softCriteria: z.array(z.string()).default([])
-// e.g., ["quiet neighborhood", "near park"]
-```
-
-**New `generatedCriteria` field (replaces softCriteria for chat-created profiles):**
-```typescript
-generatedCriteria: z.array(z.object({
-  label: z.string(),                    // e.g., "Quiet neighborhood"
-  importance: importanceLevelSchema,    // critical/high/medium/low
-  description: z.string(),             // e.g., "Away from main roads"
-})).default([])
-```
-
-Both fields coexist during migration. Old profiles keep `softCriteria`. New chat-created profiles use `generatedCriteria`. The backend `UserPreferences` model gains the same field with a `model_validator` for backward compatibility (same pattern as the existing `migrate_legacy_format` validator).
-
-### Batch Scoring -> Existing Score Pipeline
-
-The batch endpoint reuses `claude_scorer.score_listing()` unchanged. No modifications to scoring logic, prompts, or `ScoreResponse` model. The batch wrapper only adds:
-- `asyncio.gather` for concurrent execution
-- `asyncio.Semaphore` for rate limiting
-- Per-listing error isolation (one failure does not abort the batch)
-
-### Extension Batch -> Existing Content Script
-
-The content script's `handleScore()` in `App.tsx` currently calls `scoreListings()`. The change:
-1. Replace with `scoreListingsBatch()` (single batch request)
-2. On response, iterate results and call `renderBadge()` for each
-3. Loading skeleton injection happens before the batch call (unchanged)
-4. Error handling: batch failure cleans all skeletons; individual listing failures show error badges
-
-### Extension Distribution -> Existing Build Pipeline
-
-`wxt zip` already produces the correct `.zip` for CWS upload. The website download page is a new static page that links to the CWS install URL. No build pipeline changes.
-
----
-
-## What NOT to Use
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| `@anthropic-ai/sdk` in web app | AI SDK's `@ai-sdk/anthropic` wraps it. Installing both creates version conflicts and bundle bloat. | `@ai-sdk/anthropic` (includes SDK internally) |
-| `assistant-ui` / chatbot component kits | Generic chat UIs do not match our preference-discovery flow (greeting -> questions -> extraction -> review). | Custom chat component built with `useChat` hook |
-| Celery / RQ / background job queues | Scoring 20 listings takes 20-30s with concurrency. Not a background job. Adds Redis, workers, monitoring. | `asyncio.gather` + `asyncio.Semaphore` in FastAPI |
-| WebSocket for scoring results | Adds connection lifecycle management, reconnection logic, WS server support. HTTP is sufficient. | Single batch HTTP request (SSE as future optimization) |
-| `framer-motion` for chat animations | Heavy dependency (~50 KB) for simple fade/slide animations. | CSS transitions via `tw-animate-css` (already installed) |
-| Self-hosted CRX files | Chrome blocks non-CWS CRX on Windows/macOS. | Chrome Web Store Unlisted |
-| Multiple AI providers / model abstraction | We use Claude exclusively. Provider abstraction adds complexity for zero benefit. | Direct `anthropic()` provider calls |
 
 ---
 
 ## Sources
 
-- [AI SDK Documentation -- Introduction](https://ai-sdk.dev/docs/introduction) -- SDK overview, packages, capabilities
-- [AI SDK -- Chatbot Guide](https://ai-sdk.dev/docs/ai-sdk-ui/chatbot) -- full `useChat` example with route handler, `DefaultChatTransport`, `sendMessage`, message parts
-- [AI SDK -- useChat Reference](https://ai-sdk.dev/docs/reference/ai-sdk-ui/use-chat) -- hook API: `messages`, `sendMessage`, `status`, `onToolCall`, `regenerate`, `stop`
-- [AI SDK -- Anthropic Provider](https://ai-sdk.dev/providers/ai-sdk-providers/anthropic) -- setup, model IDs, `generateObject` support
-- [AI SDK 6 Release Blog](https://vercel.com/blog/ai-sdk-6) -- breaking changes, `ModelMessage` replaces `CoreMessage`
-- [AI SDK Migration Guide 6.0](https://ai-sdk.dev/docs/migration-guides/migration-guide-6-0) -- `convertToModelMessages` is async, codemod available
-- [@ai-sdk/react on npm](https://www.npmjs.com/package/@ai-sdk/react) -- version 3.0.118, published 2026-03-05
-- [@ai-sdk/anthropic on npm](https://www.npmjs.com/package/@ai-sdk/anthropic) -- version 3.0.58, published 2026-03-06
-- [Anthropic Rate Limits](https://platform.claude.com/docs/en/api/rate-limits) -- RPM/ITPM/OTPM by tier for Haiku 4.5
-- [DEPT Agency -- Flatfox Redesign](https://www.deptagency.com/de-dach/case/upgrades-fuer-die-groesste-schweizer-immobilienplattform/) -- brand: "light and agile," "fresh, bold colors"
-- [Chrome Extension Distribution](https://developer.chrome.com/docs/extensions/how-to/distribute) -- distribution options
-- [Chrome Web Store Distribution Settings](https://developer.chrome.com/docs/webstore/cws-dashboard-distribution) -- unlisted/private/public visibility
-- [FastAPI Concurrency Docs](https://fastapi.tiangolo.com/async/) -- async/await patterns
-- [Python asyncio Semaphore](https://docs.python.org/3/library/asyncio-sync.html) -- stdlib concurrency control
+- [Anthropic Structured Outputs Docs (GA)](https://platform.claude.com/docs/en/build-with-claude/structured-outputs) -- confirmed Haiku 4.5 support, `output_format` -> `output_config.format` migration path, schema change cache invalidation behavior (HIGH confidence)
+- [Pydantic v2 Fields Documentation](https://docs.pydantic.dev/latest/concepts/fields/) -- `ge`/`le` constraints on floats, `Field` descriptor patterns (HIGH confidence)
+- [Pydantic v2 Unions Documentation](https://docs.pydantic.dev/latest/concepts/unions/) -- discriminated union patterns with `Literal` (HIGH confidence)
+- Existing codebase verified: `backend/app/models/scoring.py` (current ScoreResponse), `backend/app/models/preferences.py` (DynamicField + model_validator pattern), `backend/app/services/claude.py` (messages.parse usage), `backend/app/routers/scoring.py` (cache logic), `backend/app/services/supabase.py` (save_analysis structure) -- all HIGH confidence
+- Installed versions verified via `pip show`: Pydantic 2.12.5, Anthropic SDK 0.85.0 (HIGH confidence)
+- `backend/requirements.txt`: fastapi, uvicorn, httpx, anthropic, supabase, python-dotenv, pytest, pytest-asyncio (HIGH confidence)
 
 ---
 
-*Stack research for: HomeMatch v2.0 -- Smart Preferences & UX Polish*
-*Researched: 2026-03-15*
+*Stack research for: HomeMatch v5.0 -- Hybrid Scoring Engine*
+*Researched: 2026-03-29*

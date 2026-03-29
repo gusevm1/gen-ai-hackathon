@@ -1,347 +1,436 @@
-# Domain Pitfalls
+# Domain Pitfalls: v5.0 Hybrid Scoring Engine
 
-**Domain:** Chat-based AI preferences, dynamic schema fields, parallel scoring, UI redesign, Chrome extension distribution
-**Researched:** 2026-03-15
-**Milestone:** v2.0 Smart Preferences & UX Polish
-**Confidence:** HIGH (codebase verified directly; API rate limits verified against official Anthropic docs; Chrome extension distribution verified against Chrome for Developers docs; Supabase edge function limits verified against official docs)
+**Domain:** Replacing LLM-generated scores with deterministic formulas + AI subjective evaluation in a cached, multi-consumer system
+**Researched:** 2026-03-29
+**Milestone:** v5.0 Hybrid Scoring Engine
+**Confidence:** HIGH (all pitfalls verified against codebase evidence -- scoring.py, preferences.py, listing.py, scoring router, edge function, extension types, frontend analysis page, analyses list page)
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, data corruption, or blocked demos.
-
-### Pitfall 1: Chat-Generated Preferences Overwrite User's Manually-Tuned Standard Fields
-
-**What goes wrong:**
-The chat-based preference discovery flow produces a complete preferences object from the conversation. When saved, it overwrites the entire `preferences` JSONB column in the `profiles` table -- including standard fields the user had already manually configured (budget, location, rooms). User flow: they set budget to CHF 1500-2000 manually, then open the chat to add soft criteria like "quiet street" and "south-facing balcony". The chat produces a full preferences object that either guesses at budget (incorrectly) or sets it to null/default. The manual budget disappears. The user re-scores and gets wrong results. They blame the product.
-
-**Why it happens:**
-The existing `preferencesSchema` is a single flat Zod object. There is no separation between "standard fields" (budget, location, rooms -- always form-controlled) and "dynamic fields" (chat-generated criteria). If the LLM returns a full preferences object and the save function does `UPDATE profiles SET preferences = $1`, the standard fields are overwritten.
-
-**Consequences:**
-- Users lose manually-configured dealbreaker settings silently
-- Scoring produces unexpected results because budget/rooms/location reset to defaults
-- Trust in the AI feature destroyed after first use
-
-**Prevention:**
-- Split the save path: chat output ONLY updates `softCriteria` (or the new dynamic fields) and `importance`, NEVER touches `budgetMin`, `budgetMax`, `roomsMin`, `roomsMax`, `location`, `offerType`, `objectCategory`, `floorPreference`, `availability`, or dealbreaker toggles
-- Implement merge-save, not replace-save: `UPDATE profiles SET preferences = preferences || $chat_fields` using JSONB merge, not full replacement
-- In the UI, show the chat output as an editable preview BEFORE saving -- let the user see exactly which fields will change
-- Backend validation: reject any chat-generated preferences object that contains standard filter fields (or strip them before merge)
-
-**Detection:**
-- After chat save, standard fields (budget, rooms) differ from what user manually set
-- `preferences` JSONB has null values for fields that were previously populated
-- Scoring reasoning mentions "No budget preference" when user clearly set one
-
-**Phase to address:** Chat preference discovery phase -- design the merge strategy BEFORE building the chat UI.
+Mistakes that cause data corruption, user-visible breakage across the 3 consumers (extension badge, extension summary panel, web analysis page), or scoring errors that produce wrong results silently.
 
 ---
 
-### Pitfall 2: Parallel Scoring Hits Claude API Rate Limits and Kills the Entire Batch
+### Pitfall 1: Cached Analyses Have Old ScoreResponse Schema -- Frontend Crashes on Missing Fields
 
 **What goes wrong:**
-The current `scoreListings()` in `extension/src/lib/api.ts` runs requests sequentially. v2.0 changes this to parallel: the FAB click triggers scoring for all visible listings (10-20 on a Flatfox search page) simultaneously. Each scoring request goes: extension -> edge function (auth + profile resolution) -> backend -> Flatfox API (listing fetch) -> Flatfox HTML (image URLs) -> Claude API (scoring with images). With 15 parallel requests, the backend fires 15 concurrent Claude API calls. On Tier 1 (50 RPM) or even Tier 2 (1000 RPM), the input token rate limit is the real bottleneck: each scoring call sends ~4000-8000 input tokens (prompt + 5 images at ~1334 tokens each). 15 concurrent calls = ~60,000-120,000 input tokens hitting the API simultaneously. Claude returns 429 Too Many Requests for the later calls. The backend returns 502 to the edge function. The extension shows errors for some badges while others succeed -- a partial, confusing result.
+The `analyses` table stores the full `ScoreResponse` as JSONB in the `breakdown` column. Existing cached rows have the v1.1 schema: `{ overall_score, match_tier, summary_bullets, categories: [{name, score, weight, reasoning}], checklist, language }`. The v5.0 schema removes `categories` (replaced by per-criterion fulfillment) and changes `overall_score` from Claude-generated to formula-computed. After deploying v5.0, cached rows still have the old schema. Three consumers read `breakdown` directly:
+
+1. **Web analysis page** (`/analysis/[listingId]/page.tsx` line 74-90): casts `breakdown` to a typed object expecting `categories` array with `score` and `weight` fields. `CategoryBreakdown` component renders `cat.score` as text and `cat.weight` as an importance label. With v5.0 schema, `categories` is gone -- the component receives `undefined`, the `categories.map()` call is guarded by `if (!categories || categories.length === 0) return null` so it silently shows nothing. The user sees a blank analysis page with no category breakdown.
+
+2. **Web analyses list** (`/analyses/page.tsx` line 102-108): reads `breakdown.match_tier` with fallback `getTierFromScore(analysis.score)`. This survives because it falls back to the `score` column. But the `score` column itself (line 82 of `supabase.py`) is written as `score_data["overall_score"]` -- if v5.0 renames or recomputes this field, the `score` column in the DB still has the old Claude-generated value. Old and new scores coexist in the same list, using different scales.
+
+3. **Chrome extension** (`ScoreBadge.tsx` line 67): renders `score.overall_score` directly in the badge circle. The extension casts the API response as `ScoreResponse` (`api.ts` line 51). If the new schema changes the field name or removes it, the badge shows `undefined` or `NaN`.
 
 **Why it happens:**
-The transition from sequential to parallel was designed to improve speed but no concurrency limit or rate-limiting mechanism was added. The `ClaudeScorer` singleton has no semaphore. The Flatfox API fetch and image URL extraction are also unbounded -- 15 concurrent HTML page fetches to Flatfox may trigger their rate limiting too.
+No cache versioning mechanism exists. The edge function returns cached `breakdown` JSONB verbatim (line 105 of `score-proxy/index.ts`). There is no schema version field in the analyses table. Old and new records are indistinguishable.
 
 **Consequences:**
-- Partial scoring results (some badges succeed, some error) -- confusing UX
-- 429 errors from Claude API may trigger temporary rate limit escalation
-- Flatfox may also rate-limit the backend, failing image URL extraction
-- Claude API costs spike if retries are naively added without backoff
+- Analysis pages show blank category section for all previously-scored listings
+- Extension badges show stale scores from old algorithm mixed with new deterministic scores
+- Users see inconsistent scoring: same listing scored twice shows different algorithms' results
+- No way to distinguish which algorithm produced a cached result
 
 **Prevention:**
-- Add an `asyncio.Semaphore(3)` in the backend scoring router to limit concurrent Claude API calls to 3 at a time (safe for Tier 1 at 50 RPM; provides 3-5x speedup over sequential without hitting limits)
-- In `extension/src/lib/api.ts`, implement a concurrency pool: use `Promise.allSettled()` with a concurrency limit of 3-5, not raw `Promise.all()` with all requests
-- Add retry logic with exponential backoff (1s, 2s, 4s) for 429 responses in the backend, limited to 2 retries
-- Surface per-listing progress in the extension UI: "Scoring 3/15..." with individual badge loading states
-- Add a `X-RateLimit-Remaining` header passthrough from Claude API responses so the backend can self-throttle
+1. Add a `schema_version: int` column to the `analyses` table (default 1 for existing rows, 2 for v5.0)
+2. In the edge function cache check, filter by schema version: `.eq("schema_version", CURRENT_SCHEMA_VERSION)` -- old rows become cache misses, triggering fresh scoring
+3. Make ALL frontend consumers backward-compatible: check for both old and new fields with fallbacks
+4. Do NOT delete old cached analyses -- they are still valid as historical records. Add a migration flag but do not bulk-delete
+5. The `score` column in `analyses` table must always contain the numeric score regardless of schema version, since the analyses list page uses it directly
 
 **Detection:**
-- Some badges show scores while others show error states after a single FAB click
-- Backend logs show `429 Too Many Requests` from Anthropic API
-- Flatfox image URL extraction returns empty arrays despite listings having images (Flatfox rate limiting)
+- `CategoryBreakdown` renders nothing (empty div) on previously-scored listings
+- Extension badge shows a number but analysis page shows different/missing data
+- Backend logs show `ScoreResponse.model_validate(cached)` failing with ValidationError for old rows
 
-**Phase to address:** Parallel scoring phase -- the concurrency limiter MUST be in the backend before the extension sends parallel requests.
+**Phase to address:** FIRST phase -- schema migration and cache versioning must ship before any ScoreResponse changes.
 
 ---
 
-### Pitfall 3: Dynamic AI-Generated Fields Break the Scoring Prompt and Category System
+### Pitfall 2: Division by Zero in Deterministic Formulas
 
 **What goes wrong:**
-v2.0 replaces `softCriteria: string[]` and `features: string[]` with dynamic AI-generated fields that have priorities. The chat produces custom fields like `{ field: "south-facing balcony", importance: "critical" }` or `{ field: "within 5min walk to S-Bahn", importance: "high" }`. The backend prompt in `scoring.py` currently hardcodes 5 categories: location, price, size, features, condition. The `ScoreResponse` model expects exactly these 5 `CategoryScore` entries. Dynamic fields do not map cleanly to these 5 categories -- "south-facing balcony" spans both features and condition; "near S-Bahn" is location. If dynamic fields are shoehorned into the existing `softCriteria` or `features` arrays (just as strings), Claude's prompt treats them as secondary checklist items, not as first-class scoring criteria with importance levels. The user marks "south-facing balcony" as CRITICAL but Claude only mentions it in the checklist with a boolean met/not-met, never weighting it into the overall score.
+Three specific division-by-zero scenarios in the proposed deterministic formulas:
+
+1. **Size formula when target=0:** If `living_space_min` and `living_space_max` are both None (user didn't set a preference), and the formula computes `f = actual / target`, target resolves to 0 or None. `living_space_min` defaults to `None` in `UserPreferences` (line 119 of preferences.py). A naive formula like `f = listing.surface_living / prefs.living_space_max` crashes with ZeroDivisionError when `living_space_max` is None.
+
+2. **Price formula when budget_max=0 or None:** Same pattern. `budget_max` defaults to `None` (line 115). The formula `f = 1 - (price - budget_max) / budget_max` divides by zero if budget_max is 0 or crashes if None.
+
+3. **Weighted aggregation when no criteria have scores:** If ALL criteria are skipped (missing data for all deterministic criteria, no subjective criteria), the aggregation formula `overall_score = sum(f_i * w_i) / sum(w_i)` divides by zero because `sum(w_i) = 0`.
 
 **Why it happens:**
-The v1.1 prompt design hardcodes 5 scoring categories with fixed importance levels (`Importance` model in `preferences.py`). The `ChecklistItem` model in `scoring.py` only has `criterion`, `met`, and `note` -- no score or weight. Dynamic fields with importance levels have nowhere to go in the current response schema. The frontend can generate arbitrarily complex preference structures, but the backend prompt and response model are rigid.
+The `UserPreferences` model allows all numeric fields to be None. This is by design -- users can leave fields blank. The deterministic formulas must handle None inputs gracefully, but it is easy to forget that EVERY numeric preference field can be None.
 
 **Consequences:**
-- User-specified CRITICAL dynamic criteria are treated as low-priority checklist items
-- Overall score does not reflect the user's actual priorities
-- Chat-based preference discovery feels broken: "I told it balcony is critical but it doesn't affect my score"
-- Prompt quality degrades as more dynamic fields are crammed into soft criteria strings
+- Unhandled exception returns 500 to the edge function, which returns 502 to the extension
+- User sees scoring error for listings that previously scored fine with Claude (which handled None values via natural language)
+- Regression compared to v1.1 where Claude never crashed on missing data
 
 **Prevention:**
-- Extend the `UserPreferences` model to include a `dynamic_fields: list[DynamicField]` where `DynamicField` has `name: str`, `description: str`, `importance: ImportanceLevel`
-- Update `build_user_prompt()` in `scoring.py` to render dynamic fields as a separate section with their importance levels, explicitly instructing Claude to factor them into the overall score
-- Extend `ChecklistItem` model to include an optional `importance: ImportanceLevel` and `score: int` so Claude can weight dynamic criteria
-- Alternatively, keep the 5-category system but add a 6th dynamic "Custom Criteria" category whose score is the weighted average of all dynamic field evaluations
-- Test with a preferences object containing 5+ dynamic fields at different importance levels and verify the overall score changes meaningfully when a CRITICAL dynamic field is unmet
+1. Guard every formula with None checks: if the preference field needed for the formula is None, SKIP that criterion (return `None` for fulfillment, exclude from aggregation)
+2. Guard the aggregation denominator: `if sum(w_i) == 0: return default_score` (or return None with "insufficient data" tier)
+3. Write unit tests for EVERY formula with None inputs: `test_price_formula_budget_max_none`, `test_size_formula_no_preference`, `test_aggregation_all_skipped`
+4. Use the `living_space_min` / `living_space_max` / `budget_min` / `budget_max` pattern consistently: if both min and max are None, skip the criterion entirely
 
 **Detection:**
-- Dynamic fields with CRITICAL importance do not visibly affect the overall score
-- Changing a dynamic field's importance from LOW to CRITICAL produces the same score
-- Claude's response checklist has no scores or weights for dynamic items
+- 500 errors in backend logs with `ZeroDivisionError` or `TypeError: unsupported operand type(s) for /: 'int' and 'NoneType'`
+- Listings that scored successfully in v1.1 now fail in v5.0 for users with sparse preferences
 
-**Phase to address:** Chat preference discovery phase -- schema extension MUST be designed before the chat UI generates dynamic fields.
+**Phase to address:** Deterministic formula implementation phase -- every formula function must have None-input tests before integration.
 
 ---
 
-### Pitfall 4: Chat Conversation Loses Context in Multi-Turn Preference Discovery
+### Pitfall 3: CRITICAL f=0 Override Logic Applied at Wrong Layer
 
 **What goes wrong:**
-The chat-based preference discovery requires multi-turn conversation: "What kind of apartment are you looking for?" -> user responds -> "What's your budget?" -> user responds -> generate structured output. If the implementation sends each message as a separate stateless Claude API call (no conversation history), Claude cannot build on previous answers. If the implementation accumulates the full conversation in the frontend and sends it all each time, token costs compound: turn 5 sends all 4 previous turns plus the new message. With image analysis disabled in the chat flow but the same Haiku model, the input token cost of a 10-turn preference discovery conversation is ~5000-10000 tokens per final call. This is manageable, but the real pitfall is losing context between page reloads or navigation.
+The v5.0 spec says: "If any criterion with importance=CRITICAL has fulfillment f=0, force match_tier='poor' regardless of overall_score." This override must happen AFTER all criteria are scored but BEFORE the response is returned. There are three places this could be implemented, and choosing the wrong one causes bugs:
+
+1. **Inside individual formula functions** (wrong): Each formula returns `f=0` but does not know about other criteria. It cannot set `match_tier` because it operates on a single criterion.
+
+2. **Inside the aggregation function** (partially right): The aggregation sees all fulfillment values and weights. It can check for CRITICAL f=0. But if the aggregation function both computes the overall_score AND overrides match_tier, the tier override might be reversed by a later `tier = get_tier(overall_score)` call in the router.
+
+3. **In the scoring router after aggregation** (right place, but fragile): The router calls the aggregation function, gets the overall_score, computes match_tier from score ranges, THEN checks for CRITICAL f=0 override. But the match_tier computation is currently done by Claude in the response -- in v5.0 it moves to Python. If the tier computation and the override are in separate functions called sequentially, a future developer might reorder them.
 
 **Why it happens:**
-The web app is server-rendered Next.js. If the chat component stores conversation state in React useState, navigating away (e.g., clicking the navbar) destroys the conversation. The user returns to find a fresh chat with no memory of their previous answers. Alternatively, if the chat is implemented as a modal/drawer, closing it loses state too.
+The dealbreaker logic in v1.1 is enforced by Claude's system prompt (line 70-76 of `scoring.py` prompt): "When the user marks a constraint as a DEALBREAKER... Set the overall match_tier to 'poor'." Claude handles this atomically. Moving it to Python code means the atomic "score + tier + override" must be implemented as an explicit multi-step procedure.
 
 **Consequences:**
-- Users abandon multi-turn chat after losing progress to an accidental navigation
-- Incomplete preference extraction produces poor-quality dynamic fields
-- Users fall back to manual form entry, defeating the purpose of the feature
+- A listing that violates a CRITICAL criterion (e.g., price is 2x budget with budget marked CRITICAL) gets `match_tier="good"` because the score is still high from other criteria
+- Extension badge shows green/blue for a listing that should be red
+- User trusts the badge, visits the listing, discovers it violates their top priority
+- Trust in the scoring system destroyed
 
 **Prevention:**
-- Store conversation state in localStorage or sessionStorage, keyed by profile ID: `chat:${profileId}:messages`
-- On chat component mount, restore previous conversation if it exists and was less than 30 minutes old
-- Add a "Start over" button to explicitly clear conversation state
-- Consider a single-shot approach instead of multi-turn: one large prompt that asks Claude to extract all preferences from a single free-text paragraph the user writes -- simpler, no state management, lower token cost
-- If multi-turn is chosen, limit to 5 turns max with a "Generate preferences" button available after turn 2
+1. Implement the full scoring pipeline as a SINGLE function that returns `(overall_score, match_tier, criteria_results)` -- never separate score computation from tier assignment
+2. The function's last step before returning: `if any(c.importance == CRITICAL and c.fulfillment == 0 for c in criteria_results): match_tier = "poor"`
+3. Write a test: `test_critical_f0_overrides_match_tier` -- set price CRITICAL, listing price 3x budget, verify match_tier=="poor" even if other criteria score 100
+4. Write a second test: `test_critical_f_nonzero_no_override` -- set price CRITICAL, listing price within budget, verify match_tier is NOT forced to "poor"
+5. Add a comment in the code: `# INVARIANT: This override MUST be the last step before returning. Do not move.`
 
 **Detection:**
-- User navigates to profiles page then back to chat; conversation is empty
-- Chat component's useEffect runs on every mount with empty messages array
-- sessionStorage has no entry for the current profile's chat state
+- Listings violating CRITICAL criteria show non-poor badges
+- Analysis page shows "poor" in text but badge shows green (if override is only applied on one consumer path)
 
-**Phase to address:** Chat preference discovery phase -- decide single-shot vs multi-turn architecture BEFORE building the chat UI.
+**Phase to address:** Aggregation formula phase -- implement score+tier+override as an atomic unit with dedicated tests.
 
 ---
 
-### Pitfall 5: Edge Function Becomes the Bottleneck for Parallel Scoring
+### Pitfall 4: Binary Feature Matching Fails on German Flatfox Attribute Names
 
 **What goes wrong:**
-The current `score-proxy` edge function handles one request at a time: auth check, profile resolution, proxy to backend. With parallel scoring, 15 requests arrive simultaneously. Each edge function invocation is a separate Deno isolate. Each one independently calls `supabase.auth.getUser(token)` (network round-trip to Supabase Auth) and `supabase.from('profiles').select().eq('is_default', true).single()` (network round-trip to Supabase Postgres). That is 30 Supabase round-trips for 15 listings -- all happening in parallel but each paying its own latency. The edge function's 150-second timeout per request is generous, but the real issue is that all 15 requests resolve the same profile with the same preferences, doing identical work 15 times.
+The user preference `features: list[str]` contains UI-selected features like `["Balcony", "Elevator", "Dishwasher"]`. The Flatfox API returns attributes as `FlatfoxAttribute` objects with German `.name` fields: `"Balkon"`, `"Lift"`, `"Geschirrspueler"`, `"Minergie"`, `"Rollstuhlgaengig"`. The deterministic binary feature formula needs to check: "does the listing have the feature the user wants?" A naive `feature.lower() in [a.name.lower() for a in listing.attributes]` fails because `"balcony" != "balkon"`.
+
+The current system avoids this entirely -- Claude reads both the English feature name and the German attribute list and matches them semantically in the prompt. Moving to deterministic matching requires an explicit mapping layer.
 
 **Why it happens:**
-The edge function was designed for single-listing scoring. It resolves the active profile on every request because the extension only sends `listing_id` -- the edge function looks up `profile_id` and `preferences` server-side. This is correct for security (server-authoritative profile resolution) but wasteful when 15 requests arrive within milliseconds of each other for the same user and profile.
+Flatfox is a Swiss platform. Its API returns attributes in German (and sometimes French/Italian depending on the listing region). The web app's feature selection UI uses English labels (or the user's chosen language). There is no normalization layer between the two vocabularies.
+
+Real Flatfox attribute names observed in the codebase and API:
+- `Balkon` (Balcony), `Lift` (Elevator), `Geschirrspueler` (Dishwasher)
+- `Waschmaschine` (Washing machine), `Tumbler` (Dryer), `Parkplatz` (Parking)
+- `Minergie` (Swiss energy standard -- no direct English equivalent)
+- `Rollstuhlgaengig` (Wheelchair accessible)
+- Some attributes have no standard translation: `Cheminee` (Fireplace, but French loan)
 
 **Consequences:**
-- 15x redundant Supabase Auth and DB queries per batch scoring
-- Supabase free tier has limited edge function invocations (500K/month) -- parallel scoring burns through this faster
-- Total wall-clock time for batch scoring includes 15 serial edge function cold starts
-- Supabase Postgres connection pool may be exhausted on free tier (limited concurrent connections)
+- All binary feature checks return "not met" even when the listing has the feature
+- Fulfillment for binary features is systematically 0, dragging down overall scores
+- Users see all their desired features marked as unmet, think the scoring is broken
+- Regression: v1.1 Claude correctly matched "Balcony" to "Balkon" via semantic understanding
 
 **Prevention:**
-- **Option A (recommended): Batch endpoint.** Create a new edge function `score-proxy-batch` that accepts `{ listing_ids: number[] }` in a single request. Auth and profile resolution happen once. The edge function then calls the backend with all listing IDs in one request. The backend handles parallelization internally.
-- **Option B: Backend batch endpoint.** Keep the existing edge function but add a `POST /score/batch` endpoint to the backend that accepts multiple listing IDs, resolves Flatfox data and Claude scoring in parallel with semaphore, and returns all results in one response.
-- **Option C: Client-side caching.** The extension caches the JWT and profile preferences locally (already available from popup `getSession` and `getProfiles`), sends them with each request to avoid redundant edge function lookups. This trades security (client-trusted preferences) for efficiency -- NOT recommended for production but acceptable for hackathon.
+1. Build a static normalization map: `FEATURE_ALIAS_MAP = {"balcony": ["balkon", "balcon"], "elevator": ["lift", "aufzug"], "dishwasher": ["geschirrspueler", "geschirrspüler", "lave-vaisselle"], ...}`
+2. Normalize both sides to lowercase before matching
+3. For features NOT in the map, fall back to Claude with a focused prompt: "Does attribute X match feature Y? Answer true/false." -- this is cheap (10 tokens) and handles edge cases
+4. Populate the map by fetching 50+ real Flatfox listings and collecting all unique attribute names. The Flatfox API vocabulary is finite (probably 30-50 unique attribute names)
+5. Handle umlaut normalization: `ue -> u-umlaut`, `ae -> a-umlaut`, `oe -> o-umlaut` (Flatfox sometimes uses ASCII transliteration, sometimes Unicode)
 
 **Detection:**
-- Supabase dashboard shows spike in edge function invocations (15x expected)
-- Edge function logs show 15 identical `getUser()` + `profiles.select()` queries within 1 second
-- Supabase Postgres "Active connections" metric spikes during batch scoring
+- All binary feature scores return 0 despite listings having relevant attributes
+- Comparison test: score a listing with Claude (v1.1) and deterministic (v5.0), binary features diverge significantly
+- The normalization map has fewer entries than the set of unique Flatfox attribute names across test listings
 
-**Phase to address:** Parallel scoring phase -- design the batch API before implementing parallel requests in the extension.
+**Phase to address:** Binary feature matching phase -- build and validate the normalization map BEFORE integrating into the scoring pipeline. Use real Flatfox data, not guesses.
 
 ---
 
-### Pitfall 6: Flatfox Color Scheme Rebranding Breaks Extension Badge Visibility
+### Pitfall 5: ScoreResponse Schema Change Breaks Extension Without Version Gate
 
 **What goes wrong:**
-The UI redesign adopts Flatfox-esque colors for the web app. The temptation is to also update extension badge colors to match. The extension's `ScoreBadge` and `SummaryPanel` are injected into the Flatfox page via Shadow DOM. If badge background colors are changed to match Flatfox's own blue/teal palette, badges become invisible or camouflaged against Flatfox's listing cards. The badges' purpose is to stand out from the host page, not blend in. Similarly, if the web app's primary color changes from `hsl(342 89% 40%)` (current magenta/rose) to Flatfox's blue, all shadcn components change color simultaneously -- buttons, links, focus rings, chart colors.
+The Chrome extension has its own copy of the `ScoreResponse` interface (`extension/src/types/scoring.ts`). It is manually kept in sync with the backend Pydantic model. The v5.0 changes to `ScoreResponse` include:
+- Removing `categories: CategoryScore[]` (5 fixed categories with score/weight/reasoning)
+- Adding per-criterion fulfillment fields (new shape)
+- Potentially changing `overall_score` from int (0-100) to a float (0.0-1.0) or keeping int but with different semantics
+
+The extension is deployed via manual sideloading. Users must rebuild and reload the extension manually. There is NO auto-update mechanism. If the backend deploys v5.0 first:
+
+1. Old extension calls score-proxy, gets a v5.0 response
+2. Extension casts response as old `ScoreResponse` type
+3. `score.overall_score` might be present (backward compat) but `score.categories` is undefined
+4. `SummaryPanel` renders `summary_bullets` -- this survives if the field name is unchanged
+5. `ScoreBadge` renders `score.overall_score` in the badge -- survives if field name unchanged
+6. User clicks "See full analysis" link to web app -- the web analysis page is already updated (Vercel auto-deploys), so the analysis page works
+7. BUT: if any field name changes (e.g., `overall_score` -> `score`), the badge shows `undefined`
+
+The REAL problem: the extension user has a stale extension that cannot parse v5.0 responses. They see broken badges until they manually rebuild. There is no mechanism to notify them.
 
 **Why it happens:**
-"Flatfox-esque" is ambiguous. The web app should look polished and thematically related to Flatfox for B2B credibility. But the extension badges need visual distinction from the host page. These are conflicting design goals that are easy to blur.
+The extension is sideloaded (not on Chrome Web Store). There is no auto-update path. The backend and web app deploy automatically (EC2 + Vercel), but the extension is frozen at the user's last build.
 
 **Consequences:**
-- Extension badges invisible on Flatfox pages if colors match the host site
-- Web app buttons and interactive elements lose visual distinction from non-interactive text
-- Dark mode colors need independent tuning (Flatfox doesn't have dark mode; the web app does)
+- Extension badges break for all existing users until they manually rebuild
+- No notification mechanism tells users to update
+- If the user does not rebuild, the extension is permanently broken against the new API
+- Demo to Bellevia pilot fails if they have the old extension
 
 **Prevention:**
-- Define TWO color palettes: one for the web app (Flatfox-inspired but distinct) and one for extension badges (current emerald/blue/amber/gray tier colors that contrast with Flatfox's white/blue cards)
-- The web app theme change is purely CSS variable updates in `globals.css` -- change `:root` and `.dark` HSL values. Do NOT touch `TIER_COLORS` in `extension/src/types/scoring.ts`
-- Before deploying the new color scheme, screenshot the extension badges ON a Flatfox search page to verify contrast meets WCAG AA (4.5:1 ratio for text)
-- Test both light and dark mode for the web app; test the extension ONLY on Flatfox (no dark mode to worry about)
+1. **Keep `overall_score` and `match_tier` field names unchanged** -- these are consumed by the badge and are the minimum viable response shape
+2. **Keep `summary_bullets` field name unchanged** -- consumed by the summary panel
+3. Add new fields (per-criterion fulfillment data) alongside old fields, do not remove old fields in the first deployment
+4. Add an API version header: `X-HomeMatch-API-Version: 2` in the score-proxy response. The extension can check this and show a "Please update your extension" banner if the version is higher than expected
+5. Deploy in phases: (a) backend returns BOTH old and new fields, (b) update extension to use new fields, (c) after all users have updated, remove old fields
 
 **Detection:**
-- Extension badges are hard to see on Flatfox listing cards
-- Badge text fails WCAG contrast check
-- Web app buttons are the same color as Flatfox's native buttons, causing confusion about which site the user is on
+- Extension badge shows `undefined` or `NaN` instead of a number
+- Extension console shows TypeScript-level type errors or undefined property access
+- Users report "scoring stopped working" after a backend deployment
 
-**Phase to address:** UI redesign phase -- define color palettes as the FIRST task, before any CSS changes.
+**Phase to address:** ScoreResponse schema change phase -- design the response shape to be backward-compatible FIRST, then plan the extension migration as a follow-up.
+
+---
+
+### Pitfall 6: Criterion Type Classification Non-Determinism at Save Time
+
+**What goes wrong:**
+The v5.0 design classifies each `DynamicField` into a `criterion_type` (price, size, binary_feature, proximity, or subjective) at profile save time, not at scoring time. This classification determines which formula is used. The classification is done by Claude (or a rules-based classifier). If the classification is wrong, the wrong formula is applied permanently:
+
+- User adds "max CHF 2500/month" as a dynamic field. Classifier labels it `subjective` instead of `price`. Claude evaluates it subjectively instead of using the deterministic price formula. The score is inconsistent across rescores because Claude is non-deterministic.
+- User adds "near a Coop" as a dynamic field. Classifier labels it `binary_feature` instead of `proximity`. The binary feature matcher looks for "Coop" in listing attributes (which are structural features like "Balkon", not nearby businesses). The check always returns false.
+
+**Why it happens:**
+Natural language criterion descriptions are ambiguous. "Good public transport" could be `proximity` (near a train station) or `subjective` (Claude evaluates transport quality from description). "Modern kitchen" is `subjective` (requires visual analysis) but could be confused with `binary_feature` (check for "Einbaukueche" attribute). The classifier must handle this ambiguity correctly for every user-generated criterion.
+
+**Consequences:**
+- Wrong formula applied permanently (until user re-saves profile)
+- Deterministic criteria misclassified as subjective get non-deterministic scores (defeats the purpose of v5.0)
+- Subjective criteria misclassified as deterministic get wrong scores (formula cannot evaluate "nice neighborhood")
+- User has no visibility into classification -- they do not see `criterion_type` in the UI
+
+**Prevention:**
+1. Build a rules-based pre-classifier that handles obvious cases: contains "CHF" or currency -> `price`, contains "sqm" or "m2" -> `size`, matches known feature names -> `binary_feature`, contains distance/proximity keywords ("near", "within", "close to", "walking distance") -> `proximity`. Everything else -> `subjective`
+2. For ambiguous cases, use Claude with a focused classification prompt (cheap, 50 tokens output). Include few-shot examples of each type
+3. Store the classified `criterion_type` on the `DynamicField` in the preferences JSONB so it is visible and debuggable
+4. Allow manual override in the UI: show the inferred type as a subtle badge next to each dynamic field, let the user correct it
+5. Write classification tests with 20+ real-world criterion strings covering edge cases
+
+**Detection:**
+- A criterion like "max CHF 2000" scored by Claude as subjective instead of deterministic price formula
+- Same listing rescored twice produces different scores for criteria that should be deterministic
+- Debug log shows criterion_type for each dynamic field -- verify manually against expectations
+
+**Phase to address:** Criterion classification phase -- build and validate the classifier BEFORE integrating it into the scoring pipeline.
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 7: Chrome Extension Download Page Promises "Install" but Delivers Developer Mode Sideloading
+---
+
+### Pitfall 7: IMPORTANCE_WEIGHT_MAP Values Change Silently Between v1.1 and v5.0
 
 **What goes wrong:**
-The website adds a "Download Extension" section. Users click the download button expecting a one-click install experience like the Chrome Web Store. Instead they get a `.zip` file with instructions to: (1) extract the zip, (2) open `chrome://extensions`, (3) enable "Developer mode", (4) click "Load unpacked", (5) navigate to the extracted folder. On macOS, the zip might auto-extract to the Downloads folder; on Windows, it stays zipped. Non-technical users (property managers at Bellevia) fail at step 3. Chrome shows a yellow banner "Disable developer mode extensions" periodically, alarming users.
+v1.1 uses `IMPORTANCE_WEIGHT_MAP = {CRITICAL: 90, HIGH: 70, MEDIUM: 50, LOW: 30}` (line 48-53 of preferences.py). These weights are passed to Claude in the system prompt as `weight` field values. The v5.0 spec proposes different weights for aggregation: `CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1`. If the `IMPORTANCE_WEIGHT_MAP` constant is updated in-place, the Claude prompt (which still uses `IMPORTANCE_WEIGHT_MAP` for the `weight` field instruction in the system prompt line 87) will tell Claude to use `weight=5` instead of `weight=90`, confusing Claude's scoring.
+
+Even if the prompt is updated too, existing test assertions (`test_preferences.py` lines 136-140) will break. And the frontend `CategoryBreakdown` component uses `getImportanceLabel(weight)` with thresholds `>=70` for Critical, `>=50` for High (line 33-37 of CategoryBreakdown.tsx). If weights change to 1-5, all labels will show "Low".
 
 **Why it happens:**
-Without a Chrome Web Store listing (which requires a $5 developer registration, review process, and public listing), sideloading is the only distribution option. The Chromium project explicitly blocks CRX installs from non-Web Store sources on Windows and macOS since Chrome 33/44. Enterprise policy deployment is an option but requires Google Workspace admin access that the pilot customer may not grant.
+The same constant serves two purposes: (1) weight values sent to Claude in the prompt, and (2) weight values used in the deterministic aggregation formula. These need different scales if the aggregation formula changes.
 
 **Consequences:**
-- Pilot customer (Bellevia) cannot install the extension without hands-on support
-- Chrome's "Disable developer mode extensions" popup undermines user trust
-- Extension is removed if user clicks "Disable" on Chrome's warning
-- Auto-updates are impossible without Web Store -- every version requires manual reinstall
+- `CategoryBreakdown` importance labels all show "Low" for every category
+- Claude prompt tells Claude to use wrong weight values
+- Test suite breaks on weight value assertions
+- Subtle: the old `analyses.breakdown` JSONB has `weight: 90` in category entries; new ones would have `weight: 5` -- inconsistent display
 
 **Prevention:**
-- **Publish to Chrome Web Store as "Unlisted"** -- only users with the direct link can find it. $5 one-time developer registration. Review takes 1-3 business days. This is the correct solution for B2B pilot distribution.
-- If Web Store is not an option for timeline reasons: create a detailed visual guide (screenshots) on the download page showing each sideloading step. Include a warning about the developer mode banner.
-- Package the extension as a `.zip` (not `.crx`) since Chrome blocks CRX installs from non-Store sources
-- Add a "Check Extension Installed" feature on the website that tries `chrome.runtime.sendMessage()` to detect if the extension is present, and shows different UI accordingly
-- Consider creating a video walkthrough for the install process
+1. Create a NEW constant for v5.0 aggregation weights: `AGGREGATION_WEIGHTS = {CRITICAL: 5, HIGH: 3, MEDIUM: 2, LOW: 1}`
+2. Keep `IMPORTANCE_WEIGHT_MAP` unchanged for backward compatibility with cached analyses and any remaining Claude prompt usage
+3. Update the frontend `getImportanceLabel` to accept either scale, or change it to read the importance level name directly from the new response format instead of deriving it from numeric weights
+4. If `categories` is removed from ScoreResponse, the `CategoryBreakdown` component needs a complete rewrite anyway -- do not try to make old weight thresholds work with new data
 
 **Detection:**
-- Users report they "downloaded but nothing happened"
-- Support requests about "developer mode" warnings
-- Extension silently disappears from users' browsers after Chrome update
+- All importance badges in CategoryBreakdown show "Low"
+- Test `test_importance_weight_map` fails after constant change
+- Claude response has unexpected weight values
 
-**Phase to address:** Chrome extension distribution phase -- decide Web Store unlisted vs sideloading BEFORE building the download page.
+**Phase to address:** Schema migration phase -- define new constants WITHOUT modifying existing ones.
 
 ---
 
-### Pitfall 8: Chat-Generated Dynamic Fields Create Schema Mismatch Between Web, Backend, and Extension
+### Pitfall 8: Supabase JSONB Migration for DynamicField.criterion_type Breaks Frontend Parsing
 
 **What goes wrong:**
-The chat produces dynamic preference fields like `{ name: "quiet_street", description: "On a quiet residential street", importance: "critical" }`. This is a new data shape not present in v1.1's canonical schema. The web app Zod schema (`preferencesSchema`), the backend Pydantic model (`UserPreferences`), and the extension's understanding of preferences all need to understand this new shape. If the web app saves dynamic fields to the `preferences` JSONB but the backend's `UserPreferences` model has `extra="ignore"` (which it currently does), the dynamic fields are silently dropped during `model_validate()`. Claude never sees them. The user added 5 custom criteria via chat, but scoring ignores all of them.
+Adding `criterion_type: str` to `DynamicField` in the backend Pydantic model is safe because Pydantic defaults handle missing fields. But the preferences JSONB in Supabase already contains `dynamicFields` arrays without `criterionType`. Three things can go wrong:
+
+1. **Frontend Zod schema validation fails:** If the Zod schema is updated to require `criterionType` before existing JSONB is migrated, loading any profile with old-format dynamic fields will throw a validation error. The preferences form will not render. The user cannot access their preferences.
+
+2. **Backend classification writes camelCase but reads snake_case:** The `DynamicField` model has `alias_generator=to_camel` and `populate_by_name=True`. When serialized to JSONB via the frontend (camelCase), the field is `criterionType`. When the backend writes it, it might serialize as `criterion_type` (snake_case Pydantic default) if `model_dump()` is called without `by_alias=True`. The JSONB ends up with mixed naming: some fields with `criterionType`, others with `criterion_type`.
+
+3. **The `migrate_legacy_format` validator does not handle missing criterion_type:** The existing validator (lines 143-202 of preferences.py) migrates old formats but does not add `criterionType` to existing dynamic fields. Fields saved before v5.0 will have `{name, value, importance}` but no `criterionType`. If classification happens at save time, re-saving triggers classification. But if the user never re-saves, their dynamic fields are never classified, and the scoring pipeline does not know which formula to use.
 
 **Why it happens:**
-The v1.1 schema unification was a major effort to align web, backend, and extension. Dynamic fields introduce a new dimension that must be added to ALL three layers simultaneously. The backend's `extra="ignore"` config was a deliberate safety measure to handle old-format JSONB -- but it now actively defeats the purpose of dynamic fields.
+JSONB schema evolution in Supabase has no built-in migration tooling. The application layer must handle all backward compatibility. The camelCase/snake_case duality in `DynamicField` adds a naming hazard.
 
 **Consequences:**
-- Dynamic fields stored in Supabase but ignored by scoring
-- No error message -- silent data loss through `extra="ignore"`
-- Users who rely on chat-generated preferences get worse scores than users who manually configure the form
-- The chat feature appears broken even though the data is saved correctly
+- Profiles page crashes for users with existing dynamic fields (Zod validation error)
+- Mixed camelCase/snake_case in JSONB causes fields to appear missing depending on which layer reads them
+- Unclassified dynamic fields default to... what? If `criterion_type` defaults to `"subjective"`, price criteria are scored by Claude instead of deterministically. If it defaults to None, the scoring pipeline crashes
 
 **Prevention:**
-- Add `dynamic_fields: list[DynamicField] = Field(default_factory=list)` to the backend `UserPreferences` model BEFORE the web app starts saving dynamic fields
-- Add the same field to the Zod schema: `dynamicFields: z.array(dynamicFieldSchema).default([])`
-- Update the Claude prompt template to render dynamic fields with their importance levels
-- Write an integration test: save preferences with dynamic fields via the web app, trigger scoring, assert Claude's response references at least one dynamic field
-- The extension does not need to generate dynamic fields (it uses the web for preferences), but it should pass through whatever `preferences` JSONB the edge function provides without filtering
+1. Add `criterion_type` as Optional with default None to both Pydantic and Zod schemas
+2. In the scoring pipeline, treat `criterion_type=None` as "needs classification" and run the classifier on-the-fly (then optionally save back)
+3. Add a migration in `migrate_legacy_format`: if `dynamicFields` exist but items lack `criterionType`, add `criterionType: null` to each
+4. Always use `by_alias=True` when serializing DynamicField to JSONB (consistent camelCase)
+5. Write a test: load preferences JSONB from before v5.0 (no criterionType), verify parsing succeeds and criterion_type is None
 
 **Detection:**
-- Backend logs show `UserPreferences` parsing with warnings about ignored fields (if logging is enabled for Pydantic)
-- Claude's response checklist contains only the original `features` and `softCriteria`, not dynamic fields
-- Supabase `profiles.preferences` JSONB has `dynamicFields` array but backend response does not reference them
+- Preferences form shows blank/error for profiles with dynamic fields
+- Backend logs show Pydantic `ValidationError` on preferences with missing `criterionType`
+- JSONB contains both `criterionType` and `criterion_type` keys in the same object
 
-**Phase to address:** Schema extension phase -- must be completed across all layers BEFORE the chat UI starts generating dynamic fields.
+**Phase to address:** Schema migration phase -- add criterion_type as Optional[None] FIRST, then build classification logic.
 
 ---
 
-### Pitfall 9: Parallel Scoring Fires Multiple Flatfox HTML Page Fetches That Get Rate-Limited
+### Pitfall 9: Scoring Pipeline Becomes Partially Synchronous, Breaking the Async Flow
 
 **What goes wrong:**
-Each scoring request fetches listing data from `flatfox.ch/api/v1/public-listing/{pk}/` (JSON) AND scrapes the HTML detail page at `flatfox.ch/en/flat/{slug}/{pk}/` for image URLs. With 15 parallel requests, the backend makes 15 concurrent API calls AND 15 concurrent HTML page fetches to Flatfox. Flatfox is a Swiss startup, not a hyperscale platform -- their rate limiting kicks in after 10-20 rapid requests from the same IP. The HTML page fetches start returning 429 or connection timeouts. Image URL extraction fails gracefully (returns empty list), so scoring falls back to text-only -- but the user doesn't know images were dropped. Scores decrease because the condition category loses visual input, and users think the property is worse than it is.
+The current scoring pipeline is fully async: `await claude_scorer.score_listing(...)`. The v5.0 pipeline mixes deterministic computation (CPU-bound, synchronous) with Claude API calls (IO-bound, async). If the deterministic formulas are implemented as regular Python functions called inside the async router, they block the event loop for the duration of computation. For a single listing, this is negligible (microseconds). But for batch scoring (10+ listings in parallel), synchronous formula computation for all criteria of all listings could accumulate, especially if the binary feature normalization involves string matching against a large map.
+
+More critically: if subjective criteria use `await claude_scorer.score_listing()` but deterministic criteria use synchronous functions, the orchestration must be hybrid. A naive implementation might `await` Claude for ALL criteria (including deterministic ones) because the developer wraps everything in the same async pipeline.
 
 **Why it happens:**
-The `FlatfoxClient` uses `httpx.AsyncClient` with no rate limiting. The image URL extraction creates a NEW `httpx.AsyncClient` for each call (see `get_listing_image_urls()` line 84: `async with httpx.AsyncClient(timeout=15.0) as html_client`). 15 concurrent new HTTP connections to Flatfox's servers from the same EC2 IP address.
+Mixing sync and async code in FastAPI is a common source of bugs. The deterministic formulas are pure computation and do not need to be async. But calling them alongside `await claude_scorer.score_listing()` requires careful orchestration.
 
 **Consequences:**
-- Flatfox may temporarily block the EC2 IP
-- Image-enhanced scoring silently degrades to text-only with no user notification
-- Scores appear lower than expected because condition/features categories lack visual data
-- If Flatfox blocks the API endpoint too, the entire batch fails
+- Event loop blocked during formula computation (minor for single listings, noticeable for batch)
+- Unnecessary Claude API calls if deterministic criteria are accidentally routed to Claude
+- Increased latency if deterministic and subjective scoring run sequentially instead of in parallel
 
 **Prevention:**
-- Add a semaphore to `FlatfoxClient`: `self._semaphore = asyncio.Semaphore(3)` and wrap both `get_listing()` and `get_listing_image_urls()` with `async with self._semaphore:`
-- Reuse a single `httpx.AsyncClient` for HTML page fetches instead of creating a new one per call -- add a separate `_html_client` to `FlatfoxClient`
-- Add a small delay (200-500ms) between Flatfox requests within the semaphore to stay well under rate limits
-- Log when image URL extraction falls back to empty (currently only logged at DEBUG level) -- promote to WARNING so the degradation is visible
-- Consider caching Flatfox listing data and image URLs for 1 hour in memory (listings don't change frequently)
+1. Structure the pipeline as: (a) classify criteria, (b) compute ALL deterministic fulfillments synchronously, (c) `await` Claude for subjective fulfillments ONLY, (d) aggregate. Steps (b) and (c) can run in parallel since they are independent
+2. For batch scoring, run deterministic computation for all listings first (fast), then batch Claude calls for subjective criteria
+3. Do NOT wrap deterministic functions in `asyncio.to_thread()` unless profiling shows they take >1ms -- the overhead of thread dispatch exceeds the computation time for simple formulas
+4. Keep a clear separation: `deterministic_scorer.py` (sync functions) and `claude_scorer.py` (async class). Do not mix them in the same module
 
 **Detection:**
-- Backend logs show "Could not fetch images for listing" for multiple listings in a batch
-- Scoring results show no image-based observations in the condition category reasoning
-- Flatfox API returns 429 status codes (visible in backend logs)
-- Score variance: same listing scored at different times gets different scores because images were available one time but not another
+- Backend response time for deterministic-only listings (no subjective criteria) is suspiciously close to Claude API latency (~1-2 seconds) instead of near-instant
+- `asyncio` event loop warnings in logs about long-running synchronous code
 
-**Phase to address:** Parallel scoring phase -- add Flatfox rate limiting BEFORE enabling parallel requests.
+**Phase to address:** Pipeline orchestration phase -- design the hybrid flow architecture before implementing individual formulas.
 
 ---
 
-### Pitfall 10: UI Redesign Touches globals.css Variables and Breaks Extension Popup Styles
+### Pitfall 10: The `save_analysis` Function Hardcodes `overall_score` Key for the `score` Column
 
 **What goes wrong:**
-The extension popup (`extension/src/entrypoints/popup/`) uses its own styles but may import shared utilities or Tailwind classes that reference CSS variables. The web app UI redesign changes the HSL values in `globals.css` for the new Flatfox-inspired theme. If the extension's Tailwind configuration or CSS references the same variable names (e.g., `--primary`, `--background`), and the extension build picks up web app CSS somehow (shared `tailwind.config` or `@import`), the popup renders with wrong colors. More subtly: if the extension and web app share a `tailwind.config` or CSS preset, changing the web app theme changes the extension theme unintentionally.
+`supabase_service.save_analysis()` (line 82 of supabase.py) extracts `score_data["overall_score"]` and writes it to the `score` column in the `analyses` table. The analyses list page (`/analyses/page.tsx` line 142) renders this `score` column directly in the badge. If v5.0 changes the key name (e.g., to `computed_score`) or changes the score range (e.g., from 0-100 int to 0.0-1.0 float), the `save_analysis` function will:
+
+1. KeyError on `score_data["overall_score"]` if the key is renamed
+2. Save a float like `0.73` to the `score` column (which is integer type in Postgres), causing a type error or silent truncation to `0`
+3. Save a value on a different scale, making old and new scores incomparable in the analyses list
 
 **Why it happens:**
-The extension uses WXT with its own build pipeline, but developers might create shared configuration files for consistency. Even if the extension has independent CSS, a refactor during the UI redesign could accidentally introduce a shared dependency.
+The `save_analysis` function was written for v1.1's ScoreResponse and hardcodes the key access pattern. It does not use Pydantic model serialization -- it operates on the raw dict from `result.model_dump()`.
 
 **Consequences:**
-- Extension popup has wrong background or text colors after web app theme change
-- Badge injection styles are unaffected (Shadow DOM isolates them) but popup is broken
-- Discovered late because developers test the web app in browser, not the extension popup
+- 500 error on save (KeyError) -- scoring succeeds but result is not cached
+- Score column has 0 for all v5.0 analyses (float truncation)
+- Analyses list shows misleading badge numbers
 
 **Prevention:**
-- Verify that the extension's Tailwind/CSS configuration is completely independent from the web app's `globals.css`
-- After any web app CSS changes, rebuild the extension (`cd extension && npm run build`) and verify popup appearance
-- Keep the extension's color tokens in `extension/src/entrypoints/content/style.css` and `extension/src/entrypoints/popup/` -- never import from `web/src/`
-- Add extension popup visual check to the post-redesign verification checklist
+1. Keep `overall_score` as the field name in the new ScoreResponse -- it serves the same purpose
+2. Keep the score as int 0-100 -- changing to float provides no user benefit and breaks the `score` column type
+3. If the score computation changes range, add a conversion step in `save_analysis`: `score=int(round(score_data["overall_score"] * 100))` if using 0-1 internally
+4. Update `save_analysis` to use the Pydantic model directly instead of dict access: `score=result.overall_score`
 
 **Detection:**
-- Extension popup background is wrong color after web app theme deployment
-- Extension popup text is unreadable (wrong contrast) after CSS variable changes
-- Only discovered when testing extension after web app deployment
+- Backend logs show `KeyError: 'overall_score'` in the save_analysis exception handler
+- Analyses list shows `0` for all newly scored listings
+- Score column in DB has unexpected values
 
-**Phase to address:** UI redesign phase -- verify extension independence BEFORE committing CSS variable changes.
+**Phase to address:** ScoreResponse schema change phase -- update save_analysis alongside the model change, not after.
+
+---
+
+### Pitfall 11: Proximity Quality Formula Double-Counts Distance
+
+**What goes wrong:**
+The v5.0 spec mentions a "proximity quality hybrid formula (distance decay + rating bonus)." If this formula is `f = distance_decay(d) * (1 + rating_bonus(r))`, and `distance_decay` already penalizes far distances, but the nearby_places data returned by the Apify/Google Places integration already filters by radius, the distance decay might be unnecessarily harsh. A place at 0.9 km when the user requested 1.0 km radius is "just barely within range" but the distance decay function might give it a low score (e.g., `f = 1 - 0.9/1.0 = 0.1`). The user expected "within 1 km" to mean binary pass/fail, not a linear penalty.
+
+**Why it happens:**
+The current system has Claude interpret proximity results with nuance. A place at 0.9 km within a 1.0 km radius is "very close, well within range." A deterministic formula cannot apply this nuance unless designed carefully.
+
+**Consequences:**
+- Proximity scores are systematically lower than Claude's scores for the same data
+- Users perceive the scoring as harsher after v5.0
+- Listings that Claude rated "excellent proximity" now get "fair" from the formula
+
+**Prevention:**
+1. Define the distance decay clearly: `f = max(0, 1 - (d / max_radius))` is a linear decay that gives 1.0 at d=0 and 0.0 at d=max_radius. This makes anything within radius get a positive score, with closer being better
+2. For binary "within X km" criteria, use a step function: `f = 1.0 if d <= max_radius else 0.0`. No decay
+3. Let the criterion type determine the formula shape: `proximity_binary` vs `proximity_quality`
+4. Compare formula results against Claude's scores for 10 test cases before deploying. If the formula is systematically 20+ points lower, adjust the decay curve
+
+**Detection:**
+- Proximity criterion scores are systematically lower in v5.0 than v1.1
+- Users report "proximity scoring got worse" after the update
+- Test comparison shows formula gives f=0.1 for a place at 900m when user requested 1km
+
+**Phase to address:** Proximity formula phase -- validate against Claude baseline before integrating.
 
 ---
 
 ## Minor Pitfalls
 
-### Pitfall 11: Chat UI Does Not Handle Claude API Errors Gracefully
+---
+
+### Pitfall 12: Claude Subjective Fulfillment Prompt Returns Score Outside Expected Range
 
 **What goes wrong:**
-The chat-based preference discovery calls the Claude API (likely via a new backend endpoint or directly from the web app via Vercel API route). If the Claude API returns an error (rate limit, timeout, server error), the chat shows a generic error or hangs. Users cannot retry the failed message. The conversation state becomes corrupted if a partial response was streamed.
+The v5.0 design has Claude return `fulfillment in {0.0...1.0}` for subjective criteria. Claude currently returns `score: int` in 0-100 range (line 19 of scoring.py). Changing the expected output format requires updating the structured output schema. If the Pydantic model constrains fulfillment to `ge=0.0, le=1.0` but Claude returns `0.85` as a string or returns `85` (old habit from 0-100 scale), the `messages.parse()` call might accept it (85 > 1.0, validation error) or reject it.
 
 **Prevention:**
-- Implement retry with exponential backoff for transient errors (429, 500, 503)
-- Show a "Message failed to send. Retry?" button on the specific message that failed
-- If streaming is used, handle partial responses by discarding incomplete JSON
-- Set a 30-second timeout on the chat API call (Claude responses for text-only preference extraction should complete in 5-10 seconds)
+- Add explicit instruction in the prompt: "Return fulfillment as a decimal between 0.0 and 1.0, where 1.0 means fully met"
+- Include few-shot examples in the prompt
+- If Claude returns values > 1.0, add a post-processing guard: `fulfillment = min(1.0, fulfillment / 100) if fulfillment > 1.0 else fulfillment`
 
 ---
 
-### Pitfall 12: Extension Download Page Shows Install Instructions for Wrong Platform
+### Pitfall 13: Frontend CategoryBreakdown Component Has No Replacement Planned
 
 **What goes wrong:**
-The download page shows generic instructions, but the sideloading process differs between Windows, macOS, and Linux. Showing macOS screenshots to a Windows user causes confusion. Linux users can install CRX files directly but may not know this.
+Removing `categories` from ScoreResponse means the `CategoryBreakdown` component (web/src/components/analysis/CategoryBreakdown.tsx, 124 lines) renders nothing. But no replacement component is designed for the new per-criterion fulfillment view. The analysis page becomes visually empty between the summary bullets and the checklist.
 
 **Prevention:**
-- Detect the user's platform via `navigator.platform` or `navigator.userAgentData.platform` and show platform-specific instructions
-- Provide a fallback "Show all platforms" toggle for edge cases
-- If going the Web Store unlisted route, platform detection is unnecessary (Web Store handles it)
+- Design the replacement component BEFORE removing categories from the response
+- Consider a "Criteria Breakdown" component that shows each criterion with its fulfillment bar, type (deterministic/subjective), and reasoning
+- The new component should handle both old (cached) and new response formats, or the analysis page should detect the schema version and render the appropriate component
 
 ---
 
-### Pitfall 13: Parallel Scoring Results Arrive Out of Order, Confusing Badge Display
+### Pitfall 14: Missing Data Criterion Skip Inflates Overall Score
 
 **What goes wrong:**
-With parallel scoring, results arrive at different times (some listings score faster than others). The FAB shows "Scoring 3/15..." but the numbered sequence does not match the visual order of listings on the page. A badge appears for listing #7 before listing #1, creating a jumpy, confusing visual experience.
+The v5.0 spec says: "Missing data -> skip criterion in weighted aggregation." If 3 of 5 criteria are skipped because the listing has no data, the overall score is computed from only 2 criteria. If those 2 happen to be well-matched, the score is artificially high. Example: listing has no price, no size, no features data -- only location and condition are scoreable. Both score 90. Overall: 90. But the listing is missing critical information the user cares about.
 
 **Prevention:**
-- Show loading skeletons for ALL listings immediately when scoring starts (already done in current code via `injectBadge()`)
-- Use the `onResult` callback pattern (already in `scoreListings()`) to progressively replace skeletons with scores as results arrive
-- Do NOT sort or reorder the page; let results fill in naturally
-- Show a total progress counter on the FAB: "3 of 15 scored" regardless of order
+- Set a minimum number of scored criteria threshold (e.g., at least 2 criteria must have data for a score to be meaningful)
+- If below threshold, return a special tier: "insufficient_data" instead of computing a misleading score
+- Show a badge indicating data completeness: "Score based on 2/5 criteria"
+- Weight the confidence: if important criteria are skipped, penalize the score or flag it
 
 ---
 
@@ -349,71 +438,92 @@ With parallel scoring, results arrive at different times (some listings score fa
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|---------------|------------|
-| Chat preference discovery | Overwrites standard fields (Pitfall 1) | Merge-save pattern; separate standard vs dynamic fields |
-| Chat preference discovery | Loses conversation on navigation (Pitfall 4) | sessionStorage persistence or single-shot approach |
-| Dynamic schema fields | Backend ignores dynamic fields (Pitfall 8) | Update Pydantic model BEFORE web app generates fields |
-| Dynamic schema fields | Scoring prompt doesn't weight them (Pitfall 3) | Extend prompt template and response model |
-| Parallel scoring | Claude API rate limits (Pitfall 2) | Backend semaphore limiting concurrent Claude calls to 3 |
-| Parallel scoring | Edge function redundant work (Pitfall 5) | Batch endpoint design |
-| Parallel scoring | Flatfox rate limiting (Pitfall 9) | Flatfox client semaphore + connection reuse |
-| UI redesign | Badge visibility on Flatfox (Pitfall 6) | Separate web app and extension color palettes |
-| UI redesign | Extension popup color breakage (Pitfall 10) | Verify CSS independence; rebuild extension after web changes |
-| Extension distribution | Sideloading UX confusion (Pitfall 7) | Chrome Web Store unlisted listing |
+| Schema migration / cache versioning | Old cached analyses have v1.1 schema (Pitfall 1) | Add schema_version column, filter cache by version |
+| Schema migration / DynamicField | criterion_type missing in existing JSONB (Pitfall 8) | Optional[None] default, on-the-fly classification fallback |
+| Deterministic formula implementation | Division by zero on None preferences (Pitfall 2) | Guard every formula, skip criteria with None inputs |
+| Deterministic formula implementation | Proximity formula double-counts distance (Pitfall 11) | Define decay curve explicitly, compare against Claude baseline |
+| Binary feature matching | German attribute name mismatch (Pitfall 4) | Static normalization map + Claude fallback for unknowns |
+| Criterion classification | Misclassification of ambiguous criteria (Pitfall 6) | Rules-based pre-classifier + Claude for ambiguous + manual override |
+| Aggregation formula | CRITICAL f=0 override at wrong layer (Pitfall 3) | Atomic score+tier+override function, dedicated test |
+| Aggregation formula | Missing data inflates score (Pitfall 14) | Minimum criteria threshold, "insufficient_data" tier |
+| ScoreResponse schema change | Extension breaks without version gate (Pitfall 5) | Keep field names, add new fields alongside old ones |
+| ScoreResponse schema change | save_analysis hardcodes key names (Pitfall 10) | Keep overall_score name, update save_analysis |
+| Weight constants | IMPORTANCE_WEIGHT_MAP dual-purpose conflict (Pitfall 7) | New AGGREGATION_WEIGHTS constant, keep old unchanged |
+| Pipeline orchestration | Sync/async mixing blocks event loop (Pitfall 9) | Separate deterministic (sync) and subjective (async), run in parallel |
+| Frontend update | CategoryBreakdown has no replacement (Pitfall 13) | Design replacement component before removing categories |
 
 ---
 
 ## Integration Gotchas
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| Chat output -> preferences save | `UPDATE profiles SET preferences = $chat_output` (full replace) | `UPDATE profiles SET preferences = preferences || $chat_dynamic_fields` (JSONB merge of only dynamic fields) |
-| Dynamic fields -> backend scoring | `UserPreferences(extra="ignore")` silently drops unknown fields | Add `dynamic_fields: list[DynamicField]` to model before chat generates them |
-| Dynamic fields -> Claude prompt | Cramming dynamic fields into `softCriteria: string[]` | Render as separate prompt section with importance levels |
-| Parallel extension requests -> edge function | 15 separate edge function calls, each resolving same profile | Batch endpoint: one call, one auth check, one profile resolution, multiple listing IDs |
-| Parallel backend requests -> Claude API | Unbounded `asyncio.gather()` for 15 Claude calls | `asyncio.Semaphore(3)` wrapping each Claude API call |
-| Parallel backend requests -> Flatfox | 15 concurrent HTML page scrapes from same IP | `asyncio.Semaphore(3)` + connection reuse in FlatfoxClient |
-| Web app CSS variables -> extension | Shared Tailwind config or CSS imports across projects | Fully independent CSS configurations; verify after web theme change |
-| Extension `.zip` distribution | Hosting `.crx` file for download | CRX blocked on Windows/macOS since Chrome 33/44; use `.zip` + sideloading or Web Store unlisted |
-| Flatfox color scheme -> web app | Adopting exact Flatfox colors | Flatfox-**inspired** palette with distinct primary to maintain brand identity |
+| Integration Point | What Breaks | Correct Approach |
+|-------------------|-------------|------------------|
+| Edge function cache -> v5.0 response | Returns old v1.1 JSONB verbatim to extension | Add schema_version filter to cache query |
+| `save_analysis` -> `analyses.score` column | KeyError or type mismatch if field name/type changes | Keep `overall_score` as int 0-100, update save_analysis |
+| Extension `ScoreResponse` TypeScript -> backend Pydantic | Extension has stale type definition, no auto-update | Keep field names backward-compatible, add API version header |
+| Frontend `CategoryBreakdown` -> `breakdown.categories` | Component renders nothing when categories removed | Detect schema version, render appropriate component |
+| Frontend `getImportanceLabel(weight)` -> weight thresholds | Thresholds (>=70, >=50, >=30) assume old 30-90 scale | Use new constant or read importance level name directly |
+| `DynamicField` serialization -> JSONB | Mixed camelCase/snake_case for criterion_type | Always use `by_alias=True` for JSONB serialization |
+| Deterministic price formula -> `UserPreferences.budget_max` | budget_max is None (user didn't set it) | Skip criterion when preference field is None |
+| Binary feature formula -> `listing.attributes[].name` | German names don't match English feature names | Normalization map + umlaut handling + Claude fallback |
 
 ---
 
-## Performance Traps
+## Testing Strategy for Hybrid Scoring
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| 15 parallel Claude API calls with images | 429 rate limit errors; partial batch results | Backend semaphore(3); extension concurrency pool | At 10+ concurrent listings on Tier 1/2 |
-| 15 parallel Flatfox HTML scrapes | Image extraction fails silently; text-only scoring | FlatfoxClient semaphore(3); reuse HTTP client | At 10+ concurrent scrapes from same IP |
-| 15 edge function invocations for same user | 15x redundant auth + profile DB queries | Batch endpoint with single auth/profile resolution | Every parallel scoring batch |
-| Chat conversation history accumulation | Token costs compound per turn; 10-turn = ~10K tokens | Limit to 5 turns; or use single-shot approach | At 8+ conversation turns |
-| Full preferences replace on chat save | No performance issue, but data loss | JSONB merge instead of replace | Every chat preference save |
+### Unit Tests (Per Formula)
 
----
+| Formula | Critical Test Cases |
+|---------|-------------------|
+| Price fulfillment | budget_max=None (skip), price=budget_max (f=1.0), price=2*budget_max (f=0), price=0 (f=1.0), SALE vs RENT price interpretation |
+| Size fulfillment | living_space_min=None AND max=None (skip), exact match (f=1.0), half the minimum (f=0), surface_living=None on listing (skip) |
+| Binary feature | All features matched (f=1.0), none matched (f=0), partial match (f=0.6), empty feature list (skip), German attribute names, umlaut variations |
+| Proximity | Within radius (f=1.0 or decay), outside radius (f=0), no coordinates (skip), rating bonus caps, zero radius (edge case) |
+| Aggregation | All criteria scored (normal), all criteria skipped (return default), CRITICAL f=0 override, single criterion only, mixed weights |
 
-## Security Considerations
+### Integration Tests (Pipeline)
 
-| Concern | Risk | Prevention |
-|---------|------|------------|
-| Chat endpoint exposed without rate limiting | Attacker spams chat endpoint consuming Claude API credits | Rate limit chat endpoint to 10 requests/minute per user |
-| Dynamic fields contain injection attempts | User crafts dynamic field name that manipulates Claude prompt | Sanitize dynamic field names/descriptions; max 100 chars per field; max 10 fields |
-| Batch scoring endpoint without per-user limits | Single user triggers batch scoring for 100+ listings | Limit batch size to 20 listing IDs per request |
-| Extension .zip downloaded over HTTP | MITM attack replaces extension code | Serve from HTTPS (Vercel does this automatically) |
-| Chat conversation stored in localStorage | Another extension or XSS attack reads preference data | Use sessionStorage (cleared on tab close) or encrypt with user token |
+| Scenario | What to Verify |
+|----------|---------------|
+| Listing with all data available | Deterministic criteria use formulas, subjective use Claude, aggregation correct |
+| Listing with sparse data | Missing data criteria skipped, remaining criteria scored, no division by zero |
+| Profile with no dynamic fields | Falls back to standard scoring (price/size from standard fields only) |
+| Profile with CRITICAL dealbreaker violated | match_tier forced to "poor", overall_score reflects violation |
+| Old cached analysis loaded | Frontend renders old format correctly without crash |
+| Re-score after v5.0 deploy | New score replaces old cached score, schema_version=2 |
+
+### Cross-Consumer Consistency Tests
+
+| Consumer | Test |
+|----------|------|
+| Extension badge | Render with v5.0 response: badge shows number, tier color correct |
+| Extension summary | Render with v5.0 response: bullets display correctly |
+| Web analysis page | Render with v5.0 response: new criteria breakdown component works |
+| Web analysis page | Render with v1.1 cached response: fallback rendering works |
+| Web analyses list | Mix of v1.1 and v5.0 analyses: both render correctly in same list |
+
+### Regression Tests (v1.1 Parity)
+
+Score 10 real Flatfox listings with both v1.1 (Claude-only) and v5.0 (hybrid) using identical preferences. Compare:
+- Overall scores: should be within 15 points (not exact match, but same ballpark)
+- match_tier: should agree for 8/10 listings
+- CRITICAL dealbreaker handling: must agree for 10/10 listings
+- Binary features: must agree for 8/10 features (allowing for normalization gaps)
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Chat preference save:** Dynamic fields saved to Supabase -- verify standard fields (budget, rooms, location) are UNCHANGED after chat save by comparing JSONB before and after
-- [ ] **Dynamic fields in scoring:** Backend receives dynamic fields -- verify by checking Claude's response references at least one dynamic field by name
-- [ ] **Parallel scoring concurrency:** 15 listings scored -- verify no 429 errors in backend logs and all 15 badges show scores (not partial errors)
-- [ ] **Flatfox rate limiting:** 15 listings scored -- verify image URLs extracted for all 15 (not falling back to text-only due to rate limits)
-- [ ] **Edge function efficiency:** Batch scoring triggered -- verify Supabase dashboard shows 1 edge function invocation (batch) not 15 separate invocations
-- [ ] **Badge visibility:** Extension installed on Flatfox -- take screenshot and verify badge colors contrast with Flatfox card background
-- [ ] **Extension popup after redesign:** Web app CSS changed -- rebuild extension and verify popup colors are correct
-- [ ] **Chat error handling:** Disconnect network during chat -- verify retry button appears, conversation state preserved
-- [ ] **Extension install experience:** Follow download page instructions on a clean Chrome profile -- complete install in under 3 minutes
-- [ ] **Conversation persistence:** Start chat, navigate to profiles page, return to chat -- verify conversation is restored
+- [ ] **Cache versioning:** Deploy v5.0 backend, load a pre-existing analysis page -- verify it shows old data correctly, not a blank/crashed page
+- [ ] **CRITICAL override:** Score a listing that violates a CRITICAL criterion -- verify badge shows "poor" (red), not "good" (blue)
+- [ ] **Binary feature German matching:** Score a listing with "Balkon" attribute when user wants "Balcony" -- verify it shows as met
+- [ ] **Division by zero:** Score a listing with a profile that has NO budget, NO room, NO size preferences -- verify no 500 error
+- [ ] **Extension backward compat:** Use OLD extension (pre-v5.0) against NEW backend -- verify badge still renders a number and tier
+- [ ] **save_analysis:** Score a listing, check the `analyses` table `score` column -- verify it contains the correct integer
+- [ ] **Aggregation with skipped criteria:** Score a listing where 3 of 5 criteria have no data -- verify score is reasonable (not inflated to 95+)
+- [ ] **DynamicField JSONB:** Load a profile with old dynamic fields (no criterionType) -- verify preferences form loads without error
+- [ ] **Weight constants:** Check CategoryBreakdown component -- verify importance labels show correct names (Critical/High/Medium/Low), not all "Low"
+- [ ] **Proximity formula:** Score a listing with a place at 0.9 km when user requested 1.0 km -- verify fulfillment is high (>0.5), not 0.1
 
 ---
 
@@ -421,29 +531,38 @@ With parallel scoring, results arrive at different times (some listings score fa
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Chat overwrites standard fields (Pitfall 1) | MEDIUM | Restore preferences from Supabase audit log or backup; implement merge-save; re-save affected profiles |
-| Claude API rate limit kills batch (Pitfall 2) | LOW | Add semaphore; retry failed listings individually; no data loss |
-| Dynamic fields ignored by backend (Pitfall 8) | MEDIUM | Add fields to Pydantic model; redeploy; re-score listings; existing analyses are text-only quality |
-| Flatfox blocks EC2 IP (Pitfall 9) | HIGH | Contact Flatfox; wait for rate limit reset (usually 1 hour); add semaphore; consider rotating IP via proxy |
-| Extension sideloading fails for pilot user (Pitfall 7) | MEDIUM | Schedule screen-share to walk through install; fast-track Web Store unlisted submission |
-| Web app theme breaks extension popup (Pitfall 10) | LOW | Revert CSS variables for extension; rebuild; 15-minute fix |
-| Chat conversation lost on navigation (Pitfall 4) | LOW | Implement sessionStorage persistence; user re-enters preferences; 30-minute fix |
+| Old cache breaks frontend (Pitfall 1) | LOW | Add schema_version column, deploy migration, old rows become cache misses |
+| Division by zero (Pitfall 2) | LOW | Add None guards, redeploy, no data loss |
+| CRITICAL override missing (Pitfall 3) | MEDIUM | Fix aggregation function, redeploy, re-score affected listings |
+| German feature mismatch (Pitfall 4) | MEDIUM | Build normalization map, redeploy, re-score listings; old scores still valid |
+| Extension breaks (Pitfall 5) | HIGH for users | Cannot force-update sideloaded extensions; must contact users individually |
+| Misclassified criteria (Pitfall 6) | MEDIUM | Fix classifier, re-classify by re-saving profiles; scores are wrong until re-scored |
+| Weight constant conflict (Pitfall 7) | LOW | Add new constant, revert old, redeploy; 15-minute fix |
+| JSONB migration (Pitfall 8) | LOW | Make criterion_type Optional, deploy; no data loss |
+| save_analysis crash (Pitfall 10) | MEDIUM | Scores computed but not cached; fix and redeploy; re-score to populate cache |
 
 ---
 
 ## Sources
 
-- [Rate limits - Claude API Docs](https://platform.claude.com/docs/en/api/rate-limits) -- HIGH confidence (official Anthropic documentation; Tier 1 = 50 RPM, Tier 2 = 1000 RPM, image tokens ~1334 per 1000x1000)
-- [Supabase Edge Function Limits](https://supabase.com/docs/guides/functions/limits) -- HIGH confidence (official; 150s timeout, 2s CPU time, isolated V8 per invocation)
-- [Use alternative installation methods - Chrome Extensions](https://developer.chrome.com/docs/extensions/how-to/distribute/install-extensions) -- HIGH confidence (official Chrome docs; CRX blocked on Windows/macOS; sideloading requires developer mode)
-- [Self-host for Linux - Chrome Extensions](https://developer.chrome.com/docs/extensions/how-to/distribute/host-on-linux) -- HIGH confidence (official; Linux is only platform allowing non-Store CRX install)
-- [Tailwind CSS v4 Migration](https://tailwindcss.com/blog/tailwindcss-v4) -- HIGH confidence (official; CSS-first configuration, @theme directive)
-- [zod-dynamic-schema (GitHub)](https://github.com/techery/zod-dynamic-schema) -- MEDIUM confidence (community library for dynamic Zod schemas with LLM structured outputs)
-- [Dynamic pydantic models (Medium)](https://itracer.medium.com/dynamic-pydantic-models-ac91e8acedcd) -- MEDIUM confidence (community pattern for runtime model creation)
-- [FastAPI concurrency and asyncio.Semaphore patterns](https://medium.com/@reesel/build-faster-more-reliable-fastapi-apps-with-concurrency-e726784a0299) -- MEDIUM confidence (community best practice for external API rate limiting)
-- [Rate Limiting AI APIs with Async Middleware in FastAPI 2026](https://dasroot.net/posts/2026/02/rate-limiting-ai-apis-async-middleware-fastapi-redis/) -- MEDIUM confidence (community tutorial, recent)
-- Direct codebase analysis: `extension/src/lib/api.ts` (sequential scoring), `backend/app/services/claude.py` (no semaphore), `backend/app/services/flatfox.py` (new HTTP client per image fetch), `backend/app/models/preferences.py` (extra="ignore"), `backend/app/prompts/scoring.py` (hardcoded 5 categories), `supabase/functions/score-proxy/index.ts` (single-request design), `web/src/app/globals.css` (CSS variables), `extension/src/types/scoring.ts` (TIER_COLORS independent) -- HIGH confidence (direct evidence)
+- Direct codebase analysis (HIGH confidence):
+  - `backend/app/models/scoring.py` -- ScoreResponse and CategoryScore schema (lines 15-61)
+  - `backend/app/models/preferences.py` -- UserPreferences with Optional fields, DynamicField with alias_generator, IMPORTANCE_WEIGHT_MAP (lines 48-53, 66-80, 91-202)
+  - `backend/app/models/listing.py` -- FlatfoxAttribute.name is German (lines 32-36, 89)
+  - `backend/app/routers/scoring.py` -- cache check, Claude call, save_analysis flow (lines 42-178)
+  - `backend/app/services/supabase.py` -- save_analysis hardcodes score_data["overall_score"] (line 82)
+  - `backend/app/services/claude.py` -- messages.parse() with output_format=ScoreResponse (line 85-93)
+  - `backend/app/prompts/scoring.py` -- system prompt with IMPORTANCE LEVELS section (line 86-87), dealbreaker rules (lines 70-77)
+  - `supabase/functions/score-proxy/index.ts` -- cache returns breakdown verbatim (line 105), no schema version filter
+  - `extension/src/types/scoring.ts` -- TypeScript ScoreResponse mirror, TIER_COLORS (lines 6-40)
+  - `extension/src/entrypoints/content/components/ScoreBadge.tsx` -- renders score.overall_score and score.match_tier (lines 67, 72-76)
+  - `extension/src/entrypoints/content/components/SummaryPanel.tsx` -- renders score.summary_bullets (line 49)
+  - `extension/src/lib/api.ts` -- casts response as ScoreResponse (line 51)
+  - `web/src/app/(dashboard)/analysis/[listingId]/page.tsx` -- casts breakdown to typed object with categories (lines 74-97)
+  - `web/src/components/analysis/CategoryBreakdown.tsx` -- renders categories with getImportanceLabel thresholds (lines 33-37)
+  - `web/src/components/analysis/ChecklistSection.tsx` -- renders checklist items with met/partial/false states
+  - `web/src/app/(dashboard)/analyses/page.tsx` -- reads analysis.score and breakdown.match_tier (lines 102-110)
 
 ---
-*Pitfalls research for: HomeMatch v2.0 -- Chat-based preferences, dynamic schema fields, parallel scoring, UI redesign, Chrome extension distribution*
-*Researched: 2026-03-15*
+*Pitfalls research for: HomeMatch v5.0 -- Hybrid Deterministic + AI Scoring Engine*
+*Researched: 2026-03-29*
