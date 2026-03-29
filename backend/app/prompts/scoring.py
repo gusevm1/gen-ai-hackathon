@@ -90,7 +90,18 @@ PROXIMITY EVALUATION RULES:
 - Evaluate proximity-based criteria ONLY from the "## Nearby Places Data (Verified)" section in the user prompt.
 - If an amenity is not present in that section, score it as "not found nearby" — do not guess, infer, or search.
 - Never call any tool to search for places. No tool is available for this purpose.
-- If the "## Nearby Places Data (Verified)" section is absent, the user has no proximity requirements — skip proximity evaluation entirely."""
+- If the "## Nearby Places Data (Verified)" section is absent, the user has no proximity requirements — skip proximity evaluation entirely.
+
+PARTIAL MET RULES (for proximity criteria with fallback data):
+- When the "## Nearby Places Data (Verified)" section contains a result marked [FALLBACK — outside requested radius]:
+  - The nearest amenity was found OUTSIDE the user's requested distance but within 2x that distance.
+  - Check the importance level of that proximity criterion from the user's Custom Criteria section.
+  - If importance is CRITICAL: set met to false (boolean). Critical requirements must be strictly met.
+  - If importance is HIGH, MEDIUM, or LOW: set met to "partial" (the string "partial", not a boolean). This signals a near-miss worth considering.
+  - In the note field, include the actual distance, the requested radius, and the place name/rating.
+- When results are NOT marked as fallback (found within requested radius): set met to true (boolean).
+- When no results are found at all (even after fallback): set met to false (boolean).
+- The met field in your JSON response for checklist items must be exactly one of: true, false, or "partial" (string)."""
 
 
 def _fmt_range(min_val, max_val, prefix="", suffix="") -> str:
@@ -368,12 +379,15 @@ and compromises."""
                     review_count = place.get("review_count")
                     address = place.get("address", "")
                     dist_str = f"{dist:.2f} km" if dist is not None else "distance unknown"
+                    # Annotate fallback results for the LLM scorer
+                    is_fallback = place.get("is_fallback", False)
+                    fallback_str = " [FALLBACK — outside requested radius]" if is_fallback else ""
                     rating_str = (
                         f" | Rating: {rating} ({review_count} reviews)"
                         if rating is not None
                         else ""
                     )
-                    lines.append(f"{i}. {name} — {dist_str}{rating_str}")
+                    lines.append(f"{i}. {name} — {dist_str}{fallback_str}{rating_str}")
                     if address:
                         lines.append(f"   {address}")
             else:

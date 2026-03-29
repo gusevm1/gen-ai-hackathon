@@ -114,6 +114,36 @@ def extract_proximity_requirements(
     return requirements
 
 
+def _compute_distances(lat: float, lon: float, raw_results: list[dict]) -> list[dict]:
+    """Compute Haversine distance for each raw Apify result.
+
+    Returns a list of dicts with: name, address, rating, review_count, distance_km.
+    Caller must add is_fallback flag after this function returns.
+    """
+    results: list[dict] = []
+    for item in raw_results:
+        location = item.get("location")
+        distance_km: float | None = None
+        if isinstance(location, dict):
+            place_lat = location.get("lat")
+            place_lng = location.get("lng")
+            if place_lat is not None and place_lng is not None:
+                try:
+                    distance_km = haversine_km(lat, lon, float(place_lat), float(place_lng))
+                except Exception:
+                    pass  # leave distance_km as None if computation fails
+        results.append(
+            {
+                "name": item.get("title", ""),
+                "address": item.get("address", ""),
+                "rating": item.get("rating"),
+                "review_count": item.get("reviews"),
+                "distance_km": distance_km,
+            }
+        )
+    return results
+
+
 async def fetch_nearby_places(
     lat: float,
     lon: float,
@@ -159,27 +189,84 @@ async def fetch_nearby_places(
     )
 
     # APIFY-02: compute Haversine distance for each result that has location data
-    results: list[dict] = []
-    for item in raw_results:
-        location = item.get("location")
-        distance_km: float | None = None
-        if isinstance(location, dict):
-            place_lat = location.get("lat")
-            place_lng = location.get("lng")
-            if place_lat is not None and place_lng is not None:
-                try:
-                    distance_km = haversine_km(lat, lon, float(place_lat), float(place_lng))
-                except Exception:
-                    pass  # leave distance_km as None if computation fails
-        results.append(
-            {
-                "name": item.get("title", ""),
-                "address": item.get("address", ""),
-                "rating": item.get("rating"),
-                "review_count": item.get("reviews"),
-                "distance_km": distance_km,
-            }
+    results: list[dict] = _compute_distances(lat, lon, raw_results)
+
+    # Tag non-fallback results
+    for r in results:
+        r["is_fallback"] = False
+
+    # D-01/D-02: Closest fallback — when original search returns nothing,
+    # search at 2x radius and return only the single nearest result.
+    if not results:
+        fallback_radius = requirement.radius_km * 2
+        logger.info(
+            "No results within %.2f km for query=%r — trying fallback at %.2f km",
+            requirement.radius_km, requirement.query, fallback_radius,
         )
+
+        # Check cache for expanded radius first (same pattern as primary search)
+        fallback_cached = None
+        try:
+            fallback_cached = await asyncio.to_thread(
+                supabase_service.get_nearby_places_cache,
+                lat,
+                lon,
+                requirement.query,
+                fallback_radius,
+            )
+        except Exception:
+            logger.warning(
+                "Cache read failed for fallback query=%r radius=%.2f",
+                requirement.query, fallback_radius,
+            )
+
+        if fallback_cached is not None:
+            logger.info(
+                "Cache hit for fallback query=%r radius=%.2f",
+                requirement.query, fallback_radius,
+            )
+            return fallback_cached
+
+        # Call Apify with expanded radius
+        fallback_raw = await search_nearby_places(
+            query=requirement.query,
+            latitude=lat,
+            longitude=lon,
+            radius_km=fallback_radius,
+            max_results=5,
+        )
+
+        fallback_results = _compute_distances(lat, lon, fallback_raw)
+
+        # D-04: If expanded search also returns nothing, return empty list
+        if not fallback_results:
+            return []
+
+        # Sort by distance_km ascending (None values last)
+        fallback_results.sort(
+            key=lambda r: r["distance_km"] if r["distance_km"] is not None else float("inf")
+        )
+
+        # D-02: Take only the single nearest result
+        nearest = fallback_results[0]
+        # D-03: Tag as fallback
+        nearest["is_fallback"] = True
+        results = [nearest]
+
+        # Cache fallback results under expanded radius key
+        try:
+            await asyncio.to_thread(
+                supabase_service.save_nearby_places_cache,
+                lat,
+                lon,
+                requirement.query,
+                fallback_radius,
+                results,
+            )
+        except Exception:
+            logger.warning("Cache write failed for fallback query=%r", requirement.query)
+
+        return results
 
     # CACHE-06: write to cache (fire and forget — don't fail scoring on cache write error)
     try:
