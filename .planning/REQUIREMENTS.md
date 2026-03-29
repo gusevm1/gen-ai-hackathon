@@ -1,162 +1,96 @@
-# Requirements: HomeMatch
+# Requirements: HomeMatch v4.1 — Landing Page v2 & Hackathon Credits
 
-**Defined:** 2026-03-17
+**Defined:** 2026-03-28
 **Core Value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website they're already on.
 
-## v3.0 Requirements — Extension Download & Install
+## v4.1 Requirements
 
-### Download Page (DL)
+### Hero Section
 
-- [x] **DL-01**: User sees "Download" item in the top navigation bar
-- [x] **DL-02**: User can download the Chrome extension as a zip file with one click
-- [x] **DL-03**: User sees step-by-step installation instructions (unzip, open chrome://extensions, enable Developer Mode, Load unpacked)
-- [x] **DL-04**: Instructions link opens chrome://extensions in a new tab
+- [x] **HERO-01**: Stats row removed — "2,400+ listings scored daily", "< 3s per listing", "Free" block no longer shown
+- [x] **HERO-02**: CTA button is centered on its own row (not paired inline with secondary text on desktop)
+- [x] **HERO-03**: Poor tier color updated from gray (#6b7280) to red in TIER_COLORS (both landing page and extension `src/types/scoring.ts`)
 
-### Hosting (HOST)
+### Problem Section
 
-- [x] **HOST-01**: Extension zip is served as a static file from the Next.js public/ directory
+- [x] **PROB-01**: Decorative background numbers (huge aria-hidden 01/02/03 at 3% opacity) removed from cards
+- [x] **PROB-02**: Each problem card slides in from the left as it enters the viewport (individual scroll trigger per card)
+- [x] **PROB-03**: Problem cards redesigned to be more visually engaging — elevated card style, stronger visual hierarchy, attention-hooking rather than plain bordered list
 
-## v2.0 Requirements (in progress — phases 12-13 pending)
+### Solution Section
 
-### Score Caching
+- [x] **SOLN-01**: Browser demo mock enlarged — max-w-2xl → max-w-3xl (or larger if it fits without crowding step cards)
+- [x] **SOLN-02**: Step cards (01/02/03 beneath demo) enlarged — more padding, bigger label text, more presence
+- [x] **SOLN-03**: AnimatedScore in SceneListings uses full tier color system: green (≥80), yellow (60-79), red (<60) — not binary teal/gray
+- [x] **SOLN-04**: SceneAnalysis overall score badge uses tier color (green at 94) not static teal — matching extension visual language
 
-- [x] **CACHE-01**: System returns cached score when listing_id + profile_id combination already exists in the analyses table
-- [x] **CACHE-02**: Cache is invalidated when user saves updated preferences for a profile
-- [x] **CACHE-03**: User can force a re-score from the extension FAB (manual override)
+### CTA Section
 
-### Profile Management
+- [x] **CTA-01**: Headline font size increased — minimum clamp(2.5rem, 6vw, 4.5rem), bold, commanding
+- [x] **CTA-02**: Headline animates in from further below (y: 60+) with spring physics — dramatic unveil on scroll
+- [x] **CTA-03**: CTA section has stronger visual presence — larger glow radius, button with glow shadow matching hero CTA
 
-- [ ] **PROF-08**: Duplicate profile action opens a rename modal pre-filled with "[Name] (copy)"; user can edit before creating
+### Hackathon Credits
 
-### Analysis History
+- [x] **CRED-01**: New section added above footer — "Built at" + ETH Zurich logo + Gen-AI Hackathon logo
+- [x] **CRED-02**: Credits section is minimal, elegant — does not distract from primary CTA above it
 
-- [ ] **HIST-01**: Analysis page shows all past analyses across all profiles, with each entry labeled by its profile name
-- [ ] **HIST-02**: User can click any past analysis to navigate to its full analysis view
+## v4.2 Requirements (Deferred)
 
-### Security
+### Dashboard Alignment
 
-- [ ] **SEC-01**: Edge function JWT verification is enabled (remove `--no-verify-jwt` flag)
-- [ ] **SEC-02**: Extension auth flow passes tokens that the edge function can verify end-to-end
+- **DASH-01**: Dashboard pages updated to match landing page design language (sidebar spacing, card radii, teal accent)
+- **DASH-02**: Meaningful animations applied to dashboard (not decorative)
 
-## v3.0 Requirements
+### Design System
 
-Requirements for the AI-Powered Conversational Profile Creation milestone. Each maps to a roadmap phase.
+- **DS-02**: Dark hero / light dashboard color split via CSS variables
+- **DS-03**: Typography scale defined (display, headline, body, caption)
 
-### Navigation (NAV)
+### Mobile & QA
 
-- [x] **NAV-01**: "AI-Powered Search" nav item appears in the top navbar using the existing pinkish-red accent color to visually distinguish it as a key feature
-- [x] **NAV-02**: Navigation order is: HomeMatch Logo | AI-Powered Search | Profiles | Analysis | Settings
+- **LP-07**: Full mobile/tablet responsiveness across all pages
+- **PERF-01**: LCP < 2.5s, no layout shift from animations
 
-### Chat Interface (CHAT)
+### Photography
 
-- [x] **CHAT-01**: "AI-Powered Search" page displays a minimal, centered layout with a large text input as the primary element
-- [x] **CHAT-02**: Input placeholder guides the user to describe location, budget, size, rooms, lifestyle preferences, and nearby amenities (train, schools, supermarkets, cafés, etc.)
-- [x] **CHAT-03**: On the first (pre-conversation) message, a large "Start Creating Profile" button is shown instead of the standard send arrow
-- [x] **CHAT-04**: Pressing "Start Creating Profile" prompts the user to enter a profile name before the conversation begins
-- [x] **CHAT-05**: After the user enters a name and continues, the conversation starts and the initial description is sent to the AI as the first message
-- [x] **CHAT-06**: AI responses appear in a scrollable chat thread with clear visual distinction between user and assistant messages
-- [x] **CHAT-07**: User can send follow-up messages throughout the conversation
-- [x] **CHAT-08**: Conversation is ephemeral — not persisted to the database; starting a new session starts fresh
-- [x] **CHAT-09**: AI assistant messages display a circular avatar matching the HomeMatch extension FAB icon (same logo, same brand colors)
-
-### AI Backend (AI)
-
-- [x] **AI-01**: New FastAPI endpoint on EC2 handles multi-turn conversation state and calls Claude via the `ANTHROPIC_API_KEY` environment variable
-- [x] **AI-02**: Claude extracts structured preferences from natural language: location, budget, property type, rooms, size, lifestyle preferences, nearby amenities, and importance levels
-- [x] **AI-03**: Claude asks targeted follow-up questions when key preference fields are missing or unclear
-- [x] **AI-04**: Claude infers importance levels from language cues (e.g. "absolutely must" → dealbreaker, "would be nice" → low importance)
-- [x] **AI-05**: Claude signals when it has sufficient information to generate a preference summary
-
-### Summary & Editing (SUMM)
-
-- [x] **SUMM-01**: When AI is ready, a structured preference summary card is displayed in the chat — not raw JSON
-- [x] **SUMM-02**: Summary mirrors the existing HomeMatch preference schema (same fields as the manual profile form: location, budget, type, rooms, size, preferences, amenities, importance levels)
-- [x] **SUMM-03**: User can edit any field in the summary inline before confirming
-- [x] **SUMM-04**: User confirms the summary (or edits and then confirms) to trigger profile creation
-
-### Profile Creation (PROF)
-
-- [x] **PROF-09**: Confirmed summary creates a standard HomeMatch profile via the existing profile creation API
-- [x] **PROF-10**: Created profile is structurally identical to manually-created profiles and works with the existing scoring pipeline without modification
-- [x] **PROF-11**: After profile creation, user is navigated to the new profile's detail page
-
-## Future Requirements
-
-Deferred to future releases.
-
-### Organization / B2B
-
-- **ORG-01**: Team/organization model with role-based access control
-- **ORG-02**: Profile templates for common property search patterns (broker onboarding)
-- **ORG-03**: Shared profiles within an organization
-
-### Intelligence
-
-- **INTEL-01**: Market comparison: how a listing compares to similar active listings
-- **INTEL-02**: New listing notifications when matches appear
-
-### AI Enhancements
-
-- **AIENH-01**: Persist conversation history so users can resume in-progress sessions
-- **AIENH-02**: Re-enter conversation to refine an existing AI-created profile
-- **AIENH-03**: Streaming responses for real-time AI typing effect
+- **PHOTO-01**: Swiss/Zurich urban photography integrated into relevant landing page sections (discuss separately)
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Other property sites | v3.x is Flatfox only |
-| Mobile app | Web-first approach |
-| Automatic scoring | User must trigger via FAB — Claude API cost control |
-| Conversation persistence | Ephemeral sessions chosen for v3.0 simplicity |
-| Streaming AI responses | Deferred to future; polling or full-response is sufficient for v3.0 |
+| Social proof / testimonials | No real users yet; deferred post-launch |
+| Video background in hero | Performance cost; chip animations serve same purpose |
+| Dark/light mode toggle on landing | Landing is intentionally dark-only |
+| Automatic scoring | Claude API cost control |
+| Mobile app | Web-first |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROF-08 | Phase 12 | Pending |
-| HIST-01 | Phase 12 | Pending |
-| HIST-02 | Phase 12 | Pending |
-| SEC-01 | Phase 13 | Pending |
-| SEC-02 | Phase 13 | Pending |
-| NAV-01 | Phase 14 | Complete |
-| NAV-02 | Phase 14 | Complete |
-| CHAT-01 | Phase 14 | Complete |
-| CHAT-02 | Phase 14 | Complete |
-| CHAT-03 | Phase 14 | Complete |
-| CHAT-04 | Phase 14 | Complete |
-| CHAT-05 | Phase 14 | Complete |
-| CHAT-06 | Phase 14 | Complete |
-| CHAT-07 | Phase 14 | Complete |
-| CHAT-08 | Phase 14 | Complete |
-| CHAT-09 | Phase 14 | Complete |
-| AI-01 | Phase 15 | Complete |
-| AI-02 | Phase 15 | Complete |
-| AI-03 | Phase 15 | Complete |
-| AI-04 | Phase 15 | Complete |
-| AI-05 | Phase 15 | Complete |
-| SUMM-01 | Phase 16 | Complete |
-| SUMM-02 | Phase 16 | Complete |
-| SUMM-03 | Phase 16 | Complete |
-| SUMM-04 | Phase 16 | Complete |
-| PROF-09 | Phase 16 | Complete |
-| PROF-10 | Phase 16 | Complete |
-| PROF-11 | Phase 16 | Complete |
-
-| DL-01 | Phase 17 | Complete |
-| DL-02 | Phase 17 | Complete |
-| DL-03 | Phase 17 | Complete |
-| DL-04 | Phase 17 | Complete |
-| HOST-01 | Phase 17 | Complete |
+| HERO-01 | Phase 22 | Complete |
+| HERO-02 | Phase 22 | Complete |
+| HERO-03 | Phase 22 | Complete |
+| PROB-01 | Phase 22 | Complete |
+| PROB-02 | Phase 22 | Complete |
+| PROB-03 | Phase 22 | Complete |
+| SOLN-01 | Phase 22 | Complete |
+| SOLN-02 | Phase 22 | Complete |
+| SOLN-03 | Phase 22 | Complete |
+| SOLN-04 | Phase 22 | Complete |
+| CTA-01 | Phase 22 | Complete |
+| CTA-02 | Phase 22 | Complete |
+| CTA-03 | Phase 22 | Complete |
+| CRED-01 | Phase 23 | Complete |
+| CRED-02 | Phase 23 | Complete |
 
 **Coverage:**
-- v3.0 (Download) requirements: 5 total
-- Mapped to phases: 5
+- v4.1 requirements: 15 total
+- Mapped to phases: 15
 - Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after v3.0 Extension Download milestone*
+*Requirements defined: 2026-03-28*
+*Last updated: 2026-03-28 — v4.1 milestone kickoff*

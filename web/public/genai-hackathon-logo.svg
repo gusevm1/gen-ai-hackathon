@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 68" width="380" height="68">
+  <defs>
+    <clipPath id="c">
+      <rect width="380" height="68" rx="4" ry="4"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#c)">
+    <!-- Green left zone -->
+    <rect x="0" y="0" width="300" height="68" fill="#50e75f"/>
+    <!-- Black right zone -->
+    <rect x="300" y="0" width="80" height="68" fill="#111111"/>
+    <!-- "GenAI Zürich" small label -->
+    <text x="14" y="25" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="500" fill="#000000">GenAI Zürich</text>
+    <!-- "Hackathon" large bold -->
+    <text x="12" y="57" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="900" fill="#000000">Hackathon</text>
+    <!-- Year inside black box -->
+    <text x="340" y="43" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#ffffff" text-anchor="middle">2026</text>
+  </g>
+</svg>

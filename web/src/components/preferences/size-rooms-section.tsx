@@ -12,17 +12,21 @@ import {
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { useLanguage } from '@/lib/language-context'
+import { t } from '@/lib/translations'
 
 interface SizeRoomsSectionProps {
   form: UseFormReturn<Preferences>
 }
 
 export function SizeRoomsSection({ form }: SizeRoomsSectionProps) {
+  const { language } = useLanguage()
+
   return (
     <div className="space-y-6">
       {/* Rooms Range */}
       <div>
-        <label className="text-sm font-medium">Rooms</label>
+        <label className="text-sm font-medium">{t(language, 'rooms_label')}</label>
         <div className="flex gap-4 mt-2">
           <FormField
             control={form.control}
@@ -33,7 +37,7 @@ export function SizeRoomsSection({ form }: SizeRoomsSectionProps) {
                   <Input
                     type="number"
                     step="0.5"
-                    placeholder="Min rooms"
+                    placeholder={t(language, 'rooms_min')}
                     value={field.value ?? ''}
                     onChange={(e) => {
                       const val = e.target.value
@@ -54,7 +58,7 @@ export function SizeRoomsSection({ form }: SizeRoomsSectionProps) {
                   <Input
                     type="number"
                     step="0.5"
-                    placeholder="Max rooms"
+                    placeholder={t(language, 'rooms_max')}
                     value={field.value ?? ''}
                     onChange={(e) => {
                       const val = e.target.value
@@ -87,7 +91,7 @@ export function SizeRoomsSection({ form }: SizeRoomsSectionProps) {
               className="text-sm cursor-pointer select-none"
               onClick={() => field.onChange(!field.value)}
             >
-              Hard limit — score 0 if below minimum rooms
+              {t(language, 'rooms_dealbreaker')}
             </label>
           </div>
         )}
@@ -95,7 +99,7 @@ export function SizeRoomsSection({ form }: SizeRoomsSectionProps) {
 
       {/* Living Space Range */}
       <div>
-        <label className="text-sm font-medium">Living Space (sqm)</label>
+        <label className="text-sm font-medium">{t(language, 'living_space_label')}</label>
         <div className="flex gap-4 mt-2">
           <FormField
             control={form.control}
@@ -105,7 +109,7 @@ export function SizeRoomsSection({ form }: SizeRoomsSectionProps) {
                 <FormControl>
                   <Input
                     type="number"
-                    placeholder="Min sqm"
+                    placeholder={t(language, 'living_space_min')}
                     value={field.value ?? ''}
                     onChange={(e) => {
                       const val = e.target.value
@@ -125,7 +129,7 @@ export function SizeRoomsSection({ form }: SizeRoomsSectionProps) {
                 <FormControl>
                   <Input
                     type="number"
-                    placeholder="Max sqm"
+                    placeholder={t(language, 'living_space_max')}
                     value={field.value ?? ''}
                     onChange={(e) => {
                       const val = e.target.value
@@ -158,7 +162,7 @@ export function SizeRoomsSection({ form }: SizeRoomsSectionProps) {
               className="text-sm cursor-pointer select-none"
               onClick={() => field.onChange(!field.value)}
             >
-              Hard limit — score 0 if below minimum space
+              {t(language, 'living_space_dealbreaker')}
             </label>
           </div>
         )}
@@ -170,7 +174,7 @@ export function SizeRoomsSection({ form }: SizeRoomsSectionProps) {
         name="floorPreference"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Floor Preference</FormLabel>
+            <FormLabel>{t(language, 'floor_pref_label')}</FormLabel>
             <FormControl>
               <RadioGroup
                 onValueChange={field.onChange}
@@ -180,19 +184,19 @@ export function SizeRoomsSection({ form }: SizeRoomsSectionProps) {
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="any" id="floor-any" />
                   <label htmlFor="floor-any" className="text-sm cursor-pointer">
-                    Any floor
+                    {t(language, 'floor_any')}
                   </label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="ground" id="floor-ground" />
                   <label htmlFor="floor-ground" className="text-sm cursor-pointer">
-                    Ground floor only
+                    {t(language, 'floor_ground')}
                   </label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="not_ground" id="floor-not-ground" />
                   <label htmlFor="floor-not-ground" className="text-sm cursor-pointer">
-                    Not ground floor
+                    {t(language, 'floor_not_ground')}
                   </label>
                 </div>
               </RadioGroup>

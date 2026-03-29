@@ -27,7 +27,7 @@ export interface ScoreResponse {
 
 /**
  * Modern color palette for match tiers.
- * NOT traffic light (red/yellow/green) -- uses emerald, blue, amber, gray.
+ * Traffic-light system: green (excellent), blue (good), amber (fair), red (poor).
  */
 export const TIER_COLORS: Record<
   ScoreResponse['match_tier'],
@@ -36,5 +36,5 @@ export const TIER_COLORS: Record<
   excellent: { bg: '#10b981', text: '#ffffff' },
   good: { bg: '#3b82f6', text: '#ffffff' },
   fair: { bg: '#f59e0b', text: '#1a1a1a' },
-  poor: { bg: '#6b7280', text: '#ffffff' },
+  poor: { bg: '#ef4444', text: '#ffffff' },
 };

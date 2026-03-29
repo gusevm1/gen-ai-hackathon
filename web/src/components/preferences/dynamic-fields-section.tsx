@@ -12,42 +12,45 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { X } from 'lucide-react'
+import { useLanguage } from '@/lib/language-context'
+import { t } from '@/lib/translations'
 
 interface DynamicFieldsSectionProps {
   form: UseFormReturn<Preferences>
 }
-
-const IMPORTANCE_OPTIONS = [
-  { value: 'critical', label: 'Critical' },
-  { value: 'high', label: 'High' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'low', label: 'Low' },
-] as const
 
 export function DynamicFieldsSection({ form }: DynamicFieldsSectionProps) {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'dynamicFields',
   })
+  const { language } = useLanguage()
+
+  const importanceOptions = [
+    { value: 'critical', label: t(language, 'importance_critical') },
+    { value: 'high', label: t(language, 'importance_high') },
+    { value: 'medium', label: t(language, 'importance_medium') },
+    { value: 'low', label: t(language, 'importance_low') },
+  ] as const
 
   return (
     <div className="space-y-4">
       <div>
-        <label className="text-sm font-medium">Custom Criteria</label>
+        <label className="text-sm font-medium">{t(language, 'custom_criteria_label')}</label>
         <p className="text-sm text-muted-foreground mt-1 mb-3">
-          Add any additional preferences with importance levels
+          {t(language, 'custom_criteria_hint')}
         </p>
         <div className="space-y-2">
           {fields.map((field, index) => (
             <div key={field.id} className="flex gap-2 items-start">
               <Input
                 {...form.register(`dynamicFields.${index}.name`)}
-                placeholder="Criterion name"
+                placeholder={t(language, 'criterion_name_placeholder')}
                 className="flex-1"
               />
               <Input
                 {...form.register(`dynamicFields.${index}.value`)}
-                placeholder="Details (optional)"
+                placeholder={t(language, 'criterion_details_placeholder')}
                 className="flex-1"
               />
               <Select
@@ -59,10 +62,10 @@ export function DynamicFieldsSection({ form }: DynamicFieldsSectionProps) {
                 }
               >
                 <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="Importance" />
+                  <SelectValue placeholder={t(language, 'importance_placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {IMPORTANCE_OPTIONS.map((opt) => (
+                  {importanceOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
                     </SelectItem>
@@ -88,7 +91,7 @@ export function DynamicFieldsSection({ form }: DynamicFieldsSectionProps) {
           onClick={() => append({ name: '', value: '', importance: 'medium' })}
           className="mt-3"
         >
-          + Add Criterion
+          {t(language, 'add_criterion')}
         </Button>
       </div>
     </div>

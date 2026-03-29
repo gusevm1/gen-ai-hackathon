@@ -29,6 +29,14 @@ def build_system_prompt(language: str = "de") -> str:
     return f"""You are a Swiss real estate evaluation assistant. Your job is to score \
 a property listing against a user's preferences, providing honest and transparent analysis.
 
+LANGUAGE RULES (MANDATORY — HIGHEST PRIORITY):
+- You MUST respond ENTIRELY and EXCLUSIVELY in {lang_name}. This rule overrides everything else.
+- Property descriptions, titles, and attributes from Flatfox may be in German or another language — IGNORE the input language completely.
+- Treat all Flatfox listing data as raw data only. NEVER mirror or reflect the language of that input.
+- Internally reinterpret or translate any German/foreign input as needed to produce output fully in {lang_name}.
+- ALL output MUST be in {lang_name}: section titles, content, bullet points, summaries, category labels — EVERYTHING without exception.
+- Mixed-language output is strictly forbidden. Before finalizing your response, verify every sentence is in {lang_name}.
+
 RULES:
 - Respond entirely in {lang_name}.
 - For each category, provide a 0-100 score based on how well the listing matches the user's preferences.
@@ -78,11 +86,11 @@ IMPORTANCE LEVELS:
 - Use these to weight your overall score calculation. CRITICAL categories matter most.
 - For the weight field in each category response, use: critical=90, high=70, medium=50, low=30.
 
-NEARBY PLACES SEARCH:
-- When the search_nearby_places tool is available, you MAY use it to verify proximity-based criteria.
-- Call the tool AT MOST ONCE. Choose the most important proximity criterion to verify.
-- If results are empty or the tool errors, score based on available listing data and note the limitation.
-- Do NOT call the tool for criteria assessable from listing data alone (balcony, parking, etc.)."""
+PROXIMITY EVALUATION RULES:
+- Evaluate proximity-based criteria ONLY from the "## Nearby Places Data (Verified)" section in the user prompt.
+- If an amenity is not present in that section, score it as "not found nearby" — do not guess, infer, or search.
+- Never call any tool to search for places. No tool is available for this purpose.
+- If the "## Nearby Places Data (Verified)" section is absent, the user has no proximity requirements — skip proximity evaluation entirely."""
 
 
 def _fmt_range(min_val, max_val, prefix="", suffix="") -> str:
@@ -197,7 +205,11 @@ def _format_dynamic_fields_section(prefs: UserPreferences) -> str:
     return "\n".join(lines)
 
 
-def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
+def build_user_prompt(
+    listing: FlatfoxListing,
+    prefs: UserPreferences,
+    nearby_places: dict[str, list[dict]] | None = None,
+) -> str:
     """Build the user prompt with listing data and preferences.
 
     Formats listing and preferences into structured readable text.
@@ -206,6 +218,9 @@ def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
     Args:
         listing: The Flatfox listing to evaluate.
         prefs: The user's search preferences.
+        nearby_places: Optional dict mapping amenity query string to list of place
+            result dicts. When provided, appended as a verified data section before
+            the closing evaluation instruction.
 
     Returns:
         Formatted user prompt with listing data and preferences.
@@ -292,7 +307,8 @@ def build_user_prompt(listing: FlatfoxListing, prefs: UserPreferences) -> str:
     else:
         coords_str = "Not available"
 
-    return f"""## User Preferences
+    # Build the base prompt (preferences + listing data + closing instruction)
+    base = f"""## User Preferences
 
 **Location:** {prefs.location or "No preference"}
 **Type:** {prefs.offer_type.value} | {prefs.object_category.value}
@@ -334,6 +350,41 @@ Evaluate this listing against the user's preferences. Score each of the 5 catego
 (location, price, size, features, condition), evaluate the custom criteria and desired features \
 as a checklist, and provide an overall score with summary bullets highlighting key matches \
 and compromises."""
+
+    # Append verified nearby places section when pre-fetched data is available (PROMPT-01, PROMPT-02)
+    if nearby_places:
+        lines = ["\n\n---\n\n## Nearby Places Data (Verified)\n"]
+        lines.append(
+            "The following results were fetched from Google Places before this evaluation.\n"
+            "Evaluate all proximity-based criteria EXCLUSIVELY from this data.\n"
+        )
+        for query, places in nearby_places.items():
+            lines.append(f"\n### {query}")
+            if places:
+                for i, place in enumerate(places, start=1):
+                    name = place.get("name", "Unknown")
+                    dist = place.get("distance_km")
+                    rating = place.get("rating")
+                    review_count = place.get("review_count")
+                    address = place.get("address", "")
+                    dist_str = f"{dist:.2f} km" if dist is not None else "distance unknown"
+                    rating_str = (
+                        f" | Rating: {rating} ({review_count} reviews)"
+                        if rating is not None
+                        else ""
+                    )
+                    lines.append(f"{i}. {name} — {dist_str}{rating_str}")
+                    if address:
+                        lines.append(f"   {address}")
+            else:
+                lines.append("No results found.")
+        lines.append(
+            "\n\nIf an amenity is NOT listed above, treat it as \"not found nearby\" "
+            "— do not guess or infer from listing description."
+        )
+        return base + "\n".join(lines)
+
+    return base
 
 
 def build_image_content_blocks(image_urls: list[str]) -> list[dict]:

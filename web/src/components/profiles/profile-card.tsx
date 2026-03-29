@@ -20,6 +20,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
+import { useLanguage } from '@/lib/language-context'
+import { t } from '@/lib/translations'
 
 export interface ProfileData {
   id: string
@@ -38,12 +40,12 @@ interface ProfileCardProps {
   onDelete: () => void
 }
 
-function buildSummaryLine(prefs: Record<string, unknown>): string {
+function buildSummaryLine(prefs: Record<string, unknown>, lang: ReturnType<typeof useLanguage>['language']): string {
   const parts: string[] = []
 
   const offerType = prefs.offerType as string | undefined
   const location = prefs.location as string | undefined
-  const offerLabel = offerType === 'SALE' ? 'Buy' : 'Rent'
+  const offerLabel = offerType === 'SALE' ? t(lang, 'profile_buy') : t(lang, 'profile_rent')
   if (location) {
     parts.push(`${offerLabel} in ${location}`)
   } else {
@@ -55,23 +57,23 @@ function buildSummaryLine(prefs: Record<string, unknown>): string {
   if (budgetMin != null && budgetMax != null) {
     parts.push(`CHF ${budgetMin.toLocaleString('de-CH')}-${budgetMax.toLocaleString('de-CH')}`)
   } else if (budgetMax != null) {
-    parts.push(`up to CHF ${budgetMax.toLocaleString('de-CH')}`)
+    parts.push(`${t(lang, 'profile_up_to')} CHF ${budgetMax.toLocaleString('de-CH')}`)
   } else if (budgetMin != null) {
-    parts.push(`from CHF ${budgetMin.toLocaleString('de-CH')}`)
+    parts.push(`${t(lang, 'profile_from')} CHF ${budgetMin.toLocaleString('de-CH')}`)
   }
 
   const roomsMin = prefs.roomsMin as number | null | undefined
   const roomsMax = prefs.roomsMax as number | null | undefined
   if (roomsMin != null && roomsMax != null) {
-    parts.push(`${roomsMin}-${roomsMax} rooms`)
+    parts.push(`${roomsMin}-${roomsMax} ${t(lang, 'profile_rooms')}`)
   } else if (roomsMin != null) {
-    parts.push(`${roomsMin}+ rooms`)
+    parts.push(`${roomsMin}+ ${t(lang, 'profile_rooms')}`)
   } else if (roomsMax != null) {
-    parts.push(`up to ${roomsMax} rooms`)
+    parts.push(`${t(lang, 'profile_up_to')} ${roomsMax} ${t(lang, 'profile_rooms')}`)
   }
 
   if (parts.length <= 1 && !location) {
-    return 'No preferences set yet'
+    return t(lang, 'profile_no_prefs')
   }
 
   return parts.join(' \u00b7 ')
@@ -86,7 +88,8 @@ export function ProfileCard({
   onDuplicate,
   onDelete,
 }: ProfileCardProps) {
-  const summary = buildSummaryLine(profile.preferences)
+  const { language } = useLanguage()
+  const summary = buildSummaryLine(profile.preferences, language)
   const flatfoxPrefs = {
     offerType: profile.preferences.offerType as string | undefined,
     objectCategory: profile.preferences.objectCategory as string | undefined,
@@ -98,7 +101,7 @@ export function ProfileCard({
   }
 
   return (
-    <Card>
+    <Card className="hover:shadow-md hover:ring-2 hover:ring-primary/10 transition-all">
       <CardHeader>
         <CardTitle className="flex items-center gap-1.5">
           {profile.is_default && (
@@ -118,11 +121,11 @@ export function ProfileCard({
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={onRename}>
                 <Pencil className="size-4" />
-                Rename
+                {t(language, 'profile_rename')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onDuplicate}>
                 <Copy className="size-4" />
-                Duplicate
+                {t(language, 'profile_duplicate')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -131,7 +134,7 @@ export function ProfileCard({
                 onClick={onDelete}
               >
                 <Trash2 className="size-4" />
-                Delete
+                {t(language, 'profile_delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -139,13 +142,13 @@ export function ProfileCard({
       </CardHeader>
       <CardFooter className="gap-2 flex-wrap">
         <Button size="sm" onClick={onEdit}>
-          Edit
+          {t(language, 'profile_edit')}
         </Button>
         {profile.is_default ? (
-          <Badge variant="secondary">Active</Badge>
+          <Badge variant="secondary">{t(language, 'profile_active')}</Badge>
         ) : (
           <Button variant="outline" size="sm" onClick={onSetActive}>
-            Set Active
+            {t(language, 'profile_set_active')}
           </Button>
         )}
         <OpenInFlatfoxButton preferences={flatfoxPrefs} />

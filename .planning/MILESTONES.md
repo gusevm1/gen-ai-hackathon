@@ -1,5 +1,37 @@
 # Milestones
 
+## v4.1 Landing Page v2 & Hackathon Credits (Active: 2026-03-28)
+
+**Phases planned:** 2 phases (22-23)
+**Goal:** Polish all 4 landing sections (Hero/Problem/Solution/CTA), unify tier colors (green/yellow/red), add ETH + Gen-AI Hackathon credits section.
+
+---
+
+## v4.0 Landing Page & Design System (Shipped: 2026-03-28)
+
+**Phases completed:** 4 phases (18-21), 8 plans
+**Timeline:** 2026-03-27 → 2026-03-28 (2 days)
+**Files:** 56 changed, +9,420/−159 lines | Web TS LOC: 11,301
+
+**Key accomplishments:**
+- Framer Motion design system — motion tokens, FadeIn/StaggerGroup/CountUp animation primitives, teal color tokens
+- 5-section landing page (Hero → Globe → Problem → Solution → CTA) replacing broken sticky-parallax chapters
+- SectionGlobe with SVG pathLength draw-in animation and Switzerland teal highlight
+- 7-chip ScoreBadge-style hero matching extension's TIER_COLORS visual language exactly (white/95 card, 40×40 circles)
+- Scroll-driven Problem section highlights — `useInView` per-item, teal glow, `once: false` re-trigger
+- Enlarged Solution browser demo (max-w-2xl, 360px), teal gradient bridge to CTA, radial glow CTA with scroll-retriggerable animation
+
+**Known Gaps (deferred to v4.1):**
+- LP-07: Mobile/tablet responsive design
+- DS-02: Dark hero / light dashboard color split via CSS variables
+- DS-03: Typography scale
+- UI-02: Dashboard animations alignment
+- Phases 22 (Dashboard UI Alignment) and 23 (Polish & QA) not started
+
+**Archive:** `.planning/milestones/v4.0-ROADMAP.md`, `.planning/milestones/v4.0-REQUIREMENTS.md`
+
+---
+
 ## v1.1 Demo-Ready + Multi-Profile (Shipped: 2026-03-15)
 
 **Phases completed:** 6 phases (5-10), 13 plans

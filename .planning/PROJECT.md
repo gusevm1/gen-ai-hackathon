@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A Chrome extension + web app that helps users evaluate Flatfox.ch property listings against their personal preferences. Users manage multiple search profiles on a Next.js website (with dealbreaker/importance-based preferences), then the Chrome extension scores each listing on Flatfox — showing score badges, expandable summaries, and linking to full analysis pages. Scoring uses Claude with image analysis for comprehensive evaluation. Supports multiple profiles per user for B2B property management use cases.
+A Chrome extension + web app that helps users evaluate Flatfox.ch property listings against their personal preferences. Users manage multiple search profiles on a polished Next.js marketing site (with a high-conversion landing page, Framer Motion animations, bilingual EN/DE copy), then the Chrome extension scores each listing on Flatfox — showing score badges, expandable summaries, and linking to full analysis pages. Scoring uses Claude with image analysis for comprehensive evaluation. Supports multiple profiles per user for B2B property management use cases.
 
 ## Core Value
 
@@ -14,12 +14,13 @@ Help users instantly see how well each property listing matches their specific n
 ┌──────────────────┐    ┌──────────────┐    ┌──────────────────┐    ┌──────────────┐
 │ Next.js Frontend │───▶│   Supabase   │───▶│  EC2 FastAPI     │───▶│  Claude API  │
 │ (Vercel)         │    │  Auth + Edge │    │  Backend         │    └──────────────┘
-│ - Profile CRUD   │    │  Functions   │    │  - Flatfox fetch │
-│ - Preferences    │    └──────┬───────┘    │  - Image extract │    ┌──────────────┐
-│ - Analysis pages │          │            │  - LLM scoring   │───▶│ Flatfox API  │
-└──────────────────┘           │            └──────────────────┘    │ /api/v1/flat/ │
-                               │                                    └──────────────┘
-┌──────────────────┐           │
+│ - Landing page   │    │  Functions   │    │  - Flatfox fetch │
+│ - Profile CRUD   │    └──────┬───────┘    │  - Image extract │    ┌──────────────┐
+│ - Preferences    │          │            │  - LLM scoring   │───▶│ Flatfox API  │
+│ - Analysis pages │          │            │  - AI chat       │    │ /api/v1/flat/ │
+└──────────────────┘          │            └──────────────────┘    └──────────────┘
+
+┌──────────────────┐          │
 │ Chrome Extension │───────────┘
 │ (Flatfox.ch)     │
 │ - Shadow DOM     │
@@ -50,48 +51,72 @@ Help users instantly see how well each property listing matches their specific n
 - ✓ Extension popup with profile switcher and session health — v1.1
 - ✓ Stale badge detection when active profile changes — v1.1
 - ✓ Analysis page redesigned for demo presentations — v1.1
-- ✓ Score caching by listing+profile (CACHE-01, CACHE-02, CACHE-03) — v2.0 Phase 11
-- ✓ FAB re-score UX: long-press, stale visual states, brand teal styling — v2.0 Phase 11
-- ✓ AI-Powered Search nav + chat interface — v2.0 Phase 14
-- ✓ Multi-turn conversational AI backend (Claude on EC2) — v2.0 Phase 15
-- ✓ Summary card with inline editing, confirm-to-create profile — v2.0 Phase 16
+- ✓ Score caching by listing+profile (CACHE-01, CACHE-02, CACHE-03) — v2.0
+- ✓ FAB re-score UX: long-press, stale visual states, brand teal styling — v2.0
+- ✓ AI-Powered Search nav + chat interface — v2.0
+- ✓ Multi-turn conversational AI backend (Claude on EC2) — v2.0
+- ✓ Summary card with inline editing, confirm-to-create profile — v2.0
+- ✓ Download page with extension zip + sideloading instructions — v3.0
+- ✓ LP-01: Public landing page at `/` replaces redirect — v4.0
+- ✓ LP-02: Hero section with animated product demo — v4.0
+- ✓ LP-03: Problem/Solution sections with Hormozi-structured copy (EN/DE bilingual) — v4.0
+- ✓ LP-04: Features section showcasing scoring, profiles, and analysis — v4.0
+- ✓ LP-05: Clear primary CTA funneling to auth — v4.0
+- ✓ LP-06: Secondary CTA for existing users — v4.0
+- ✓ LP-08: Page LCP < 2.5s, no layout shift from animations — v4.0
+- ✓ DS-01: Framer Motion installed and animation primitives defined — v4.0
+- ✓ DS-04: Single teal accent — no competing secondary colors — v4.0
+- ✓ UI-01: Dashboard pages updated to align with landing page design language — v4.0
+- ✓ UI-03: Bilingual EN/DE copy propagated to all user-facing surfaces — v4.0
 
 ### Active
 
-- [ ] DL-01: "Download" item in the top navigation bar for authenticated users
-- [ ] DL-02: Direct zip download of the Chrome extension from the website
-- [ ] DL-03: Step-by-step sideloading instructions (unzip, chrome://extensions, Developer Mode, Load unpacked)
-- [ ] DL-04: Instructions include link to open chrome://extensions in a new tab
-- [ ] HOST-01: Extension zip served as a static file from Next.js public/ directory
+- [ ] HERO-01: Stats row removed from SectionHero
+- [ ] HERO-02: CTA button centered on its own row
+- [ ] HERO-03: Poor tier color updated to red across landing + extension
+- [ ] PROB-01: Decorative background numbers removed from problem cards
+- [ ] PROB-02: Problem cards slide in from left on scroll
+- [ ] PROB-03: Problem cards visually redesigned — elevated, engaging
+- [ ] SOLN-01: Browser demo enlarged (max-w-3xl+)
+- [ ] SOLN-02: Step cards enlarged with more presence
+- [ ] SOLN-03: Score display uses full tier color system (green/yellow/red)
+- [ ] CTA-01: Headline font size increased to clamp(2.5rem, 6vw, 4.5rem)
+- [ ] CTA-02: Headline dramatic bottom-up entrance animation
+- [ ] CRED-01: ETH + Gen-AI Hackathon credits section added
 
 ### Out of Scope
 
-- Other property sites beyond Flatfox — v1.x is Flatfox only
+- Other property sites beyond Flatfox — v4.x is Flatfox only
 - Mobile app — web-first approach
 - Historical price tracking or investment analysis
-- Automatic scoring (user must trigger via FAB — Claude API cost control)
+- Automatic scoring — user must trigger via FAB (Claude API cost control)
 - Offline mode
+- Conversation persistence — ephemeral sessions chosen for v3.0 simplicity
+- PROF-08: Duplicate profile rename modal — deferred
+- HIST-01/02: Analysis history across profiles — deferred
+- SEC-01/02: Edge function JWT verification — deferred (auth handled at function level)
 
-## Current Milestone: v2.0 Smart Preferences & UX Polish
+## Current Milestone: v4.1 Landing Page v2 & Hackathon Credits
 
-**Goal:** Replace manual preference forms with AI chat-driven discovery, overhaul UI design, and enable parallel listing scoring.
+**Goal:** Polish all 4 landing page sections based on UX review, unify tier color system to traffic-light (green/yellow/red), and add ETH/Gen-AI Hackathon credits section.
 
 **Target features:**
-- Chat-based preference generation with editable output and priority assignment
-- Simplified preferences schema: standard fields + dynamic AI-generated fields
-- Flatfox-inspired UI redesign across web app
-- Parallel scoring of all visible listings from single FAB click
-- Chrome extension distribution from website
+- Hero: Remove stats row, center CTA, fix poor tier to red
+- Problem: Slide-in-from-left cards, remove decorative background numbers, more engaging visual design
+- Solution: Larger browser demo, larger step cards, proper tier colors in score display
+- CTA: Bigger headline (clamp up to 4.5rem), dramatic bottom-up entrance animation, stronger glow
+- Credits: New ETH Zurich + Gen-AI Hackathon section above footer
 
 ## Context
 
-**Shipped v1.1 Demo-Ready + Multi-Profile.** 13,153 LOC across TypeScript (extension + web) and Python (backend). Built in ~10 days.
+**Shipped v4.0 Landing Page & Design System.** 11,301 LOC TypeScript (web), ~2,400 LOC Python (backend).
 
-- **Tech stack:** Next.js (Vercel) + FastAPI (EC2) + Supabase (auth/DB/edge) + WXT Chrome extension + Claude API
+- **Tech stack:** Next.js (Vercel) + FastAPI (EC2) + Supabase (auth/DB/edge) + WXT Chrome extension + Claude API + Framer Motion
+- **Landing page:** 5-section scroll-triggered (Hero → Globe → Problem → Solution → CTA), bilingual EN/DE, teal design language
 - **Target site:** Flatfox.ch — Swiss property portal with public API
 - **Language:** DE/FR/IT — scoring matches listing language
 - **Pilot target:** Vera Caflisch at Bellevia Immobilien GmbH, Thalwil ZH (B2B property management)
-- **Known tech debt:** No score caching, `--no-verify-jwt` on edge function, orphaned app-sidebar.tsx and dashboard/actions.ts
+- **Known tech debt:** `--no-verify-jwt` on edge function; no score caching invalidation on listing updates
 
 ## Constraints
 
@@ -120,17 +145,13 @@ Help users instantly see how well each property listing matches their specific n
 | Structured importance levels over float weights | Better Claude prompt quality | ✓ Good |
 | Horizontal top navbar over sidebar | User preference after visual review | ✓ Good |
 | Native `<select>` in extension popup | Avoids portal/iframe issues with Radix | ✓ Good |
-| No score caching in v1 | Speed over optimization for hackathon | ⚠️ Revisit |
+| 5-section landing page over 7-chapter sticky-parallax | Phase 20 redesign — sticky-parallax broke; whileInView simpler and more reliable | ✓ Good |
+| Framer Motion (motion/react v12) for animations | Spring physics + scroll-triggered; established as standard | ✓ Good |
+| TIER_COLORS local to SectionHero | Avoids cross-workspace import coupling with extension | ✓ Good |
+| `useInView` not `whileInView` for Problem items | Avoids Framer Motion conflict with per-item `animate` prop | ✓ Good |
+| Gradient bridge in LandingPageContent | Keeps section components self-contained | ✓ Good |
 | `--no-verify-jwt` on edge function | Gateway rejects extension JWTs; function handles auth itself | ⚠️ Revisit |
-
-## Current Milestone: v3.0 Extension Download & Install
-
-**Goal:** Add a "Download" page to the web app so authenticated users can download the Chrome extension and follow step-by-step sideloading instructions.
-
-**Target features:**
-- "Download" nav tab in the top navigation bar
-- Direct zip download of the Chrome extension from the website
-- Step-by-step sideloading instructions (unzip, chrome://extensions, Developer Mode, Load unpacked)
+| No score caching in v1 | Speed over optimization for hackathon | ⚠️ Revisit |
 
 ---
-*Last updated: 2026-03-17 after v3.0 Extension Download milestone started*
+*Last updated: 2026-03-28 after v4.0 Landing Page & Design System milestone*
