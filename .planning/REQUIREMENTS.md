@@ -32,8 +32,8 @@
 
 ### Hackathon Credits
 
-- [ ] **CRED-01**: New section added above footer — "Built at" + ETH Zurich logo + Gen-AI Hackathon logo
-- [ ] **CRED-02**: Credits section is minimal, elegant — does not distract from primary CTA above it
+- [x] **CRED-01**: New section added above footer — "Built at" + ETH Zurich logo + Gen-AI Hackathon logo
+- [x] **CRED-02**: Credits section is minimal, elegant — does not distract from primary CTA above it
 
 ## v4.2 Requirements (Deferred)
 
@@ -83,8 +83,8 @@
 | CTA-01 | Phase 22 | Complete |
 | CTA-02 | Phase 22 | Complete |
 | CTA-03 | Phase 22 | Complete |
-| CRED-01 | Phase 23 | Pending |
-| CRED-02 | Phase 23 | Pending |
+| CRED-01 | Phase 23 | Complete |
+| CRED-02 | Phase 23 | Complete |
 
 **Coverage:**
 - v4.1 requirements: 15 total

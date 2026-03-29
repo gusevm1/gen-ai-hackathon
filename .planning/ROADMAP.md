@@ -67,7 +67,7 @@
 **Milestone Goal:** Polish all 4 landing page sections based on UX review, add hackathon credits, and unify tier color system to traffic-light (green/yellow/red).
 
 - [x] **Phase 22: Landing Page Section Redesigns** — Hero cleanup (stats row, CTA centering, tier colors), Problem card slide-in + visual redesign, Solution enlargement + tier color fix, CTA dramatic entrance animation (completed 2026-03-28)
-- [ ] **Phase 23: Hackathon Credits Section** — ETH Zurich + Gen-AI Hackathon logos section above footer; Zurich cityscape photo across hero, credits, and auth page
+- [x] **Phase 23: Hackathon Credits Section** — ETH Zurich + Gen-AI Hackathon logos section above footer; Zurich cityscape photo across hero, credits, and auth page (completed 2026-03-29)
 
 ### Phase 22: Landing Page Section Redesigns
 
@@ -94,7 +94,7 @@
 **Requirements:** CRED-01, CRED-02
 
 **Plans:**
-1 plan total
+1/1 plans complete
 - [ ] 23-01-PLAN.md — Zurich photo assets + SectionCredits component + hero/auth photo integration
 
 **Success Criteria:**
