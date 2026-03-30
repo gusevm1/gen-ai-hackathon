@@ -32,8 +32,8 @@
 
 ### Integration & Infrastructure
 
-- [ ] **INT-01**: Supabase migrations 005 (listing_profiles table) and 006 (research_json column) applied to production before hybrid scorer ships
-- [ ] **INT-02**: `OPENROUTER_API_KEY`, `ALLOW_CLAUDE_FALLBACK=false`, and `SUBJECTIVE_MODEL` env vars set on EC2
+- [x] **INT-01**: Supabase migrations 005 (listing_profiles table) and 006 (research_json column) applied to production before hybrid scorer ships
+- [x] **INT-02**: `OPENROUTER_API_KEY`, `ALLOW_CLAUDE_FALLBACK=false`, and `SUBJECTIVE_MODEL` env vars set on EC2
 - [ ] **INT-03**: Scoring router performs ListingProfile lookup from Supabase; adapter converts ListingProfile fields to FlatfoxListing-compatible format for deterministic scorer consumption without modifying Phase 28 code
 - [ ] **INT-04**: When `ALLOW_CLAUDE_FALLBACK=false` and no ListingProfile exists, scoring endpoint returns a response with `enrichment_status="unavailable"` instead of calling Claude; old Claude path preserved behind the gate
 - [ ] **INT-05**: OpenRouter model constant updated from deprecated `google/gemini-2.0-flash-001` to `google/gemini-2.5-flash-lite`
@@ -47,9 +47,9 @@
 
 ### Database & Cache
 
-- [ ] **DB-01**: `schema_version` field added to the `breakdown` JSONB column in the `analyses` table; this migration deploys before any `ScoreResponse` schema changes reach production
+- [x] **DB-01**: `schema_version` field added to the `breakdown` JSONB column in the `analyses` table; this migration deploys before any `ScoreResponse` schema changes reach production
 - [ ] **DB-02**: Cache read logic checks `schema_version`; any cached analysis with `schema_version < 2` (or missing `schema_version`) triggers a re-score instead of returning the stale cached entry; edge function cache also updated
-- [ ] **DB-03**: `fulfillment_data` JSONB column added to `analyses` table (additive); existing `breakdown` column and `score` column retained for v1 backward compatibility
+- [x] **DB-03**: `fulfillment_data` JSONB column added to `analyses` table (additive); existing `breakdown` column and `score` column retained for v1 backward compatibility
 
 ### Frontend Consumers
 
@@ -100,14 +100,14 @@
 | SS-02 | Phase 29 | Complete |
 | SS-03 | Phase 29 | Complete |
 | SS-04 | Phase 29 | Complete |
-| INT-01 | Phase 30 | Pending |
-| INT-02 | Phase 30 | Pending |
+| INT-01 | Phase 30 | Complete |
+| INT-02 | Phase 30 | Complete |
 | INT-03 | Phase 31 | Pending |
 | INT-04 | Phase 31 | Pending |
 | INT-05 | Phase 31 | Pending |
-| DB-01 | Phase 30 | Pending |
+| DB-01 | Phase 30 | Complete |
 | DB-02 | Phase 31 | Pending |
-| DB-03 | Phase 30 | Pending |
+| DB-03 | Phase 30 | Complete |
 | HA-01 | Phase 31 | Pending |
 | HA-02 | Phase 31 | Pending |
 | HA-03 | Phase 31 | Pending |

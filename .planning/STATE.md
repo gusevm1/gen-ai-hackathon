@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Scoring Engine
 status: completed
-stopped_at: Completed 29-02-PLAN.md (two-path OpenRouter scoring logic) — Phase 29 complete
-last_updated: "2026-03-30T13:44:35.406Z"
-last_activity: 2026-03-30 — Completed Phase 29 (two-path OpenRouter scoring)
+stopped_at: Completed 30-01-PLAN.md (database infrastructure prep) -- Phase 30 complete
+last_updated: "2026-03-30T14:27:50.651Z"
+last_activity: 2026-03-30 — Completed Phase 30 (database infrastructure prep)
 progress:
   total_phases: 8
-  completed_phases: 5
-  total_plans: 11
-  completed_plans: 11
-  percent: 50
+  completed_phases: 7
+  total_plans: 13
+  completed_plans: 13
+  percent: 58
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Phase 29 complete — next: Phase 30 (DB schema version)
+**Current focus:** Phase 30 complete — next: Phase 31 (Hybrid Scorer & Router Integration)
 
 ## Current Position
 
-Phase: 29 of 32 (Subjective Scorer — OpenRouter) COMPLETE
-Plan: 2 of 2 in current phase (complete)
+Phase: 30 of 32 (Database Infrastructure Prep) COMPLETE
+Plan: 1 of 1 in current phase (complete)
 Status: Phase complete
-Last activity: 2026-03-30 — Completed Phase 29 (two-path OpenRouter scoring)
+Last activity: 2026-03-30 — Completed Phase 30 (database infrastructure prep)
 
-Progress: [#####-----] 50% (phases 27-29 complete, 33 complete out-of-band)
+Progress: [######----] 58% (phases 27-30 complete, 33 complete out-of-band)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 2 plans)
+- Total plans completed: 10 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 2 plans, 30: 1 plan)
 - Average duration: ~5min
 - Total execution time: --
 
@@ -43,6 +43,7 @@ Progress: [#####-----] 50% (phases 27-29 complete, 33 complete out-of-band)
 |-------|------|----------|-------|-------|
 | 29    | 01   | 5min     | 2     | 4     |
 | 29    | 02   | 4min     | 2     | 4     |
+| 30    | 01   | 5min     | 3     | 3     |
 
 ## Accumulated Context
 
@@ -77,10 +78,18 @@ Progress: [#####-----] 50% (phases 27-29 complete, 33 complete out-of-band)
 ### Blockers/Concerns
 
 - Gemini 2.5 Flash Lite structured output support untested -- verify during Phase 29
-- Only 27 pre-enriched listings (zipcode 8051) -- Phase 31 must handle "no ListingProfile" gracefully
+- 164 pre-enriched listings in production (zipcode 8051) -- Phase 31 must still handle "no ListingProfile" gracefully for other zipcodes
+
+### Phase 30 Infrastructure Decisions
+
+- Migrations 005-007 applied to production Supabase (listing_profiles, research_json, fulfillment_data)
+- DB-01 (schema_version) is a JSONB key in breakdown column, not a DDL column -- Phase 31 writes at application level
+- OPENROUTER_API_KEY already existed on EC2 from batch enrichment; added ALLOW_CLAUDE_FALLBACK=false and SUBJECTIVE_MODEL
+- 164 listing profiles in production (from batch enrichment of zipcode 8051)
+- Migration tracking registered in supabase_migrations.schema_migrations for 005, 006, 007
 
 ## Session Continuity
 
-Last session: 2026-03-30
-Stopped at: Completed 29-02-PLAN.md (two-path OpenRouter scoring logic) — Phase 29 complete
+Last session: 2026-03-30T14:27:50.649Z
+Stopped at: Completed 30-01-PLAN.md (database infrastructure prep) -- Phase 30 complete
 Resume file: None
