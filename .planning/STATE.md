@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: Landing Page v2 & Hackathon Credits
 status: executing
-stopped_at: "Completed 28-01: Deterministic scorer TDD scaffold"
-last_updated: "2026-03-30T06:17:21.257Z"
-last_activity: "2026-03-29 -- 27-03 complete: criterionType on dynamicFieldSchema, classify-criteria injected in saveProfilePreferences + createProfileWithPreferences"
+stopped_at: "Completed 28-02: deterministic_scorer.py implementation, all 41 tests GREEN"
+last_updated: "2026-03-30T10:45:37.988Z"
+last_activity: "2026-03-30 -- 28-02 complete: deterministic_scorer.py fully implemented, 41 tests passing"
 progress:
   total_phases: 9
   completed_phases: 7
