@@ -109,7 +109,7 @@ Plans:
 - [x] **Phase 28: Deterministic Scorer** — Pure-function fulfillment formulas for price, distance, size, binary features, proximity quality, and built-in fields (completed 2026-03-30)
 - [x] **Phase 29: Subjective Scorer (OpenRouter)** — SubjectiveResponse model, batched OpenRouter call for subjective criteria + summary bullets, configurable model via SUBJECTIVE_MODEL env var (completed 2026-03-30)
 - [x] **Phase 30: Database & Infrastructure Prep** — Migrations 005/006, schema_version + fulfillment_data columns, OPENROUTER_API_KEY + ALLOW_CLAUDE_FALLBACK + SUBJECTIVE_MODEL env vars on EC2 (completed 2026-03-30)
-- [ ] **Phase 31: Hybrid Scorer & Router Integration** — ListingProfile lookup + adapter, weighted aggregation engine, CRITICAL override, ScoreResponse v2, cache version gating, ALLOW_CLAUDE_FALLBACK gating, OpenRouter model constant update
+- [x] **Phase 31: Hybrid Scorer & Router Integration** — ListingProfile lookup + adapter, weighted aggregation engine, CRITICAL override, ScoreResponse v2, cache version gating, ALLOW_CLAUDE_FALLBACK gating, OpenRouter model constant update (completed 2026-03-30)
 - [ ] **Phase 32: Frontend Consumers** — FulfillmentBreakdown component, checklist threshold update, extension types, schema_version branching, grey "beta" badge for non-enriched listings
 
 **Phase ordering:** 29 and 30 can run in parallel. 31 depends on both 29 and 30. 32 depends on 31.
@@ -195,7 +195,7 @@ Plans:
   3. Any CRITICAL-importance criterion with `fulfillment=0` forces `match_tier="poor"` and caps the numeric score at 39
   4. The `ScoreResponse` includes `schema_version: 2`, `criteria_results` list, no `categories` list; `overall_score`, `match_tier`, and `summary_bullets` field names are preserved; cache reads reject entries with `schema_version < 2`; edge function cache also checks `schema_version`
   5. When `ALLOW_CLAUDE_FALLBACK=false` and no ListingProfile exists, the endpoint returns `enrichment_status="unavailable"` instead of calling Claude; the OpenRouter model constant is updated to `google/gemini-2.5-flash-lite`
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 31-01-PLAN.md — ScoreResponse v2 model + CriterionResult, profile_adapter.py, hybrid_scorer.py (aggregation engine)
@@ -246,5 +246,5 @@ Plans:
 | 28. Deterministic Scorer | ✅ Complete | 2026-03-30 |
 | 29. Subjective Scorer (OpenRouter) | ✅ Complete | 2026-03-30 |
 | 30. Database & Infrastructure Prep | ✅ Complete | 2026-03-30 |
-| 31. Hybrid Scorer & Router Integration | 2/3 | In Progress|  | 32. Frontend Consumers | Not started | - |
+| 31. Hybrid Scorer & Router Integration | 3/3 | Complete   | 2026-03-30 | 32. Frontend Consumers | Not started | - |
 | 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |

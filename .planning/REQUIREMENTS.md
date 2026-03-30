@@ -35,8 +35,8 @@
 - [x] **INT-01**: Supabase migrations 005 (listing_profiles table) and 006 (research_json column) applied to production before hybrid scorer ships
 - [x] **INT-02**: `OPENROUTER_API_KEY`, `ALLOW_CLAUDE_FALLBACK=false`, and `SUBJECTIVE_MODEL` env vars set on EC2
 - [x] **INT-03**: Scoring router performs ListingProfile lookup from Supabase; adapter converts ListingProfile fields to FlatfoxListing-compatible format for deterministic scorer consumption without modifying Phase 28 code
-- [ ] **INT-04**: When `ALLOW_CLAUDE_FALLBACK=false` and no ListingProfile exists, scoring endpoint returns a response with `enrichment_status="unavailable"` instead of calling Claude; old Claude path preserved behind the gate
-- [ ] **INT-05**: OpenRouter model constant updated from deprecated `google/gemini-2.0-flash-001` to `google/gemini-2.5-flash-lite`
+- [x] **INT-04**: When `ALLOW_CLAUDE_FALLBACK=false` and no ListingProfile exists, scoring endpoint returns a response with `enrichment_status="unavailable"` instead of calling Claude; old Claude path preserved behind the gate
+- [x] **INT-05**: OpenRouter model constant updated from deprecated `google/gemini-2.0-flash-001` to `google/gemini-2.5-flash-lite`
 
 ### Hybrid Aggregation Engine
 
@@ -103,8 +103,8 @@
 | INT-01 | Phase 30 | Complete |
 | INT-02 | Phase 30 | Complete |
 | INT-03 | Phase 31 | Complete |
-| INT-04 | Phase 31 | Pending |
-| INT-05 | Phase 31 | Pending |
+| INT-04 | Phase 31 | Complete |
+| INT-05 | Phase 31 | Complete |
 | DB-01 | Phase 30 | Complete |
 | DB-02 | Phase 31 | Complete |
 | DB-03 | Phase 30 | Complete |

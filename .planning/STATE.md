@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Scoring Engine
 status: in-progress
-stopped_at: Completed 31-03-PLAN.md
-last_updated: "2026-03-30T15:22:52.639Z"
-last_activity: 2026-03-30 — Completed Phase 31 Plan 03 (schema_version cache gating)
+stopped_at: Completed 31-02-PLAN.md (all Phase 31 plans complete)
+last_updated: "2026-03-30T15:23:18Z"
+last_activity: 2026-03-30 — Completed Phase 31 Plan 02 (scoring router + OpenRouter model update)
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
   percent: 97
 ---
 
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Phase 31 in progress — Hybrid Scorer & Router Integration (Plan 03 of 03 complete, awaiting Plan 02)
+**Current focus:** Phase 31 complete — Hybrid Scorer & Router Integration (all 3 plans complete)
 
 ## Current Position
 
 Phase: 31 of 32 (Hybrid Scorer & Router Integration)
-Plan: 3 of 3 in current phase (Plans 01 and 03 complete, Plan 02 pending)
-Status: In progress
-Last activity: 2026-03-30 — Completed Phase 31 Plan 03 (schema_version cache gating)
+Plan: 3 of 3 in current phase (all complete)
+Status: Phase 31 complete
+Last activity: 2026-03-30 — Completed Phase 31 Plan 02 (scoring router + OpenRouter model)
 
 Progress: [██████████] 97% (phases 27-31 in progress, 33 complete out-of-band)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 2 plans, 30: 1 plan, 31: 2 plans)
+- Total plans completed: 13 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 2 plans, 30: 1 plan, 31: 3 plans)
 - Average duration: ~5min
 - Total execution time: --
 
@@ -45,6 +45,7 @@ Progress: [██████████] 97% (phases 27-31 in progress, 33 com
 | 29    | 02   | 4min     | 2     | 4     |
 | 30    | 01   | 5min     | 3     | 3     |
 | 31    | 01   | 2min     | 3     | 3     |
+| 31    | 02   | 2min     | 2     | 2     |
 | 31    | 03   | 1min     | 2     | 2     |
 
 ## Accumulated Context
@@ -80,6 +81,14 @@ Progress: [██████████] 97% (phases 27-31 in progress, 33 com
 - hybrid_scorer: weighted aggregation (HA-01), None exclusion (HA-02), CRITICAL cap at 39 (HA-03)
 - Pre-computed amenity data always is_fallback=False in proximity_data format
 
+### Phase 31 Plan 02 Decisions
+
+- Scoring router rewritten as hybrid pipeline orchestrator: cache -> profile lookup -> adapt -> deterministic + subjective -> aggregate -> ScoreResponse v2
+- Fallback pipeline also uses hybrid aggregation (not just Claude alone), returns enrichment_status="fallback"
+- Three enrichment_status values: "available" (profile), "fallback" (Claude), "unavailable" (no data)
+- Analysis save uses asyncio.create_task fire-and-forget pattern for non-blocking response
+- OPENROUTER_MODEL updated to google/gemini-2.5-flash-lite in openrouter.py (Layer 3 gap-fill client)
+
 ### Phase 31 Plan 03 Decisions
 
 - Default schema_version to 0 when missing -- treats all legacy v1 entries as stale in both cache layers
@@ -106,6 +115,6 @@ Progress: [██████████] 97% (phases 27-31 in progress, 33 com
 
 ## Session Continuity
 
-Last session: 2026-03-30T15:22:52.637Z
-Stopped at: Completed 31-03-PLAN.md
+Last session: 2026-03-30T15:23:18Z
+Stopped at: Completed 31-02-PLAN.md (all Phase 31 plans complete)
 Resume file: None
