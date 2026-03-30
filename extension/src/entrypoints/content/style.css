@@ -13,3 +13,59 @@
   margin: 0;
   padding: 0;
 }
+
+/* ── Onboarding overlay ─────────────────────────────────────────── */
+.homematch-onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+}
+
+.homematch-onboarding-tooltip {
+  position: fixed;
+  background: white;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  max-width: 320px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  color: #1a1a1a;
+  z-index: 100000;
+}
+
+.homematch-onboarding-tooltip h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 5px;
+}
+
+.homematch-onboarding-tooltip p {
+  font-size: 13px;
+  color: #555;
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+
+.homematch-onboarding-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+}
+
+.homematch-onboarding-btn-primary {
+  background: #2563eb;
+  color: white;
+}
+
+.homematch-onboarding-btn-ghost {
+  background: transparent;
+  color: #888;
+}
+
+.homematch-onboarding-progress {
+  font-size: 11px;
+  color: #aaa;
+}

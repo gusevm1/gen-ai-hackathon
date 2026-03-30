@@ -5,10 +5,58 @@ import type { ScoreResponse } from '@/types/scoring';
 import { extractVisibleListingPKs, findListingCardElement } from '@/lib/flatfox';
 import { scoreListings } from '@/lib/api';
 import { activeProfileStorage } from '@/storage/active-profile';
+import { getOnboardingState, updateOnboardingState } from '@/lib/onboarding';
+import type { OnboardingState } from '@/lib/onboarding';
 import { Fab } from './components/Fab';
 import { ScoreBadge } from './components/ScoreBadge';
 import { SummaryPanel } from './components/SummaryPanel';
 import { LoadingSkeleton } from './components/LoadingSkeleton';
+import { OnboardingOverlay } from './components/OnboardingOverlay';
+
+/** Extension onboarding steps 4-7 that run on the Flatfox page. */
+interface ExtensionStepConfig {
+  step: number;
+  title: string;
+  instruction: string;
+  targetSelector: string | null;
+  targetShadowHost: string | null;
+  nextLabel: string | null;
+}
+
+const EXTENSION_STEPS: ExtensionStepConfig[] = [
+  {
+    step: 4,
+    title: 'Log In',
+    instruction: 'Click the HomeMatch icon in your browser toolbar and log in with your account.',
+    targetSelector: null,
+    targetShadowHost: null,
+    nextLabel: "I'm logged in",
+  },
+  {
+    step: 5,
+    title: 'Analyze Listings',
+    instruction: 'Click the HomeMatch button to score the listings on this page.',
+    targetSelector: null,
+    targetShadowHost: 'homematch-fab',
+    nextLabel: null, // Auto-advances when scoring completes
+  },
+  {
+    step: 6,
+    title: 'Your Results',
+    instruction: 'See how each listing matches your preferences. Click a badge for details.',
+    targetSelector: null, // Dynamically set to first badge shadow host
+    targetShadowHost: null,
+    nextLabel: 'Got it',
+  },
+  {
+    step: 7,
+    title: 'View Full Analysis',
+    instruction: 'Click "Show full analysis" on any listing to see the detailed breakdown in the web app.',
+    targetSelector: null,
+    targetShadowHost: null,
+    nextLabel: 'Done',
+  },
+];
 
 interface AppProps {
   ctx: ContentScriptContext;
@@ -31,6 +79,10 @@ export default function App({ ctx }: AppProps) {
   const [isScoring, setIsScoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isStale, setIsStale] = useState(false);
+
+  // Onboarding state (steps 4-7 handled by this extension content script)
+  const [onboardingState, setOnboardingState] = useState<OnboardingState | null>(null);
+  const [onboardingStatusMsg, setOnboardingStatusMsg] = useState<string | null>(null);
 
   // Refs to avoid stale closures in separate React roots
   const scoresRef = useRef<Map<number, ScoreResponse>>(new Map());
@@ -98,6 +150,83 @@ export default function App({ ctx }: AppProps) {
       profileNameRef.current = profile?.name ?? null;
     });
   }, []);
+
+  /**
+   * Load onboarding state on mount (once per page load).
+   * Only activates if step is in extension range (4-7) and onboarding is active.
+   */
+  useEffect(() => {
+    getOnboardingState().then((state) => {
+      if (
+        state &&
+        state.onboarding_active &&
+        state.onboarding_step >= 4 &&
+        state.onboarding_step <= 7
+      ) {
+        setOnboardingState(state);
+      }
+    });
+  }, []);
+
+  /**
+   * Advance to the next onboarding step and persist to Supabase.
+   */
+  const advanceOnboarding = useCallback(async () => {
+    setOnboardingState((prev) => {
+      if (!prev) return null;
+      const next = prev.onboarding_step + 1;
+      const completed = next > 8;
+      const newState: OnboardingState = {
+        onboarding_step: completed ? 8 : next,
+        onboarding_active: !completed,
+        onboarding_completed: prev.onboarding_completed || completed,
+      };
+      // Write async, don't block UI
+      updateOnboardingState(
+        newState.onboarding_step,
+        newState.onboarding_active,
+        newState.onboarding_completed,
+      );
+      // On step 7 -> 8, redirect to web app
+      if (prev.onboarding_step === 7) {
+        window.open('https://homematch.ch/analyses', '_blank');
+        return null; // Hide overlay
+      }
+      return completed ? null : newState;
+    });
+    setOnboardingStatusMsg(null);
+  }, []);
+
+  /**
+   * Skip onboarding — set active=false in Supabase and hide overlay.
+   */
+  const skipOnboarding = useCallback(async () => {
+    setOnboardingState((prev) => {
+      if (!prev) return null;
+      updateOnboardingState(prev.onboarding_step, false, prev.onboarding_completed);
+      return null; // Hide overlay immediately
+    });
+    setOnboardingStatusMsg(null);
+  }, []);
+
+  /**
+   * Handle "Next" for step 4 (login verification).
+   * Verifies auth before advancing; shows error if not logged in.
+   */
+  const handleStep4Next = useCallback(async () => {
+    try {
+      const response = await browser.runtime.sendMessage({ action: 'getSession' });
+      const session = response?.session;
+      if (!session?.access_token) {
+        setOnboardingStatusMsg('Please log in first via the extension popup.');
+        return;
+      }
+    } catch {
+      setOnboardingStatusMsg('Could not verify login status. Please try again.');
+      return;
+    }
+    await advanceOnboarding();
+  }, [advanceOnboarding]);
 
   /**
    * Watch for active profile changes and mark existing badges as stale.
@@ -281,19 +410,63 @@ export default function App({ ctx }: AppProps) {
     setIsStale(false);
     rerenderAllBadges(openPanelRef.current);
     setIsScoring(false);
+
+    // Onboarding step 5: auto-advance to step 6 when scoring finishes with results
+    setOnboardingState((prev) => {
+      if (prev && prev.onboarding_step === 5 && scoresRef.current.size > 0) {
+        const newState: OnboardingState = {
+          ...prev,
+          onboarding_step: 6,
+        };
+        updateOnboardingState(6, newState.onboarding_active, newState.onboarding_completed);
+        return newState;
+      }
+      return prev;
+    });
   }, [injectBadge, renderBadge, cleanupBadges, rerenderAllBadges]);
 
   const handleForceRescore = useCallback(() => {
     handleScore(true);
   }, [handleScore]);
 
+  // Determine active onboarding step config
+  const activeStepConfig = onboardingState
+    ? EXTENSION_STEPS.find((s) => s.step === onboardingState.onboarding_step) ?? null
+    : null;
+
+  // For step 6, dynamically target the first scored badge shadow host
+  const step6TargetShadowHost =
+    onboardingState?.onboarding_step === 6 && scoresRef.current.size > 0
+      ? `homematch-badge-${[...scoresRef.current.keys()][0]}`
+      : null;
+
   return (
-    <Fab
-      onClick={handleScore}
-      onLongPress={handleForceRescore}
-      isScoring={isScoring}
-      scoredCount={scores.size}
-      error={error}
-    />
+    <>
+      <Fab
+        onClick={handleScore}
+        onLongPress={handleForceRescore}
+        isScoring={isScoring}
+        scoredCount={scores.size}
+        error={error}
+      />
+      {activeStepConfig && onboardingState && (
+        <OnboardingOverlay
+          step={onboardingState.onboarding_step}
+          totalSteps={7}
+          title={activeStepConfig.title}
+          instruction={activeStepConfig.instruction}
+          targetSelector={activeStepConfig.targetSelector}
+          targetShadowHost={
+            activeStepConfig.step === 6
+              ? step6TargetShadowHost
+              : activeStepConfig.targetShadowHost
+          }
+          onNext={activeStepConfig.step === 4 ? handleStep4Next : advanceOnboarding}
+          onSkip={skipOnboarding}
+          nextLabel={activeStepConfig.nextLabel ?? 'Next'}
+          statusMessage={onboardingStatusMsg}
+        />
+      )}
+    </>
   );
 }
