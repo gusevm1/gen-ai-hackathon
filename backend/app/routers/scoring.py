@@ -137,9 +137,9 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
         if wp.rent_charges is not None:
             listing.rent_charges = wp.rent_charges
 
-    # 5. Score with Claude (includes images + pre-fetched nearby places when available)
+    # 5. Score via OpenRouter (subjective criteria + summary bullets)
     try:
-        result = await claude_scorer.score_listing(
+        subjective_results, summary_bullets = await claude_scorer.score_listing(
             listing, preferences, image_urls=image_urls, nearby_places=nearby_data or None
         )
     except Exception as e:
@@ -147,6 +147,17 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
             status_code=502,
             detail=f"Scoring failed: {e}",
         )
+
+    # 5a. Build temporary ScoreResponse for backward compatibility (Phase 31 replaces this)
+    # TODO(Phase 31): Replace with hybrid scorer aggregation
+    result = ScoreResponse(
+        overall_score=0,  # Placeholder -- Phase 31 computes this via weighted aggregation
+        match_tier="fair",  # Placeholder -- Phase 31 derives from score
+        summary_bullets=summary_bullets,
+        categories=[],  # Empty -- categories removed in v5.0
+        checklist=[],  # Empty -- replaced by criteria_results in Phase 31
+        language=preferences.language,
+    )
 
     # 6. Save analysis to Supabase with profile_id (fire and forget -- log error but don't fail)
     try:
