@@ -232,3 +232,14 @@ Plans:
 | v4.1 Landing Page v2 & Hackathon Credits | 📋 Planned | -- |
 | v4.2 Dashboard Alignment & QA | 🔮 Deferred | -- |
 | v5.0 Hybrid Scoring Engine | 📋 Planned | -- |
+
+### Phase 33: Dashboard Home, Nav Polish, Profile Creation Flow, and Analyses Titles Fix
+
+**Goal:** Deliver four UX improvements: a proper dashboard home page with welcome text and profile-creation cards, Home nav item in TopNavbar, two-card profile creation chooser (Manual vs AI), download page nav fix, and English-first analysis titles.
+**Requirements:** HOME-01, HOME-02, NAV-01, PROF-01, DOWN-01, ANA-01
+**Depends on:** Phase 32
+**Plans:** 2 plans
+
+Plans:
+- [ ] 33-01-PLAN.md — Dashboard home page with welcome text + profile-creation cards, Home nav item, translations
+- [ ] 33-02-PLAN.md — Profile chooser in profiles page, download page nav fix, backend title priority fix
