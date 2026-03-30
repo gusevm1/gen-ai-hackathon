@@ -136,6 +136,10 @@ Progress: [██████████] 97% (phases 27-33 complete, 34 in pro
 - Phase 31 depends on BOTH 29 and 30
 - Phase 32 depends on 31
 
+### Roadmap Evolution
+
+- Phase 34 added: Onboarding & Tutorial System
+
 ### Blockers/Concerns
 
 - Gemini 2.5 Flash Lite structured output support untested -- verify during Phase 29
