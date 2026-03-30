@@ -153,7 +153,7 @@ async def score_listing(request: ScoreRequest) -> ScoreResponse:
         # Inject listing title so frontend can display it instead of the raw listing ID
         score_data = result.model_dump()
         score_data["listing_title"] = (
-            listing.description_title or listing.public_title or listing.short_title or None
+            listing.short_title or listing.pitch_title or listing.public_title or listing.description_title or None
         )
         score_data["listing_address"] = " ".join(filter(None, [
             listing.street,
