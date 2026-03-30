@@ -57,7 +57,10 @@ class SupabaseService:
             .execute()
         )
         if result.data:
-            return result.data.get("breakdown")
+            breakdown = result.data.get("breakdown")
+            # DB-02: Reject stale v1 cache entries -- require schema_version >= 2
+            if breakdown and breakdown.get("schema_version", 0) >= 2:
+                return breakdown
         return None
 
     def save_analysis(
