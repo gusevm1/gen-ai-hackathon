@@ -8,11 +8,11 @@ vi.mock("next/navigation", () => ({
 }))
 
 describe("TopNavbar", () => {
-  it("renders AI-Powered Search as first nav item", () => {
+  it("renders Home as first nav item", () => {
     render(<TopNavbar />)
 
     const links = screen.getAllByRole("link")
-    expect(links[0].textContent).toContain("AI-Powered Search")
+    expect(links[0].textContent).toContain("Home")
   })
 
   it("AI-Powered Search uses text-primary class", () => {
@@ -28,6 +28,7 @@ describe("TopNavbar", () => {
     const links = screen.getAllByRole("link")
     const titles = links.map((link) => link.textContent?.trim())
     expect(titles).toEqual([
+      "Home",
       "AI-Powered Search",
       "Profiles",
       "Analyses",
