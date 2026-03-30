@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Scoring Engine
 status: executing
-stopped_at: Completed 29-01-PLAN.md (subjective models and prompts)
-last_updated: "2026-03-30"
-last_activity: 2026-03-30
+stopped_at: Completed 29-02-PLAN.md (two-path OpenRouter scoring logic)
+last_updated: "2026-03-30T13:39:23.165Z"
+last_activity: 2026-03-30 — Completed Phase 29 (subjective scorer)
 progress:
-  total_phases: 6
-  completed_phases: 3
-  total_plans: 9
-  completed_plans: 8
+  total_phases: 8
+  completed_phases: 5
+  total_plans: 11
+  completed_plans: 11
   percent: 38
 ---
 
@@ -21,27 +21,28 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Phase 29 — Subjective Scorer (OpenRouter) [executing]
+**Current focus:** Phase 29 complete — next: Phase 30 (DB schema version)
 
 ## Current Position
 
-Phase: 29 of 32 (Subjective Scorer — OpenRouter)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-03-30 — Completed Plan 01 (subjective models & prompts)
+Phase: 29 of 32 (Subjective Scorer — OpenRouter) COMPLETE
+Plan: 2 of 2 in current phase (complete)
+Status: Phase complete
+Last activity: 2026-03-30 — Completed Phase 29 (two-path OpenRouter scoring)
 
-Progress: [####------] 38% (phases 27-28 complete, 33 complete out-of-band, 29 plan 1/2)
+Progress: [#####-----] 50% (phases 27-29 complete, 33 complete out-of-band)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 1 plan)
-- Average duration: --
+- Total plans completed: 9 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 2 plans)
+- Average duration: ~5min
 - Total execution time: --
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 29    | 01   | 5min     | 2     | 4     |
+| 29    | 02   | 4min     | 2     | 4     |
 
 ## Accumulated Context
 
@@ -63,6 +64,9 @@ Progress: [####------] 38% (phases 27-28 complete, 33 complete out-of-band, 29 p
 - Named model SubjectiveResponse (not ClaudeSubjectiveResponse) since provider is OpenRouter
 - JSON schema embedded in system prompt for OpenRouter (no auto-schema injection like Anthropic SDK)
 - Bullets-only prompt pattern for cases with no subjective criteria
+- Kept ClaudeScorer class name for minimal router diff; Phase 31 renames to SubjectiveScorer
+- Router builds temp ScoreResponse with overall_score=0 for v1 backward compat until Phase 31
+- criterion_type=None treated as subjective (Phase 27 design)
 
 ### Phase Ordering
 
@@ -78,5 +82,5 @@ Progress: [####------] 38% (phases 27-28 complete, 33 complete out-of-band, 29 p
 ## Session Continuity
 
 Last session: 2026-03-30
-Stopped at: Completed 29-01-PLAN.md (subjective models & prompts)
+Stopped at: Completed 29-02-PLAN.md (two-path OpenRouter scoring logic) — Phase 29 complete
 Resume file: None

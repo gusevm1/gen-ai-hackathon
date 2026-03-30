@@ -107,7 +107,7 @@ Plans:
 
 - [x] **Phase 27: Data Model & Criterion Classifier** — CriterionType enum, LLM classification at profile save, updated importance weight map (completed 2026-03-29)
 - [x] **Phase 28: Deterministic Scorer** — Pure-function fulfillment formulas for price, distance, size, binary features, proximity quality, and built-in fields (completed 2026-03-30)
-- [ ] **Phase 29: Subjective Scorer (OpenRouter)** — SubjectiveResponse model, batched OpenRouter call for subjective criteria + summary bullets, configurable model via SUBJECTIVE_MODEL env var
+- [x] **Phase 29: Subjective Scorer (OpenRouter)** — SubjectiveResponse model, batched OpenRouter call for subjective criteria + summary bullets, configurable model via SUBJECTIVE_MODEL env var (completed 2026-03-30)
 - [ ] **Phase 30: Database & Infrastructure Prep** — Migrations 005/006, schema_version + fulfillment_data columns, OPENROUTER_API_KEY + ALLOW_CLAUDE_FALLBACK + SUBJECTIVE_MODEL env vars on EC2
 - [ ] **Phase 31: Hybrid Scorer & Router Integration** — ListingProfile lookup + adapter, weighted aggregation engine, CRITICAL override, ScoreResponse v2, cache version gating, ALLOW_CLAUDE_FALLBACK gating, OpenRouter model constant update
 - [ ] **Phase 32: Frontend Consumers** — FulfillmentBreakdown component, checklist threshold update, extension types, schema_version branching, grey "beta" badge for non-enriched listings
@@ -163,7 +163,7 @@ Plans:
   2. All subjective-type criteria are batched into a single OpenRouter call; model is configurable via `SUBJECTIVE_MODEL` env var (default: `google/gemini-2.5-flash-lite`); when zero subjective criteria exist, no call is made
   3. The prompt instructs the model to return fulfillment in 0.1 increments per criterion with reasoning; the model never produces an `overall_score` or category-level scores
   4. 3-5 natural-language `summary_bullets` in the user's preferred language are generated in the same OpenRouter call alongside subjective evaluation -- no separate call needed
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 29-01-PLAN.md — Pydantic models (SubjectiveCriterionResult, ClaudeSubjectiveResponse, BulletsOnlyResponse) + system prompt rewrite
@@ -236,7 +236,7 @@ Plans:
 |-------|--------|-----------|
 | 27. Data Model & Criterion Classifier | ✅ Complete | 2026-03-29 |
 | 28. Deterministic Scorer | ✅ Complete | 2026-03-30 |
-| 29. Subjective Scorer (OpenRouter) | 1/2 | In Progress|  | 30. Database & Infrastructure Prep | Not started | - |
+| 29. Subjective Scorer (OpenRouter) | 2/2 | Complete   | 2026-03-30 | 30. Database & Infrastructure Prep | Not started | - |
 | 31. Hybrid Scorer & Router Integration | Not started | - |
 | 32. Frontend Consumers | Not started | - |
 | 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |
