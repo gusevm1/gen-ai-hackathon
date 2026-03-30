@@ -231,6 +231,25 @@ Plans:
 - [x] 33-01-PLAN.md — Dashboard home page with welcome text + profile-creation cards, Home nav item, translations
 - [x] 33-02-PLAN.md — Profile chooser in profiles page, download page nav fix, backend title priority fix
 
+### Phase 34: Onboarding & Tutorial System
+
+**Goal:** Design and implement a guided onboarding system that drives first-time users to core product value (first property analysis) as quickly as possible, spanning web app and Chrome extension with shared state coordination via Supabase.
+**Requirements:** OB-01, OB-02, OB-03, OB-04, OB-05, OB-06, OB-07, OB-08, OB-STATE, OB-REPLAY, OB-CHECKLIST, OB-EXT-STATE
+**Depends on:** Phase 33
+**Plans:** 2 plans
+
+Plans:
+- [ ] 34-01-PLAN.md — Supabase RPC + web app onboarding (driver.js tour Steps 1-3, Step 8, checklist, "Take a quick tour")
+- [ ] 34-02-PLAN.md — Extension onboarding overlay (custom spotlight Steps 4-7, background state handlers)
+
+**Success Criteria** (what must be TRUE):
+  1. First-time user sees onboarding flow automatically after login, guiding them through install extension, create profile, open Flatfox
+  2. Extension detects active onboarding on Flatfox and guides user through login, analyze, understand results, redirect back
+  3. Post-analysis tooltips (Step 8) show feature awareness on web app return
+  4. "Take a quick tour" in profile dropdown restarts onboarding from Step 1
+  5. Skip/Exit available at every step; progress indicator shown
+  6. Onboarding state persists in Supabase profiles.preferences JSONB, accessible by both web app and extension
+
 ## Progress
 
 | Milestone | Status | Shipped |
@@ -251,4 +270,6 @@ Plans:
 | 29. Subjective Scorer (OpenRouter) | ✅ Complete | 2026-03-30 |
 | 30. Database & Infrastructure Prep | ✅ Complete | 2026-03-30 |
 | 31. Hybrid Scorer & Router Integration | ✅ Complete | 2026-03-30 |
-| 32. Frontend Consumers | 2/2 | Complete    | 2026-03-30 | 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |
+| 32. Frontend Consumers | ✅ Complete | 2026-03-30 |
+| 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |
+| 34. Onboarding & Tutorial System | 0/2 plans | -- |
