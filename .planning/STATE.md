@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: Landing Page v2 & Hackathon Credits
 status: executing
-stopped_at: Completed 27-03 (criterionType Zod schema + classify-criteria server action injection)
-last_updated: "2026-03-30T04:45:21.430Z"
+stopped_at: Phase 28 context gathered
+last_updated: "2026-03-30T05:03:39.924Z"
 last_activity: "2026-03-29 -- 27-03 complete: criterionType on dynamicFieldSchema, classify-criteria injected in saveProfilePreferences + createProfileWithPreferences"
 progress:
   total_phases: 9
@@ -90,6 +90,6 @@ Progress: [██████████] 95%
 
 ## Session Continuity
 
-Last session: 2026-03-29T22:37:26.900Z
-Stopped at: Completed 27-03 (criterionType Zod schema + classify-criteria server action injection)
-Resume file: .planning/phases/27-data-model-criterion-classifier/27-03-SUMMARY.md
+Last session: 2026-03-30T05:03:39.909Z
+Stopped at: Phase 28 context gathered
+Resume file: .planning/phases/28-deterministic-scorer/28-CONTEXT.md
