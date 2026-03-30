@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { getTierColor } from '@/components/analysis/ScoreHeader'
+import { deriveFulfillmentChecklist, type CriterionResult } from '@/lib/fulfillment-utils'
 
 describe('ScoreHeader', () => {
   describe('getTierColor', () => {
@@ -114,5 +115,71 @@ describe('Analysis page data flow', () => {
   it('includes link back to dashboard in data model', () => {
     const dashboardLink = '/dashboard'
     expect(dashboardLink).toBe('/dashboard')
+  })
+
+  it('extracts v2 fields from breakdown with schema_version 2', () => {
+    const breakdown = {
+      overall_score: 72,
+      match_tier: 'good',
+      summary_bullets: ['Good match', 'Transit nearby'],
+      categories: [],
+      checklist: [],
+      language: 'en',
+      schema_version: 2,
+      criteria_results: [
+        { criterion_name: 'Budget', fulfillment: 0.85, importance: 'critical', weight: 5, reasoning: 'Within range' },
+        { criterion_name: 'Transit', fulfillment: 0.5, importance: 'high', weight: 3, reasoning: 'Bus nearby' },
+      ],
+      enrichment_status: 'available',
+    }
+
+    const schemaVersion = (breakdown.schema_version as number) ?? 1
+    const criteriaResults = (breakdown.criteria_results ?? []) as CriterionResult[]
+
+    expect(schemaVersion).toBe(2)
+    expect(criteriaResults).toHaveLength(2)
+    expect(criteriaResults[0].criterion_name).toBe('Budget')
+    expect(criteriaResults[0].fulfillment).toBe(0.85)
+    expect(criteriaResults[1].importance).toBe('high')
+    expect(breakdown.enrichment_status).toBe('available')
+  })
+
+  it('defaults schema_version to 1 when missing', () => {
+    const breakdown = {
+      overall_score: 65,
+      match_tier: 'fair',
+      summary_bullets: ['Some points'],
+      categories: [
+        { name: 'location', score: 70, weight: 60, reasoning: ['Central'] },
+      ],
+      checklist: [
+        { criterion: 'Balcony', met: true, note: 'Has balcony' },
+      ],
+      language: 'en',
+    }
+
+    const schemaVersion = ((breakdown as Record<string, unknown>).schema_version as number) ?? 1
+    expect(schemaVersion).toBe(1)
+
+    // v1 path: use categories and checklist directly
+    expect(breakdown.categories).toHaveLength(1)
+    expect(breakdown.checklist).toHaveLength(1)
+  })
+
+  it('derives fulfillment checklist from criteria_results for v2', () => {
+    const criteriaResults: CriterionResult[] = [
+      { criterion_name: 'Budget', fulfillment: 0.9, importance: 'critical', weight: 5, reasoning: 'Under budget' },
+      { criterion_name: 'Size', fulfillment: 0.4, importance: 'high', weight: 3, reasoning: 'Slightly small' },
+      { criterion_name: 'Parking', fulfillment: 0.1, importance: 'low', weight: 1, reasoning: 'No parking' },
+      { criterion_name: 'Garden', fulfillment: null, importance: 'medium', weight: 2, reasoning: null },
+    ]
+
+    const checklist = deriveFulfillmentChecklist(criteriaResults)
+
+    expect(checklist).toHaveLength(4)
+    expect(checklist[0]).toEqual({ criterion: 'Budget', met: true, note: 'Under budget' })
+    expect(checklist[1]).toEqual({ criterion: 'Size', met: 'partial', note: 'Slightly small' })
+    expect(checklist[2]).toEqual({ criterion: 'Parking', met: false, note: 'No parking' })
+    expect(checklist[3]).toEqual({ criterion: 'Garden', met: null, note: '' })
   })
 })

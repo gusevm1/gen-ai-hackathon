@@ -4,6 +4,9 @@ import { ScoreHeader } from '@/components/analysis/ScoreHeader'
 import { BulletSummary } from '@/components/analysis/BulletSummary'
 import { CategoryBreakdown } from '@/components/analysis/CategoryBreakdown'
 import { ChecklistSection } from '@/components/analysis/ChecklistSection'
+import { FulfillmentBreakdown } from '@/components/analysis/FulfillmentBreakdown'
+import { deriveFulfillmentChecklist } from '@/lib/fulfillment-utils'
+import type { CriterionResult } from '@/lib/fulfillment-utils'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 
@@ -87,6 +90,9 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
       met: boolean | null | "partial"
       note: string
     }>
+    schema_version?: number
+    criteria_results?: CriterionResult[]
+    enrichment_status?: string
   }
 
   const overallScore = breakdown.overall_score ?? analysis.score ?? 0
@@ -95,6 +101,8 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
   const categories = breakdown.categories ?? []
   const checklist = breakdown.checklist ?? []
   const listingTitle = breakdown.listing_title ?? null
+  const schemaVersion = (breakdown.schema_version as number) ?? 1
+  const criteriaResults = (breakdown.criteria_results ?? []) as CriterionResult[]
 
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4">
@@ -125,15 +133,23 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
 
       {/* 2-column layout on lg screens */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
-        {/* Left column: Key Takeaways + Category Breakdown */}
+        {/* Left column: Key Takeaways + Breakdown (v1: categories, v2: fulfillment) */}
         <div className="space-y-8">
           <BulletSummary bullets={summaryBullets} />
-          <CategoryBreakdown categories={categories} />
+          {schemaVersion >= 2 ? (
+            <FulfillmentBreakdown criteriaResults={criteriaResults} />
+          ) : (
+            <CategoryBreakdown categories={categories} />
+          )}
         </div>
 
-        {/* Right column: Checklist as sticky sidebar */}
+        {/* Right column: Checklist (v2: derived from fulfillment, v1: legacy) */}
         <div className="lg:sticky lg:top-8 lg:self-start">
-          <ChecklistSection checklist={checklist} />
+          {schemaVersion >= 2 ? (
+            <ChecklistSection checklist={deriveFulfillmentChecklist(criteriaResults)} />
+          ) : (
+            <ChecklistSection checklist={checklist} />
+          )}
         </div>
       </div>
     </div>
