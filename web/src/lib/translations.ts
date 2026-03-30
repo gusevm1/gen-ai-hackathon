@@ -91,7 +91,7 @@ export const translations = {
 
     // Dashboard home
     dashboard_welcome: 'Welcome to HomeMatch',
-    dashboard_subtitle: "Let's create your profile",
+    dashboard_subtitle: "Let's set your preferences, requirements and desires.",
     dashboard_manual_title: 'Manual profile creation',
     dashboard_manual_desc: 'Prefer full control? Fill out a straightforward form and create your profile manually.',
     dashboard_ai_title: 'AI-guided profile creation',
@@ -324,7 +324,7 @@ export const translations = {
 
 // Dashboard home
     dashboard_welcome: 'Willkommen bei HomeMatch',
-    dashboard_subtitle: 'Erstellen Sie Ihr Profil',
+    dashboard_subtitle: 'Lassen Sie uns Ihre Präferenzen, Anforderungen und Wünsche festlegen.',
     dashboard_manual_title: 'Manuelle Profilerstellung',
     dashboard_manual_desc: 'Volle Kontrolle gewuenscht? Fuellen Sie ein einfaches Formular aus und erstellen Sie Ihr Profil manuell.',
     dashboard_ai_title: 'KI-gesteuerte Profilerstellung',
