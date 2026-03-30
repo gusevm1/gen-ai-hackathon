@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Scoring Engine
-status: completed
-stopped_at: Completed 30-01-PLAN.md (database infrastructure prep) -- Phase 30 complete
-last_updated: "2026-03-30T14:33:23.808Z"
-last_activity: 2026-03-30 — Completed Phase 30 (database infrastructure prep)
+status: in-progress
+stopped_at: Completed 31-01-PLAN.md (scoring building blocks)
+last_updated: "2026-03-30T15:18:30Z"
+last_activity: 2026-03-30 — Completed Phase 31 Plan 01 (scoring building blocks)
 progress:
   total_phases: 8
   completed_phases: 6
-  total_plans: 12
-  completed_plans: 12
-  percent: 58
+  total_plans: 15
+  completed_plans: 14
+  percent: 94
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Phase 30 complete — next: Phase 31 (Hybrid Scorer & Router Integration)
+**Current focus:** Phase 31 in progress — Hybrid Scorer & Router Integration (Plan 01 of 03 complete)
 
 ## Current Position
 
-Phase: 30 of 32 (Database Infrastructure Prep) COMPLETE
-Plan: 1 of 1 in current phase (complete)
-Status: Phase complete
-Last activity: 2026-03-30 — Completed Phase 30 (database infrastructure prep)
+Phase: 31 of 32 (Hybrid Scorer & Router Integration)
+Plan: 1 of 3 in current phase (complete)
+Status: In progress
+Last activity: 2026-03-30 — Completed Phase 31 Plan 01 (scoring building blocks)
 
-Progress: [######----] 58% (phases 27-30 complete, 33 complete out-of-band)
+Progress: [█████████░] 94% (phases 27-31 in progress, 33 complete out-of-band)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 2 plans, 30: 1 plan)
+- Total plans completed: 11 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 2 plans, 30: 1 plan, 31: 1 plan)
 - Average duration: ~5min
 - Total execution time: --
 
@@ -44,6 +44,7 @@ Progress: [######----] 58% (phases 27-30 complete, 33 complete out-of-band)
 | 29    | 01   | 5min     | 2     | 4     |
 | 29    | 02   | 4min     | 2     | 4     |
 | 30    | 01   | 5min     | 3     | 3     |
+| 31    | 01   | 2min     | 3     | 3     |
 
 ## Accumulated Context
 
@@ -69,6 +70,15 @@ Progress: [######----] 58% (phases 27-30 complete, 33 complete out-of-band)
 - Router builds temp ScoreResponse with overall_score=0 for v1 backward compat until Phase 31
 - criterion_type=None treated as subjective (Phase 27 design)
 
+### Phase 31 Plan 01 Decisions
+
+- CriterionResult model added to scoring.py with criterion_name, fulfillment, importance, weight, reasoning
+- ScoreResponse v2: schema_version=2 default, criteria_results list, enrichment_status field; categories/checklist default to empty list
+- summary_bullets max_length raised from 5 to 7 for flexibility
+- profile_adapter: ListingProfile -> FlatfoxListing with type coercions (attributes list[str]->FlatfoxAttribute, rooms float->str)
+- hybrid_scorer: weighted aggregation (HA-01), None exclusion (HA-02), CRITICAL cap at 39 (HA-03)
+- Pre-computed amenity data always is_fallback=False in proximity_data format
+
 ### Phase Ordering
 
 - Phase 29 and 30 can run in parallel (no dependency between them)
@@ -90,6 +100,6 @@ Progress: [######----] 58% (phases 27-30 complete, 33 complete out-of-band)
 
 ## Session Continuity
 
-Last session: 2026-03-30T14:27:50.649Z
-Stopped at: Completed 30-01-PLAN.md (database infrastructure prep) -- Phase 30 complete
+Last session: 2026-03-30T15:18:30Z
+Stopped at: Completed 31-01-PLAN.md (scoring building blocks)
 Resume file: None

@@ -34,16 +34,16 @@
 
 - [x] **INT-01**: Supabase migrations 005 (listing_profiles table) and 006 (research_json column) applied to production before hybrid scorer ships
 - [x] **INT-02**: `OPENROUTER_API_KEY`, `ALLOW_CLAUDE_FALLBACK=false`, and `SUBJECTIVE_MODEL` env vars set on EC2
-- [ ] **INT-03**: Scoring router performs ListingProfile lookup from Supabase; adapter converts ListingProfile fields to FlatfoxListing-compatible format for deterministic scorer consumption without modifying Phase 28 code
+- [x] **INT-03**: Scoring router performs ListingProfile lookup from Supabase; adapter converts ListingProfile fields to FlatfoxListing-compatible format for deterministic scorer consumption without modifying Phase 28 code
 - [ ] **INT-04**: When `ALLOW_CLAUDE_FALLBACK=false` and no ListingProfile exists, scoring endpoint returns a response with `enrichment_status="unavailable"` instead of calling Claude; old Claude path preserved behind the gate
 - [ ] **INT-05**: OpenRouter model constant updated from deprecated `google/gemini-2.0-flash-001` to `google/gemini-2.5-flash-lite`
 
 ### Hybrid Aggregation Engine
 
-- [ ] **HA-01**: System computes final score via weighted average: `score = (Σ weight × fulfillment / Σ weights) × 100`, using the new CRITICAL=5/HIGH=3/MEDIUM=2/LOW=1 weight scale
-- [ ] **HA-02**: Criteria with missing data (None fulfillment) are excluded from both numerator and denominator in the weighted aggregation; score computed over available criteria only
-- [ ] **HA-03**: Any CRITICAL-importance criterion with `fulfillment=0` forces `match_tier="poor"` and caps the numeric score at a maximum of 39
-- [ ] **HA-04**: `ScoreResponse` v2 schema: `overall_score` computed in Python backend (not from LLM), `categories` list removed, `criteria_results: list[CriterionResult]` added, `schema_version: 2` field added; `overall_score`, `match_tier`, and `summary_bullets` field names preserved for backward compatibility
+- [x] **HA-01**: System computes final score via weighted average: `score = (Σ weight × fulfillment / Σ weights) × 100`, using the new CRITICAL=5/HIGH=3/MEDIUM=2/LOW=1 weight scale
+- [x] **HA-02**: Criteria with missing data (None fulfillment) are excluded from both numerator and denominator in the weighted aggregation; score computed over available criteria only
+- [x] **HA-03**: Any CRITICAL-importance criterion with `fulfillment=0` forces `match_tier="poor"` and caps the numeric score at a maximum of 39
+- [x] **HA-04**: `ScoreResponse` v2 schema: `overall_score` computed in Python backend (not from LLM), `categories` list removed, `criteria_results: list[CriterionResult]` added, `schema_version: 2` field added; `overall_score`, `match_tier`, and `summary_bullets` field names preserved for backward compatibility
 
 ### Database & Cache
 
@@ -102,16 +102,16 @@
 | SS-04 | Phase 29 | Complete |
 | INT-01 | Phase 30 | Complete |
 | INT-02 | Phase 30 | Complete |
-| INT-03 | Phase 31 | Pending |
+| INT-03 | Phase 31 | Complete |
 | INT-04 | Phase 31 | Pending |
 | INT-05 | Phase 31 | Pending |
 | DB-01 | Phase 30 | Complete |
 | DB-02 | Phase 31 | Pending |
 | DB-03 | Phase 30 | Complete |
-| HA-01 | Phase 31 | Pending |
-| HA-02 | Phase 31 | Pending |
-| HA-03 | Phase 31 | Pending |
-| HA-04 | Phase 31 | Pending |
+| HA-01 | Phase 31 | Complete |
+| HA-02 | Phase 31 | Complete |
+| HA-03 | Phase 31 | Complete |
+| HA-04 | Phase 31 | Complete |
 | FE-01 | Phase 32 | Pending |
 | FE-02 | Phase 32 | Pending |
 | FE-03 | Phase 32 | Pending |
