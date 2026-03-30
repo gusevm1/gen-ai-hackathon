@@ -16,13 +16,29 @@ export interface ChecklistItem {
   note: string;
 }
 
+/**
+ * Per-criterion scoring result from v2 hybrid scorer.
+ * Each user criterion gets a fulfillment score and reasoning.
+ */
+export interface CriterionResult {
+  criterion_name: string; // e.g., "Budget", "Near public transport"
+  fulfillment: number | null; // 0.0 - 1.0, or null if data unavailable
+  importance: string; // "critical" | "high" | "medium" | "low"
+  weight: number; // 5 | 3 | 2 | 1
+  reasoning: string | null; // Explanation text or null
+}
+
 export interface ScoreResponse {
   overall_score: number; // 0-100
   match_tier: 'excellent' | 'good' | 'fair' | 'poor';
-  summary_bullets: string[]; // 3-5 bullets
+  summary_bullets: string[]; // 3-7 bullets
   categories: CategoryScore[];
   checklist: ChecklistItem[];
   language: string; // de/fr/it/en
+  // v2 additions (all optional for backward compatibility with cached v1 responses)
+  schema_version?: number;
+  criteria_results?: CriterionResult[];
+  enrichment_status?: 'available' | 'unavailable' | 'fallback' | null;
 }
 
 /**
