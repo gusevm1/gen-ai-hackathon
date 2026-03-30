@@ -251,4 +251,4 @@ Plans:
 | 29. Subjective Scorer (OpenRouter) | ✅ Complete | 2026-03-30 |
 | 30. Database & Infrastructure Prep | ✅ Complete | 2026-03-30 |
 | 31. Hybrid Scorer & Router Integration | ✅ Complete | 2026-03-30 |
-| 32. Frontend Consumers | 2/2 | Complete   | 2026-03-30 | 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |
+| 32. Frontend Consumers | 2/2 | Complete    | 2026-03-30 | 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |
