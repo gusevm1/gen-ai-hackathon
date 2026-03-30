@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Scoring Engine
 status: completed
-stopped_at: Completed 32-01-PLAN.md (all Phase 32 plans complete)
-last_updated: "2026-03-30T16:00:14.696Z"
+stopped_at: Completed 34-01-PLAN.md
+last_updated: "2026-03-30T18:48:24.164Z"
 last_activity: 2026-03-30 — Completed Phase 32 Plan 01 (fulfillment breakdown + schema branching)
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 8
-  total_plans: 17
-  completed_plans: 17
+  total_plans: 19
+  completed_plans: 18
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Phase 32 complete — Frontend Consumers (all plans complete)
+**Current focus:** Phase 34 Plan 01 complete — Onboarding Tutorial System (web side)
 
 ## Current Position
 
-Phase: 32 of 32 (Frontend Consumers)
-Plan: 2 of 2 in current phase (all complete)
-Status: Phase 32 complete
-Last activity: 2026-03-30 — Completed Phase 32 Plan 01 (fulfillment breakdown + schema branching)
+Phase: 34 of 34 (Onboarding Tutorial System)
+Plan: 1 of 2 in current phase (plan 01 complete)
+Status: Phase 34 Plan 01 complete
+Last activity: 2026-03-30 — Completed Phase 34 Plan 01 (web onboarding system with driver.js, checklist, Supabase state)
 
-Progress: [██████████] 100% (all phases 27-33 complete)
+Progress: [██████████] 97% (phases 27-33 complete, 34 in progress)
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Progress: [██████████] 100% (all phases 27-33 complete)
 | 31    | 03   | 1min     | 2     | 2     |
 | 32    | 01   | 3min     | 2     | 5     |
 | 32    | 02   | 3min     | 2     | 4     |
+| 34    | 01   | 9min     | 2     | 11    |
 
 ## Accumulated Context
 
@@ -110,6 +111,15 @@ Progress: [██████████] 100% (all phases 27-33 complete)
 - SummaryPanel unavailable state still renders summary_bullets under "What we know" header with grey dots
 - Used snake_case field names in TypeScript matching existing extension conventions
 
+### Phase 34 Plan 01 Decisions
+
+- Migration file (008_onboarding_rpc.sql) used for update_onboarding_state RPC instead of direct CLI deploy (no Supabase access token on this machine)
+- OnboardingProvider wraps full dashboard layout (header + main) so NavUser can access onboarding context without a separate wrapper
+- Step 3->4 Supabase write is atomic before opening Flatfox to prevent extension reading stale onboarding_step=3
+- Auto-start tour only for true first-timers: step=1 + active=false + completed=false; active tour resumes via driver.js on pathname change
+- driver.js onDestroyStarted calls skip() so ESC/overlay click properly deactivates onboarding
+- Onboarding DOM target IDs: install-extension-cta (download), create-profile-section (dashboard), open-flatfox-cta (dashboard step 3), profile-switcher (layout header)
+
 ### Phase Ordering
 
 - Phase 29 and 30 can run in parallel (no dependency between them)
@@ -131,6 +141,6 @@ Progress: [██████████] 100% (all phases 27-33 complete)
 
 ## Session Continuity
 
-Last session: 2026-03-30T15:54:30Z
-Stopped at: Completed 32-01-PLAN.md (all Phase 32 plans complete)
+Last session: 2026-03-30T18:48:24.160Z
+Stopped at: Completed 34-01-PLAN.md
 Resume file: None

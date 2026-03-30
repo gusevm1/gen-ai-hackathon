@@ -236,7 +236,7 @@ Plans:
 **Goal:** Design and implement a guided onboarding system that drives first-time users to core product value (first property analysis) as quickly as possible, spanning web app and Chrome extension with shared state coordination via Supabase.
 **Requirements:** OB-01, OB-02, OB-03, OB-04, OB-05, OB-06, OB-07, OB-08, OB-STATE, OB-REPLAY, OB-CHECKLIST, OB-EXT-STATE
 **Depends on:** Phase 33
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 34-01-PLAN.md — Supabase RPC + web app onboarding (driver.js tour Steps 1-3, Step 8, checklist, "Take a quick tour")
