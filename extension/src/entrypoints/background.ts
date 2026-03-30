@@ -14,7 +14,9 @@ export type ExtMessage =
   | AuthMessage
   | { action: 'getProfiles' }
   | { action: 'switchProfile'; profileId: string }
-  | { action: 'healthCheck' };
+  | { action: 'healthCheck' }
+  | { action: 'getOnboardingState' }
+  | { action: 'updateOnboardingState'; step: number; active: boolean; completed: boolean };
 
 /**
  * Handle messages from the popup and content scripts.
@@ -65,6 +67,30 @@ export async function handleMessage(
       } catch {
         return { connected: false, email: null };
       }
+    }
+    case 'getOnboardingState': {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { onboarding: null };
+      const { data } = await supabase
+        .from('profiles')
+        .select('preferences')
+        .eq('is_default', true)
+        .single();
+      return { onboarding: (data?.preferences as Record<string, unknown> | null)?.onboarding ?? null };
+    }
+    case 'updateOnboardingState': {
+      const { step, active, completed } = message as {
+        action: 'updateOnboardingState';
+        step: number;
+        active: boolean;
+        completed: boolean;
+      };
+      const { error } = await supabase.rpc('update_onboarding_state', {
+        p_step: step,
+        p_active: active,
+        p_completed: completed,
+      });
+      return { error: error ? { message: error.message } : null };
     }
     default:
       return { error: { message: 'Unknown action' } };
