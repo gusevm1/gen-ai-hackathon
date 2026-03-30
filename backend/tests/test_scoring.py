@@ -1,17 +1,21 @@
-"""Integration tests for the scoring service with mocked Claude and Supabase.
+"""Integration tests for the scoring service with mocked OpenRouter and Supabase.
 
-Covers: EVAL-01 (Claude evaluates listing), EVAL-04 (missing data handling),
+Covers: EVAL-01 (scorer evaluates listing), EVAL-04 (missing data handling),
         EVAL-05 (language in prompt). All external APIs are mocked.
+
+Updated for Phase 29: ClaudeScorer now uses OpenRouter httpx calls instead
+of Anthropic SDK messages.parse(). Tests mock httpx POST responses.
 """
 
 import copy
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.models.listing import FlatfoxListing
 from app.models.preferences import UserPreferences
-from app.models.scoring import ScoreResponse
+from app.services.deterministic_scorer import FulfillmentResult
 from tests.conftest import (
     MINIMAL_LISTING_JSON,
     SAMPLE_LISTING_JSON,
@@ -20,8 +24,43 @@ from tests.conftest import (
 )
 
 
+def _make_mock_httpx_response(json_body: dict) -> MagicMock:
+    """Create a mock httpx.Response that wraps json_body in OpenRouter format."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": json.dumps(json_body)}}]
+    }
+    return mock_response
+
+
+# Default mock response for subjective scoring (preferences have dynamic_fields
+# with criterion_type=None which are treated as subjective)
+_MOCK_SUBJECTIVE_JSON = {
+    "criteria": [
+        {"criterion": "near Bahnhof", "fulfillment": 0.3, "reasoning": "Weit entfernt"},
+        {"criterion": "quiet neighborhood", "fulfillment": 0.8, "reasoning": "Ruhige Lage"},
+    ],
+    "summary_bullets": [
+        "CHF 1,790/month is well within your CHF 2,500 budget",
+        "Only 29 sqm living space, significantly below your 50 sqm minimum",
+        "Located in Roggwil BE, not in your preferred Zurich area",
+    ],
+}
+
+# Bullets-only mock for preferences without subjective criteria
+_MOCK_BULLETS_JSON = {
+    "summary_bullets": [
+        "CHF 1,790/month is well within your CHF 2,500 budget",
+        "Only 29 sqm living space",
+        "Located in Roggwil BE",
+    ],
+}
+
+
 class TestClaudeScorer:
-    """Tests for ClaudeScorer.score_listing with mocked Claude API."""
+    """Tests for ClaudeScorer.score_listing with mocked OpenRouter API."""
 
     @pytest.fixture(autouse=True)
     def reset_claude_client(self):
@@ -44,98 +83,88 @@ class TestClaudeScorer:
     def preferences(self):
         return UserPreferences.model_validate(SAMPLE_PREFERENCES_JSON)
 
-    @pytest.fixture
-    def mock_score_response(self):
-        return ScoreResponse.model_validate(copy.deepcopy(SAMPLE_SCORE_RESPONSE))
-
     @pytest.mark.asyncio
     async def test_score_listing_returns_valid_response(
-        self, listing, preferences, mock_score_response
+        self, listing, preferences
     ):
-        """score_listing with mocked Claude returns valid ScoreResponse with 5 categories."""
+        """score_listing with mocked OpenRouter returns (results, bullets) tuple."""
         from app.services.claude import claude_scorer
 
-        mock_parsed = MagicMock()
-        mock_parsed.parsed_output = mock_score_response
-
+        # SAMPLE_PREFERENCES has dynamic_fields with criterion_type=None -> subjective path
+        mock_response = _make_mock_httpx_response(_MOCK_SUBJECTIVE_JSON)
         mock_client = AsyncMock()
-        mock_client.messages.parse = AsyncMock(return_value=mock_parsed)
+        mock_client.post = AsyncMock(return_value=mock_response)
+        claude_scorer._client = mock_client
 
-        with patch.object(claude_scorer, "get_client", return_value=mock_client):
-            result = await claude_scorer.score_listing(listing, preferences)
+        results, bullets = await claude_scorer.score_listing(listing, preferences)
 
-        assert isinstance(result, ScoreResponse)
-        assert len(result.categories) == 5
-        assert result.overall_score == 72
-        assert result.match_tier == "good"
+        assert isinstance(results, list)
+        assert len(results) == 2
+        assert all(isinstance(r, FulfillmentResult) for r in results)
+        assert len(bullets) >= 3
 
     @pytest.mark.asyncio
-    async def test_score_listing_passes_correct_params(
-        self, listing, preferences, mock_score_response
+    async def test_score_listing_passes_correct_model(
+        self, listing, preferences
     ):
-        """score_listing passes correct model, max_tokens, system prompt, and output_format."""
-        from app.services.claude import claude_scorer, CLAUDE_MODEL
+        """score_listing sends correct model to OpenRouter."""
+        from app.services.claude import claude_scorer, SUBJECTIVE_MODEL
 
-        mock_parsed = MagicMock()
-        mock_parsed.parsed_output = mock_score_response
-
+        mock_response = _make_mock_httpx_response(_MOCK_SUBJECTIVE_JSON)
         mock_client = AsyncMock()
-        mock_client.messages.parse = AsyncMock(return_value=mock_parsed)
+        mock_client.post = AsyncMock(return_value=mock_response)
+        claude_scorer._client = mock_client
 
-        with patch.object(claude_scorer, "get_client", return_value=mock_client):
-            await claude_scorer.score_listing(listing, preferences)
+        await claude_scorer.score_listing(listing, preferences)
 
-        call_kwargs = mock_client.messages.parse.call_args
-        assert call_kwargs.kwargs["model"] == CLAUDE_MODEL
-        assert call_kwargs.kwargs["max_tokens"] == 4096
-        assert call_kwargs.kwargs["output_format"] == ScoreResponse
-        assert "German" in call_kwargs.kwargs["system"]
+        call_kwargs = mock_client.post.call_args
+        posted_json = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
+        assert posted_json["model"] == SUBJECTIVE_MODEL
 
     @pytest.mark.asyncio
     async def test_score_listing_with_minimal_listing(
-        self, minimal_listing, preferences, mock_score_response
+        self, minimal_listing, preferences
     ):
         """score_listing with minimal listing (missing most fields) does not crash."""
         from app.services.claude import claude_scorer
 
-        mock_parsed = MagicMock()
-        mock_parsed.parsed_output = mock_score_response
-
+        mock_response = _make_mock_httpx_response(_MOCK_SUBJECTIVE_JSON)
         mock_client = AsyncMock()
-        mock_client.messages.parse = AsyncMock(return_value=mock_parsed)
+        mock_client.post = AsyncMock(return_value=mock_response)
+        claude_scorer._client = mock_client
 
-        with patch.object(claude_scorer, "get_client", return_value=mock_client):
-            result = await claude_scorer.score_listing(minimal_listing, preferences)
+        results, bullets = await claude_scorer.score_listing(minimal_listing, preferences)
 
-        assert isinstance(result, ScoreResponse)
+        assert isinstance(results, list)
+        assert isinstance(bullets, list)
         # Verify the user prompt was built without error (None fields handled)
-        # Content is now a list of content blocks (images + text)
-        content_blocks = mock_client.messages.parse.call_args.kwargs["messages"][0]["content"]
-        text_block = next(b for b in content_blocks if b["type"] == "text")
-        assert "Not specified" in text_block["text"]
+        call_kwargs = mock_client.post.call_args
+        posted_json = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
+        user_msg = next(m for m in posted_json["messages"] if m["role"] == "user")
+        assert "Not specified" in user_msg["content"]
 
     @pytest.mark.asyncio
     async def test_score_listing_french_language(
-        self, listing, mock_score_response
+        self, listing
     ):
-        """score_listing with language='fr' passes French system prompt to Claude."""
+        """score_listing with language='fr' passes French system prompt to OpenRouter."""
         from app.services.claude import claude_scorer
 
         french_prefs = UserPreferences.model_validate(
             {**SAMPLE_PREFERENCES_JSON, "language": "fr"}
         )
 
-        mock_parsed = MagicMock()
-        mock_parsed.parsed_output = mock_score_response
-
+        mock_response = _make_mock_httpx_response(_MOCK_SUBJECTIVE_JSON)
         mock_client = AsyncMock()
-        mock_client.messages.parse = AsyncMock(return_value=mock_parsed)
+        mock_client.post = AsyncMock(return_value=mock_response)
+        claude_scorer._client = mock_client
 
-        with patch.object(claude_scorer, "get_client", return_value=mock_client):
-            await claude_scorer.score_listing(listing, french_prefs)
+        await claude_scorer.score_listing(listing, french_prefs)
 
-        system_prompt = mock_client.messages.parse.call_args.kwargs["system"]
-        assert "French" in system_prompt
+        call_kwargs = mock_client.post.call_args
+        posted_json = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
+        system_msg = next(m for m in posted_json["messages"] if m["role"] == "system")
+        assert "French" in system_msg["content"]
 
 
 class TestSupabaseService:
