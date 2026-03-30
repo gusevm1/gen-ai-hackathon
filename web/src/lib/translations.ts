@@ -236,6 +236,20 @@ export const translations = {
     importance_size: 'Size & Rooms',
     importance_features: 'Features & Amenities',
     importance_condition: 'Condition & Age',
+
+    // Onboarding
+    onboarding_step_1_title: 'Install the HomeMatch Extension',
+    onboarding_step_1_desc: 'Download and install the HomeMatch Chrome extension to get started.',
+    onboarding_step_2_title: 'Create Your First Profile',
+    onboarding_step_2_desc: 'Choose manual or AI-powered profile creation to define your search criteria.',
+    onboarding_step_3_title: 'Head to Flatfox',
+    onboarding_step_3_desc: 'Open Flatfox and the extension will guide you through scoring your first listing.',
+    onboarding_checklist_install: 'Install Extension',
+    onboarding_checklist_profile: 'Create Profile',
+    onboarding_checklist_analyze: 'Analyze First Property',
+    onboarding_take_tour: 'Take a quick tour',
+    onboarding_skip: 'Skip tour',
+    onboarding_installed_confirm: "I've installed the extension",
   },
   de: {
     // Navigation
@@ -469,6 +483,20 @@ export const translations = {
     importance_size: 'Größe & Zimmer',
     importance_features: 'Ausstattung & Annehmlichkeiten',
     importance_condition: 'Zustand & Alter',
+
+    // Onboarding
+    onboarding_step_1_title: 'HomeMatch-Erweiterung installieren',
+    onboarding_step_1_desc: 'Lade die HomeMatch Chrome-Erweiterung herunter und installiere sie, um zu beginnen.',
+    onboarding_step_2_title: 'Erstes Profil erstellen',
+    onboarding_step_2_desc: 'Wähle manuelle oder KI-gestützte Profilerstellung, um deine Suchkriterien festzulegen.',
+    onboarding_step_3_title: 'Zu Flatfox wechseln',
+    onboarding_step_3_desc: 'Öffne Flatfox — die Erweiterung führt dich durch die Bewertung deines ersten Inserats.',
+    onboarding_checklist_install: 'Erweiterung installieren',
+    onboarding_checklist_profile: 'Profil erstellen',
+    onboarding_checklist_analyze: 'Erste Wohnung analysieren',
+    onboarding_take_tour: 'Kurze Tour starten',
+    onboarding_skip: 'Tour überspringen',
+    onboarding_installed_confirm: 'Ich habe die Erweiterung installiert',
   },
 } as const
 

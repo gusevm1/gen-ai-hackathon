@@ -5,6 +5,8 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { NavUser } from "@/components/nav-user"
 import { ProfileSwitcher } from "@/components/profile-switcher"
 import { Logo } from "@/components/logo"
+import { OnboardingProvider } from "@/components/onboarding/OnboardingProvider"
+import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist"
 
 export default async function DashboardLayout({
   children,
@@ -29,20 +31,23 @@ export default async function DashboardLayout({
   const activeProfile = profiles?.find(p => p.is_default) ?? profiles?.[0]
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <Logo />
-        <TopNavbar />
-        <div className="ml-auto flex items-center gap-2">
-          <ProfileSwitcher
-            profiles={profiles ?? []}
-            activeProfileId={activeProfile?.id}
-          />
-          <ThemeToggle />
-          <NavUser user={{ email: user.email ?? "" }} />
-        </div>
-      </header>
-      <main className="flex-1 p-4">{children}</main>
-    </div>
+    <OnboardingProvider>
+      <div className="flex min-h-screen flex-col">
+        <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <Logo />
+          <TopNavbar />
+          <div className="ml-auto flex items-center gap-2" id="profile-switcher">
+            <ProfileSwitcher
+              profiles={profiles ?? []}
+              activeProfileId={activeProfile?.id}
+            />
+            <ThemeToggle />
+            <NavUser user={{ email: user.email ?? "" }} />
+          </div>
+        </header>
+        <main className="flex-1 p-4">{children}</main>
+        <OnboardingChecklist />
+      </div>
+    </OnboardingProvider>
   )
 }
