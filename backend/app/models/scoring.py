@@ -38,10 +38,31 @@ class ChecklistItem(BaseModel):
     note: str = Field(description="Brief explanation with listing data reference")
 
 
-class ScoreResponse(BaseModel):
-    """Complete scoring response from Claude.
+class CriterionResult(BaseModel):
+    """Per-criterion result in the v2 ScoreResponse.
 
-    Validated via messages.parse() with output_format=ScoreResponse.
+    Maps each user preference criterion to a fulfillment score with
+    its importance weight and reasoning. Used by the hybrid scoring
+    pipeline (Phase 31) to provide transparent per-criterion breakdown.
+    """
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    criterion_name: str
+    fulfillment: Optional[float] = Field(None, ge=0.0, le=1.0)
+    importance: str  # "critical", "high", "medium", "low"
+    weight: int  # Numeric weight (5, 3, 2, 1)
+    reasoning: Optional[str] = None
+
+
+class ScoreResponse(BaseModel):
+    """Complete scoring response (v2).
+
+    v2 additions (Phase 31): schema_version, criteria_results, enrichment_status.
+    Field names overall_score/match_tier/summary_bullets preserved for backward
+    compatibility (HA-04).
+
+    categories/checklist default to empty lists in v2 (retained for v1 cache reads).
     """
 
     overall_score: int = Field(ge=0, le=100, description="Overall match score")
@@ -50,12 +71,21 @@ class ScoreResponse(BaseModel):
     )
     summary_bullets: list[str] = Field(
         min_length=3,
-        max_length=5,
-        description="3-5 pro/con bullets highlighting compromises",
+        max_length=7,
+        description="3-7 pro/con bullets highlighting compromises",
     )
-    categories: list[CategoryScore] = Field(description="Per-category breakdown")
-    checklist: list[ChecklistItem] = Field(description="Soft criteria + feature checklist")
+    categories: list[CategoryScore] = Field(default_factory=list, description="Per-category breakdown (v1)")
+    checklist: list[ChecklistItem] = Field(default_factory=list, description="Soft criteria + feature checklist (v1)")
     language: str = Field(description="Language code of the response (de, fr, it, en)")
+
+    # v2 fields (Phase 31)
+    schema_version: int = Field(default=2, description="Response schema version")
+    criteria_results: list[CriterionResult] = Field(
+        default_factory=list, description="Per-criterion fulfillment breakdown (v2)"
+    )
+    enrichment_status: Optional[str] = Field(
+        None, description="Listing enrichment status: 'available', 'unavailable', or None"
+    )
 
 
 class ScoreRequest(BaseModel):
