@@ -166,8 +166,8 @@ Plans:
 **Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 29-01-PLAN.md — Pydantic models (SubjectiveCriterionResult, ClaudeSubjectiveResponse, BulletsOnlyResponse) + system prompt rewrite
-- [ ] 29-02-PLAN.md — Two-path score_listing() logic in claude.py + scoring router compatibility
+- [x] 29-01-PLAN.md — Pydantic models (SubjectiveCriterionResult, ClaudeSubjectiveResponse, BulletsOnlyResponse) + system prompt rewrite
+- [x] 29-02-PLAN.md — Two-path score_listing() logic in claude.py + scoring router compatibility
 
 ### Phase 30: Database & Infrastructure Prep
 
@@ -179,7 +179,10 @@ Plans:
   2. The `analyses` table has a `schema_version` field in the `breakdown` JSONB column and a new `fulfillment_data` JSONB column; existing rows without these fields continue to read correctly
   3. EC2 environment has `OPENROUTER_API_KEY`, `ALLOW_CLAUDE_FALLBACK=false`, and `SUBJECTIVE_MODEL` env vars set in the backend `.env` file
   4. All migrations are verified deployed before any hybrid scorer code (Phase 31) ships
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 30-01-PLAN.md — Create migration 007 (fulfillment_data), apply migrations 005-007 to production, set EC2 env vars
 
 ### Phase 31: Hybrid Scorer & Router Integration
 
@@ -236,7 +239,8 @@ Plans:
 |-------|--------|-----------|
 | 27. Data Model & Criterion Classifier | ✅ Complete | 2026-03-29 |
 | 28. Deterministic Scorer | ✅ Complete | 2026-03-30 |
-| 29. Subjective Scorer (OpenRouter) | 2/2 | Complete    | 2026-03-30 | 30. Database & Infrastructure Prep | Not started | - |
+| 29. Subjective Scorer (OpenRouter) | ✅ Complete | 2026-03-30 |
+| 30. Database & Infrastructure Prep | Not started | - |
 | 31. Hybrid Scorer & Router Integration | Not started | - |
 | 32. Frontend Consumers | Not started | - |
 | 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |
