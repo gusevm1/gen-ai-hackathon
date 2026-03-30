@@ -7,9 +7,9 @@
 - ✅ **v2.0 Polish & AI Profile Creation** — Phases 11-16 (shipped 2026-03-17)
 - ✅ **v3.0 Extension Download & Install** — Phase 17 (shipped 2026-03-17)
 - ✅ **v4.0 Landing Page & Design System** — Phases 18-21 (shipped 2026-03-28)
-- 📋 **v4.1 Landing Page v2 & Hackathon Credits** — Phases 22-23 (planned)
+- ✅ **v4.1 Landing Page v2 & Hackathon Credits** — Phases 22-23 (shipped 2026-03-29)
 - 🔮 **v4.2 Dashboard Alignment & QA** — Phases TBD (deferred)
-- 📋 **v5.0 Hybrid Scoring Engine** — Phases 27-32 (planned)
+- 🚧 **v5.0 Hybrid Scoring Engine** — Phases 27-32 (in progress)
 
 ## Phases
 
@@ -63,47 +63,16 @@
 
 </details>
 
-### v4.1 Landing Page v2 & Hackathon Credits (Planned)
+<details>
+<summary>✅ v4.1 Landing Page v2 & Hackathon Credits (Phases 22-23) — SHIPPED 2026-03-29</summary>
 
-**Milestone Goal:** Polish all 4 landing page sections based on UX review, add hackathon credits, and unify tier color system to traffic-light (green/yellow/red).
+- [x] Phase 22: Landing Page Section Redesigns — Hero cleanup, Problem card slide-in + visual redesign, Solution enlargement + tier color fix, CTA dramatic entrance animation (completed 2026-03-28)
+- [x] Phase 23: Hackathon Credits Section — ETH Zurich + Gen-AI Hackathon logos section, Zurich cityscape photo across hero, credits, and auth page (completed 2026-03-29)
 
-- [x] **Phase 22: Landing Page Section Redesigns** — Hero cleanup (stats row, CTA centering, tier colors), Problem card slide-in + visual redesign, Solution enlargement + tier color fix, CTA dramatic entrance animation (completed 2026-03-28)
-- [x] **Phase 23: Hackathon Credits Section** — ETH Zurich + Gen-AI Hackathon logos section above footer; Zurich cityscape photo across hero, credits, and auth page (completed 2026-03-29)
+</details>
 
-### Phase 22: Landing Page Section Redesigns
-
-**Goal:** Polish all 4 landing page sections — remove hero stats row and center CTA, redesign problem cards with left slide-in animation, enlarge solution browser demo and fix tier colors, dramatically upgrade CTA headline size and animation.
-
-**Requirements:** HERO-01, HERO-02, HERO-03, PROB-01, PROB-02, PROB-03, SOLN-01, SOLN-02, SOLN-03, SOLN-04, CTA-01, CTA-02, CTA-03
-
-**Plans:**
-3/3 plans complete
-- [ ] 22-02-PLAN.md — Problem section card redesign (slide-in animation)
-- [ ] 22-03-PLAN.md — Solution enlargement + tier color fix; CTA dramatic entrance
-
-**Success Criteria:**
-1. Hero: stats row gone, CTA button centered on own line, poor tier = red (#ef4444)
-2. Problem: decorative bg numbers removed; each card slides from x:-60→0 on scroll entry
-3. Problem cards: visually elevated (card background, stronger typography, not plain list)
-4. Solution: browser demo max-w-3xl+; step cards larger; scores show green/yellow/red by range
-5. CTA: headline clamp(2.5rem, 6vw, 4.5rem); enters from y:60 with spring physics
-
-### Phase 23: Hackathon Credits Section
-
-**Goal:** Add ETH Zurich + Gen-AI Hackathon credits section to the landing page and auth page, with a Zurich cityscape photo as visual theme across the hero (dimmed scroll-fade), credits section (full-bleed photo background), and auth page (full-screen background).
-
-**Requirements:** CRED-01, CRED-02
-
-**Plans:**
-1/1 plans complete
-- [ ] 23-01-PLAN.md — Zurich photo assets + SectionCredits component + hero/auth photo integration
-
-**Success Criteria:**
-1. New SectionCredits component renders ETH Zurich logo + "GenAI Zurich Hackathon 2026" badge with "A project from" label
-2. SectionCredits placed between SectionCTA and LandingFooter; uses Zurich photo as full-section background
-3. Hero section has Zurich cityscape dimmed to ~25% opacity, fades to 0 as user scrolls
-4. Auth page shows full-screen Zurich photo, login card floats over it, credits strip at bottom
-5. TypeScript build passes — translation key parity maintained
+<details>
+<summary>Phase 26: Proximity Enhancements (Standalone)</summary>
 
 ### Phase 26: Proximity Enhancements — Closest Fallback + Partial Met Scoring
 
@@ -123,6 +92,8 @@ Plans:
 2. LLM prompt instructs scorer to output met="partial" for fallback results when importance is not critical, met=false when critical
 3. ChecklistSection renders met="partial" with amber AlertTriangle icon, own badge count, sorted between met and unmet
 
+</details>
+
 ### v4.2 Dashboard Alignment & QA (Deferred)
 
 **Milestone Goal:** Complete v4.0 deferred work — dashboard design language, mobile responsiveness, performance.
@@ -130,28 +101,33 @@ Plans:
 - [ ] **Phase 24: Dashboard UI Alignment** — Propagate landing design language to dashboard, profiles, analysis pages
 - [ ] **Phase 25: Polish & QA** — Mobile/tablet responsiveness, LCP < 2.5s, cross-browser, final copy pass
 
-### v5.0 Hybrid Scoring Engine (Planned)
+### v5.0 Hybrid Scoring Engine (In Progress)
 
-**Milestone Goal:** Replace the all-Claude scoring system with a hybrid deterministic + AI architecture where Claude handles only subjective evaluation and never generates numeric scores.
+**Milestone Goal:** Replace the all-Claude scoring system with a hybrid deterministic + AI architecture. Pre-computed ListingProfiles feed deterministic formulas. OpenRouter handles subjective criteria. Claude fallback is gated behind an env var. Frontend renders per-criterion fulfillment breakdowns.
 
 - [x] **Phase 27: Data Model & Criterion Classifier** — CriterionType enum, LLM classification at profile save, updated importance weight map (completed 2026-03-29)
 - [x] **Phase 28: Deterministic Scorer** — Pure-function fulfillment formulas for price, distance, size, binary features, proximity quality, and built-in fields (completed 2026-03-30)
-- [ ] **Phase 29: Subjective Scorer (Claude Refactor)** — New Pydantic response model, batched subjective-only Claude call, fulfillment-based prompt, summary bullets
-- [ ] **Phase 30: Database Schema Prep** — schema_version field in JSONB breakdown, fulfillment_data column; deployed before hybrid scorer ships
-- [ ] **Phase 31: Hybrid Scorer & Router Integration** — Weighted aggregation engine, CRITICAL override, missing-data handling, ScoreResponse v2, cache version gating
-- [ ] **Phase 32: Frontend Consumers** — FulfillmentBreakdown component, checklist threshold update, extension types, schema_version branching
+- [ ] **Phase 29: Subjective Scorer (OpenRouter)** — SubjectiveResponse model, batched OpenRouter call for subjective criteria + summary bullets, configurable model via SUBJECTIVE_MODEL env var
+- [ ] **Phase 30: Database & Infrastructure Prep** — Migrations 005/006, schema_version + fulfillment_data columns, OPENROUTER_API_KEY + ALLOW_CLAUDE_FALLBACK + SUBJECTIVE_MODEL env vars on EC2
+- [ ] **Phase 31: Hybrid Scorer & Router Integration** — ListingProfile lookup + adapter, weighted aggregation engine, CRITICAL override, ScoreResponse v2, cache version gating, ALLOW_CLAUDE_FALLBACK gating, OpenRouter model constant update
+- [ ] **Phase 32: Frontend Consumers** — FulfillmentBreakdown component, checklist threshold update, extension types, schema_version branching, grey "beta" badge for non-enriched listings
+
+**Phase ordering:** 29 and 30 can run in parallel. 31 depends on both 29 and 30. 32 depends on 31.
+
+## Phase Details
 
 ### Phase 27: Data Model & Criterion Classifier
 
 **Goal:** Every user criterion is classified into one of 6 types so the scoring pipeline knows which scorer to route it to.
 **Depends on:** Phase 26
 **Requirements:** DM-01, DM-02, DM-03
+**Status:** Complete (2026-03-29)
 **Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 27-01-PLAN.md — CriterionType enum + DynamicField extension + IMPORTANCE_WEIGHT_MAP update + test scaffold
-- [ ] 27-02-PLAN.md — CriterionClassifier service + POST /classify-criteria FastAPI endpoint
-- [ ] 27-03-PLAN.md — Zod criterionType schema + server action /classify-criteria injection
+- [x] 27-01-PLAN.md — CriterionType enum + DynamicField extension + IMPORTANCE_WEIGHT_MAP update + test scaffold
+- [x] 27-02-PLAN.md — CriterionClassifier service + POST /classify-criteria FastAPI endpoint
+- [x] 27-03-PLAN.md — Zod criterionType schema + server action /classify-criteria injection
 
 **Success Criteria** (what must be TRUE):
   1. Each DynamicField in a saved profile has a `criterion_type` value persisted in its JSONB entry, set to one of: `distance`, `price`, `size`, `binary_feature`, `proximity_quality`, `subjective`
@@ -163,77 +139,81 @@ Plans:
 **Goal:** All non-subjective criteria produce fulfillment scores (0.0-1.0) via deterministic Python formulas -- no LLM calls needed for price, distance, size, binary features, or proximity quality.
 **Depends on:** Phase 27
 **Requirements:** DS-01, DS-02, DS-03, DS-04, DS-05, DS-06
+**Status:** Complete (2026-03-30)
+**Plans:** 2/2 plans complete
+
+Plans:
+- [x] 28-01-PLAN.md — TDD test scaffold: failing tests for all DS-01 through DS-06 scorer functions
+- [x] 28-02-PLAN.md — Full deterministic_scorer.py implementation: FulfillmentResult + FEATURE_ALIAS_MAP + 5 scorer functions + built-in synthesizer
+
 **Success Criteria** (what must be TRUE):
   1. Given a listing with price above budget, the scorer returns a fulfillment value following `f=exp(-2.5 * (price-budget)/budget)` -- at-or-under budget returns `f=1.0`; missing price skips the criterion
   2. Distance and size criteria produce fulfillment via their respective decay/power formulas, with guard behavior for missing or zero values
   3. Binary feature criteria (e.g., "balcony", "lift") resolve against Flatfox attribute slugs via set-membership check, with `FEATURE_ALIAS_MAP` handling German synonym inputs; present=1.0, absent=0.0
   4. Proximity quality criteria produce fulfillment combining distance decay and rating bonus per the hybrid formula; fallback results use fallback distance
   5. Built-in preferences (budget, rooms, living_space) appear as virtual `FulfillmentResult` entries using dealbreaker flags for importance, without being migrated into `dynamic_fields`
-**Plans:** 2/2 plans complete
 
-Plans:
-- [ ] 28-01-PLAN.md — TDD test scaffold: failing tests for all DS-01 through DS-06 scorer functions
-- [ ] 28-02-PLAN.md — Full deterministic_scorer.py implementation: FulfillmentResult + FEATURE_ALIAS_MAP + 5 scorer functions + built-in synthesizer
+### Phase 29: Subjective Scorer (OpenRouter)
 
-### Phase 29: Subjective Scorer (Claude Enhancement)
-
-**Goal:** Enhance the Claude scoring prompt so Claude evaluates only genuinely subjective criteria, returning per-criterion fulfillment values instead of category scores, while preserving all existing prompt logic that works correctly today.
-**Depends on:** Phase 27
+**Goal:** Subjective criteria (those that cannot be scored deterministically) are evaluated via a single batched OpenRouter call that returns per-criterion fulfillment values and natural-language summary bullets -- no Claude API calls in the scoring path.
+**Depends on:** Phase 28
 **Requirements:** SS-01, SS-02, SS-03, SS-04
-**Preserved prompt logic (must NOT be removed):**
-  - Sale vs rent price distinction (SALE = total purchase price, RENT = monthly rent — never confuse them)
-  - Language rules (respond entirely in user's preferred language, ignore input language)
-  - Image analysis guidance (evaluate condition/finish from photos when provided)
-  - Proximity data section format (evaluate from verified nearby_places only, never guess)
-  - "Not specified" handling for missing listing fields
 **Success Criteria** (what must be TRUE):
-  1. Claude returns a `ClaudeSubjectiveResponse` with a list of `SubjectiveCriterionResult` entries, each containing `criterion`, `fulfillment` (0.0-1.0 rounded to 0.1), and `reasoning`
-  2. When a profile has zero subjective criteria, no Claude scoring call is made; when subjective criteria exist, they are batched into a single `messages.parse()` call
-  3. Claude's system prompt instructs it to return fulfillment values only for subjective criteria -- it never produces an `overall_score` or category-level scores
-  4. The response always includes 3-5 natural-language `summary_bullets` in the user's preferred language, even when all criteria were deterministic (a separate minimal Claude call is made if needed)
-  5. Sale vs rent price interpretation, language output rules, and image/proximity evaluation guidance are preserved in the updated prompt
-**Plans:** 3 plans
+  1. A `SubjectiveResponse` Pydantic model exists containing a list of `SubjectiveCriterionResult` entries (each with `criterion`, `fulfillment` 0.0-1.0, `reasoning`) and `summary_bullets`
+  2. All subjective-type criteria are batched into a single OpenRouter call; model is configurable via `SUBJECTIVE_MODEL` env var (default: `google/gemini-2.5-flash-lite`); when zero subjective criteria exist, no call is made
+  3. The prompt instructs the model to return fulfillment in 0.1 increments per criterion with reasoning; the model never produces an `overall_score` or category-level scores
+  4. 3-5 natural-language `summary_bullets` in the user's preferred language are generated in the same OpenRouter call alongside subjective evaluation -- no separate call needed
+**Plans**: TBD
 
-Plans:
-- [ ] 29-01-PLAN.md — TDD test scaffold: failing tests for SS-01 through SS-04
-- [ ] 29-02-PLAN.md — New Pydantic models (SubjectiveCriterionResult, ClaudeSubjectiveResponse, BulletsOnlyResponse) + rewritten scoring prompts
-- [ ] 29-03-PLAN.md — Two-path ClaudeScorer.score_listing() implementation + router update
+### Phase 30: Database & Infrastructure Prep
 
-### Phase 30: Database Schema Prep
-
-**Goal:** The database schema is ready to store v2 scoring data before the hybrid scorer ships, ensuring backward-compatible storage and no data loss.
-**Depends on:** Phase 27
-**Requirements:** DB-01, DB-03
+**Goal:** All database migrations are applied, env vars are configured on EC2, and the production infrastructure is ready for the hybrid scorer to ship -- before any Phase 31 code deploys.
+**Depends on:** Phase 28
+**Requirements:** INT-01, INT-02, DB-01, DB-03
 **Success Criteria** (what must be TRUE):
-  1. The `analyses` table `breakdown` JSONB column accepts a `schema_version` field; existing rows without it continue to read correctly
-  2. A new `fulfillment_data` JSONB column exists on the `analyses` table (additive); the existing `breakdown` and `score` columns are untouched
-  3. This migration is deployed to production before any Phase 31 (hybrid scorer) code ships
+  1. Supabase migration 005 (listing_profiles table with indexes) and migration 006 (research_json JSONB column) are applied to production
+  2. The `analyses` table has a `schema_version` field in the `breakdown` JSONB column and a new `fulfillment_data` JSONB column; existing rows without these fields continue to read correctly
+  3. EC2 environment has `OPENROUTER_API_KEY`, `ALLOW_CLAUDE_FALLBACK=false`, and `SUBJECTIVE_MODEL` env vars set in the backend `.env` file
+  4. All migrations are verified deployed before any hybrid scorer code (Phase 31) ships
 **Plans**: TBD
 
 ### Phase 31: Hybrid Scorer & Router Integration
 
-**Goal:** The scoring pipeline routes each criterion to the correct scorer (deterministic or subjective), aggregates fulfillment into a final score, and returns a v2 response shape that preserves backward compatibility.
-**Depends on:** Phase 28, Phase 29, Phase 30
-**Requirements:** HA-01, HA-02, HA-03, HA-04, DB-02
+**Goal:** The scoring router orchestrates the full pipeline: looks up pre-computed ListingProfile data, adapts it for the deterministic scorer, routes subjective criteria to OpenRouter, aggregates fulfillment into a weighted score, and returns a v2 response -- with graceful degradation when no enrichment data exists.
+**Depends on:** Phase 29, Phase 30
+**Requirements:** INT-03, INT-04, INT-05, HA-01, HA-02, HA-03, HA-04, DB-02
 **Success Criteria** (what must be TRUE):
-  1. The final score is computed as `(sum of weight * fulfillment) / (sum of weights) * 100` using CRITICAL=5/HIGH=3/MEDIUM=2/LOW=1 weights -- not from Claude
-  2. Criteria with missing data (None fulfillment) are excluded from both numerator and denominator; the score reflects only available information
+  1. The scoring router looks up a ListingProfile from Supabase; a `profile_adapter.py` module converts ListingProfile fields to FlatfoxListing-compatible format so the Phase 28 deterministic scorer runs unmodified
+  2. The final score is computed as `(sum of weight * fulfillment) / (sum of weights) * 100` using CRITICAL=5/HIGH=3/MEDIUM=2/LOW=1 weights; criteria with missing data (None fulfillment) are excluded from both numerator and denominator
   3. Any CRITICAL-importance criterion with `fulfillment=0` forces `match_tier="poor"` and caps the numeric score at 39
-  4. The `ScoreResponse` includes `schema_version: 2`, `criteria_results` list (per-criterion name/fulfillment/weight/reasoning), no `categories` list; `overall_score`, `match_tier`, and `summary_bullets` field names are unchanged
-  5. Cache reads reject entries with `schema_version < 2` (or missing), triggering a fresh re-score instead of returning stale v1 data
+  4. The `ScoreResponse` includes `schema_version: 2`, `criteria_results` list, no `categories` list; `overall_score`, `match_tier`, and `summary_bullets` field names are preserved; cache reads reject entries with `schema_version < 2`; edge function cache also checks `schema_version`
+  5. When `ALLOW_CLAUDE_FALLBACK=false` and no ListingProfile exists, the endpoint returns `enrichment_status="unavailable"` instead of calling Claude; the OpenRouter model constant is updated to `google/gemini-2.5-flash-lite`
 **Plans**: TBD
 
 ### Phase 32: Frontend Consumers
 
-**Goal:** The web app and Chrome extension display the new per-criterion fulfillment breakdown, with backward-compatible rendering for cached v1 analyses.
+**Goal:** The web app and Chrome extension display the new per-criterion fulfillment breakdown, with backward-compatible rendering for cached v1 analyses and a clear indicator for listings that lack enrichment data.
 **Depends on:** Phase 31
-**Requirements:** FE-01, FE-02, FE-03, FE-04
+**Requirements:** FE-01, FE-02, FE-03, FE-04, FE-05
 **Success Criteria** (what must be TRUE):
   1. A new `FulfillmentBreakdown` component on the analysis page shows each criterion's name, fulfillment score, weight, and reasoning from `criteria_results`
   2. The checklist displays met (fulfillment >= 0.7), partial (0.3-0.69), and not-met (< 0.3) states derived from fulfillment floats
   3. The Chrome extension TypeScript types include the v2 `ScoreResponse` shape; existing field names (`overall_score`, `match_tier`, `summary_bullets`) work without extension changes
   4. The analysis page branches on `schema_version`: v1 cached analyses render the legacy category breakdown, v2 responses render the new per-criterion fulfillment view
+  5. The extension renders a grey "beta" badge for listings with `enrichment_status="unavailable"`, indicating scoring is not yet available for this listing's area
 **Plans**: TBD
+
+### Phase 33: Dashboard Home, Nav Polish, Profile Creation Flow, and Analyses Titles Fix
+
+**Goal:** Deliver four UX improvements: a proper dashboard home page with welcome text and profile-creation cards, Home nav item in TopNavbar, two-card profile creation chooser (Manual vs AI), download page nav fix, and English-first analysis titles.
+**Requirements:** HOME-01, HOME-02, NAV-01, PROF-01, DOWN-01, ANA-01
+**Depends on:** Phase 32
+**Status:** Complete (2026-03-30)
+**Plans:** 2/2 plans complete
+
+Plans:
+- [x] 33-01-PLAN.md — Dashboard home page with welcome text + profile-creation cards, Home nav item, translations
+- [x] 33-02-PLAN.md — Profile chooser in profiles page, download page nav fix, backend title priority fix
 
 ## Progress
 
@@ -244,17 +224,16 @@ Plans:
 | v2.0 Polish & AI Profile Creation | ✅ Complete | 2026-03-17 |
 | v3.0 Extension Download & Install | ✅ Complete | 2026-03-17 |
 | v4.0 Landing Page & Design System | ✅ Complete | 2026-03-28 |
-| v4.1 Landing Page v2 & Hackathon Credits | 📋 Planned | -- |
+| v4.1 Landing Page v2 & Hackathon Credits | ✅ Complete | 2026-03-29 |
 | v4.2 Dashboard Alignment & QA | 🔮 Deferred | -- |
-| v5.0 Hybrid Scoring Engine | 📋 Planned | -- |
+| v5.0 Hybrid Scoring Engine | 🚧 In Progress | -- |
 
-### Phase 33: Dashboard Home, Nav Polish, Profile Creation Flow, and Analyses Titles Fix
-
-**Goal:** Deliver four UX improvements: a proper dashboard home page with welcome text and profile-creation cards, Home nav item in TopNavbar, two-card profile creation chooser (Manual vs AI), download page nav fix, and English-first analysis titles.
-**Requirements:** HOME-01, HOME-02, NAV-01, PROF-01, DOWN-01, ANA-01
-**Depends on:** Phase 32
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 33-01-PLAN.md — Dashboard home page with welcome text + profile-creation cards, Home nav item, translations
-- [x] 33-02-PLAN.md — Profile chooser in profiles page, download page nav fix, backend title priority fix
+| Phase | Status | Completed |
+|-------|--------|-----------|
+| 27. Data Model & Criterion Classifier | ✅ Complete | 2026-03-29 |
+| 28. Deterministic Scorer | ✅ Complete | 2026-03-30 |
+| 29. Subjective Scorer (OpenRouter) | Not started | - |
+| 30. Database & Infrastructure Prep | Not started | - |
+| 31. Hybrid Scorer & Router Integration | Not started | - |
+| 32. Frontend Consumers | Not started | - |
+| 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |
