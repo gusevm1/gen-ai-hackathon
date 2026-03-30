@@ -238,8 +238,8 @@ Plans:
 **Goal:** Deliver four UX improvements: a proper dashboard home page with welcome text and profile-creation cards, Home nav item in TopNavbar, two-card profile creation chooser (Manual vs AI), download page nav fix, and English-first analysis titles.
 **Requirements:** HOME-01, HOME-02, NAV-01, PROF-01, DOWN-01, ANA-01
 **Depends on:** Phase 32
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 33-01-PLAN.md — Dashboard home page with welcome text + profile-creation cards, Home nav item, translations
-- [ ] 33-02-PLAN.md — Profile chooser in profiles page, download page nav fix, backend title priority fix
+- [x] 33-01-PLAN.md — Dashboard home page with welcome text + profile-creation cards, Home nav item, translations
+- [x] 33-02-PLAN.md — Profile chooser in profiles page, download page nav fix, backend title priority fix
