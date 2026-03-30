@@ -135,7 +135,7 @@ Plans:
 **Milestone Goal:** Replace the all-Claude scoring system with a hybrid deterministic + AI architecture where Claude handles only subjective evaluation and never generates numeric scores.
 
 - [x] **Phase 27: Data Model & Criterion Classifier** — CriterionType enum, LLM classification at profile save, updated importance weight map (completed 2026-03-29)
-- [ ] **Phase 28: Deterministic Scorer** — Pure-function fulfillment formulas for price, distance, size, binary features, proximity quality, and built-in fields
+- [x] **Phase 28: Deterministic Scorer** — Pure-function fulfillment formulas for price, distance, size, binary features, proximity quality, and built-in fields (completed 2026-03-30)
 - [ ] **Phase 29: Subjective Scorer (Claude Refactor)** — New Pydantic response model, batched subjective-only Claude call, fulfillment-based prompt, summary bullets
 - [ ] **Phase 30: Database Schema Prep** — schema_version field in JSONB breakdown, fulfillment_data column; deployed before hybrid scorer ships
 - [ ] **Phase 31: Hybrid Scorer & Router Integration** — Weighted aggregation engine, CRITICAL override, missing-data handling, ScoreResponse v2, cache version gating
@@ -169,7 +169,7 @@ Plans:
   3. Binary feature criteria (e.g., "balcony", "lift") resolve against Flatfox attribute slugs via set-membership check, with `FEATURE_ALIAS_MAP` handling German synonym inputs; present=1.0, absent=0.0
   4. Proximity quality criteria produce fulfillment combining distance decay and rating bonus per the hybrid formula; fallback results use fallback distance
   5. Built-in preferences (budget, rooms, living_space) appear as virtual `FulfillmentResult` entries using dealbreaker flags for importance, without being migrated into `dynamic_fields`
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 28-01-PLAN.md — TDD test scaffold: failing tests for all DS-01 through DS-06 scorer functions

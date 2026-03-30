@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: Landing Page v2 & Hackathon Credits
 status: executing
-stopped_at: Phase 28 context gathered
-last_updated: "2026-03-30T05:03:39.924Z"
+stopped_at: "Completed 28-01: Deterministic scorer TDD scaffold"
+last_updated: "2026-03-30T06:17:21.257Z"
 last_activity: "2026-03-29 -- 27-03 complete: criterionType on dynamicFieldSchema, classify-criteria injected in saveProfilePreferences + createProfileWithPreferences"
 progress:
   total_phases: 9
-  completed_phases: 6
-  total_plans: 11
-  completed_plans: 11
+  completed_phases: 7
+  total_plans: 13
+  completed_plans: 13
   percent: 95
 ---
 
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 
 ## Current Position
 
-Phase: 27 of 32 (Data Model & Criterion Classifier)
-Plan: 03 COMPLETE (27-03: criterionType Zod schema + classify-criteria server action injection)
+Phase: 28 of 32 (Deterministic Scorer)
+Plan: 01 COMPLETE (28-01: TDD scaffold — 6 test classes, 41 test methods for DS-01 through DS-06)
 Status: In Progress
-Last activity: 2026-03-29 -- 27-03 complete: criterionType on dynamicFieldSchema, classify-criteria injected in saveProfilePreferences + createProfileWithPreferences
+Last activity: 2026-03-30 -- 28-01 complete: test_deterministic_scorer.py scaffold committed (6 classes, 41 methods)
 
 Progress: [██████████] 95%
 
@@ -44,6 +44,8 @@ Progress: [██████████] 95%
 | 27    | 01   | 3 min    | 2     | 3     |
 | 27    | 02   | 8 min    | 2     | 4     |
 | 27    | 03   | 7 min    | 2     | 3     |
+| Phase 28 P02 | 4 min | 3 tasks | 2 files |
+| Phase 28 P01 | 5 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -84,12 +86,19 @@ Progress: [██████████] 95%
 - EC2_API_URL used without NEXT_PUBLIC_ prefix — server actions only, never exposed to client bundle
 - res.json() cast to { dynamicFields: typeof validated.dynamicFields } to satisfy TypeScript strict mode without loosening types
 
+### Phase 28 Decisions (28-01)
+
+- score_distance receives actual_km as explicit kwarg (not derived from listing coords) — keeps function pure and testable
+- FulfillmentResult validates fulfillment in [0, 1] range via Pydantic field constraint — rejects values > 1.0
+- proximity_data passed as dict keyed by field_name to score_proximity_quality (matches Phase 31 aggregator contract)
+- criterion_name field on FulfillmentResult used as lookup key for budget/rooms/living_space built-in entries
+
 ### Blockers/Concerns
 
 - None
 
 ## Session Continuity
 
-Last session: 2026-03-30T05:03:39.909Z
-Stopped at: Phase 28 context gathered
-Resume file: .planning/phases/28-deterministic-scorer/28-CONTEXT.md
+Last session: 2026-03-30T06:17:21.253Z
+Stopped at: Completed 28-01: Deterministic scorer TDD scaffold
+Resume file: None
