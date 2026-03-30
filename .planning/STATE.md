@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Scoring Engine
-status: in-progress
-stopped_at: Completed 32-02-PLAN.md
-last_updated: "2026-03-30T15:55:00.000Z"
-last_activity: 2026-03-30 — Completed Phase 32 Plan 02 (extension v2 types + grey beta badge)
+status: completed
+stopped_at: Completed 32-01-PLAN.md (all Phase 32 plans complete)
+last_updated: "2026-03-30T15:54:30.000Z"
+last_activity: 2026-03-30 — Completed Phase 32 Plan 01 (fulfillment breakdown + schema branching)
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 17
-  completed_plans: 16
-  percent: 97
+  completed_plans: 17
+  percent: 100
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Phase 32 in progress — Frontend Consumers (extension v2 types + grey beta badge)
+**Current focus:** Phase 32 complete — Frontend Consumers (all plans complete)
 
 ## Current Position
 
 Phase: 32 of 32 (Frontend Consumers)
-Plan: 2 of 2 in current phase
-Status: Phase 32 plan 02 complete
-Last activity: 2026-03-30 — Completed Phase 32 Plan 02 (extension v2 types + grey beta badge)
+Plan: 2 of 2 in current phase (all complete)
+Status: Phase 32 complete
+Last activity: 2026-03-30 — Completed Phase 32 Plan 01 (fulfillment breakdown + schema branching)
 
-Progress: [██████████] 97% (phases 27-32 in progress, 33 complete out-of-band)
+Progress: [██████████] 100% (all phases 27-33 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 2 plans, 30: 1 plan, 31: 3 plans, 32: 1 plan)
+- Total plans completed: 15 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 2 plans, 30: 1 plan, 31: 3 plans, 32: 2 plans)
 - Average duration: ~5min
 - Total execution time: --
 
@@ -47,6 +47,7 @@ Progress: [██████████] 97% (phases 27-32 in progress, 33 com
 | 31    | 01   | 2min     | 3     | 3     |
 | 31    | 02   | 2min     | 2     | 2     |
 | 31    | 03   | 1min     | 2     | 2     |
+| 32    | 01   | 3min     | 2     | 5     |
 | 32    | 02   | 3min     | 2     | 4     |
 
 ## Accumulated Context
@@ -95,6 +96,13 @@ Progress: [██████████] 97% (phases 27-32 in progress, 33 com
 - Default schema_version to 0 when missing -- treats all legacy v1 entries as stale in both cache layers
 - Both cache layers (backend Python + edge function TypeScript) use identical gating logic
 
+### Phase 32 Plan 01 Decisions
+
+- Schema version branching uses >= 2 (not === 2) for forward compatibility with future schema versions
+- Null-fulfillment criteria rendered in separate "Data unavailable" section to prevent NaN% display
+- deriveFulfillmentChecklist includes null-fulfillment items with met=null for ChecklistSection "Unknown" rendering
+- Importance displayed as labels (Critical/High/Medium/Low) not raw weights (5/3/2/1)
+
 ### Phase 32 Plan 02 Decisions
 
 - All v2 fields optional on ScoreResponse to preserve v1 backward compatibility with cached responses
@@ -123,6 +131,6 @@ Progress: [██████████] 97% (phases 27-32 in progress, 33 com
 
 ## Session Continuity
 
-Last session: 2026-03-30T15:51:06Z
-Stopped at: Completed 32-02-PLAN.md
+Last session: 2026-03-30T15:54:30Z
+Stopped at: Completed 32-01-PLAN.md (all Phase 32 plans complete)
 Resume file: None

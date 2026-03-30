@@ -110,7 +110,7 @@ Plans:
 - [x] **Phase 29: Subjective Scorer (OpenRouter)** — SubjectiveResponse model, batched OpenRouter call for subjective criteria + summary bullets, configurable model via SUBJECTIVE_MODEL env var (completed 2026-03-30)
 - [x] **Phase 30: Database & Infrastructure Prep** — Migrations 005/006, schema_version + fulfillment_data columns, OPENROUTER_API_KEY + ALLOW_CLAUDE_FALLBACK + SUBJECTIVE_MODEL env vars on EC2 (completed 2026-03-30)
 - [x] **Phase 31: Hybrid Scorer & Router Integration** — ListingProfile lookup + adapter, weighted aggregation engine, CRITICAL override, ScoreResponse v2, cache version gating, ALLOW_CLAUDE_FALLBACK gating, OpenRouter model constant update (completed 2026-03-30)
-- [ ] **Phase 32: Frontend Consumers** — FulfillmentBreakdown component, checklist threshold update, extension types, schema_version branching, grey "beta" badge for non-enriched listings
+- [x] **Phase 32: Frontend Consumers** — FulfillmentBreakdown component, checklist threshold update, extension types, schema_version branching, grey "beta" badge for non-enriched listings (completed 2026-03-30)
 
 **Phase ordering:** 29 and 30 can run in parallel. 31 depends on both 29 and 30. 32 depends on 31.
 
@@ -213,7 +213,7 @@ Plans:
   3. The Chrome extension TypeScript types include the v2 `ScoreResponse` shape; existing field names (`overall_score`, `match_tier`, `summary_bullets`) work without extension changes
   4. The analysis page branches on `schema_version`: v1 cached analyses render the legacy category breakdown, v2 responses render the new per-criterion fulfillment view
   5. The extension renders a grey "beta" badge for listings with `enrichment_status="unavailable"`, indicating scoring is not yet available for this listing's area
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 32-01-PLAN.md — Web app FulfillmentBreakdown component, fulfillment utilities, analysis page schema_version branching
@@ -251,4 +251,4 @@ Plans:
 | 29. Subjective Scorer (OpenRouter) | ✅ Complete | 2026-03-30 |
 | 30. Database & Infrastructure Prep | ✅ Complete | 2026-03-30 |
 | 31. Hybrid Scorer & Router Integration | ✅ Complete | 2026-03-30 |
-| 32. Frontend Consumers | 1/2 | In Progress|  | 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |
+| 32. Frontend Consumers | 2/2 | Complete   | 2026-03-30 | 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |
