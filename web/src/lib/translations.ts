@@ -94,7 +94,7 @@ export const translations = {
     dashboard_subtitle: "Let's set your preferences, requirements and desires.",
     dashboard_manual_title: 'Manual profile creation',
     dashboard_manual_desc: 'Prefer full control? Fill out a straightforward form and create your profile manually.',
-    dashboard_ai_title: 'AI-guided profile creation',
+    dashboard_ai_title: 'AI-powered profile creation',
     dashboard_ai_desc: "Tell us exactly what you're looking for and let our AI build your profile automatically.",
 
     // Profiles page
@@ -327,7 +327,7 @@ export const translations = {
     dashboard_subtitle: 'Lassen Sie uns Ihre Präferenzen, Anforderungen und Wünsche festlegen.',
     dashboard_manual_title: 'Manuelle Profilerstellung',
     dashboard_manual_desc: 'Volle Kontrolle gewuenscht? Fuellen Sie ein einfaches Formular aus und erstellen Sie Ihr Profil manuell.',
-    dashboard_ai_title: 'KI-gesteuerte Profilerstellung',
+    dashboard_ai_title: 'KI-gestützte Profilerstellung',
     dashboard_ai_desc: 'Sagen Sie uns genau, wonach Sie suchen, und lassen Sie unsere KI Ihr Profil automatisch erstellen.',
 
 // Profiles page
