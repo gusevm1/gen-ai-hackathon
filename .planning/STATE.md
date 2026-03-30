@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Scoring Engine
-status: executing
-stopped_at: Completed 29-02-PLAN.md (two-path OpenRouter scoring logic)
-last_updated: "2026-03-30T13:39:23.165Z"
-last_activity: 2026-03-30 — Completed Phase 29 (subjective scorer)
+status: completed
+stopped_at: Completed 29-02-PLAN.md (two-path OpenRouter scoring logic) — Phase 29 complete
+last_updated: "2026-03-30T13:44:35.406Z"
+last_activity: 2026-03-30 — Completed Phase 29 (two-path OpenRouter scoring)
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 11
   completed_plans: 11
-  percent: 38
+  percent: 50
 ---
 
 # Project State
