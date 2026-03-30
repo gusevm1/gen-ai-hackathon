@@ -19,14 +19,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Milestone v5.0 -- Phase 27 ready to plan
+**Current focus:** Phase 33 planned and ready to execute
 
 ## Current Position
 
-Phase: 27 of 32 (Data Model & Criterion Classifier)
-Plan: --
-Status: Ready to plan
-Last activity: 2026-03-29 -- Roadmap created for v5.0 (Phases 27-32)
+Phase: 33 of 33 (Dashboard Home, Nav Polish, Profile Creation Flow, and Analyses Titles Fix)
+Plan: 33-01, 33-02
+Status: Ready to execute
+Last activity: 2026-03-30 -- Phase 33 planned (2 plans)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -56,6 +56,10 @@ Progress: [░░░░░░░░░░] 0%
 - Criterion type stored on DynamicField at profile save (not per-score-call)
 - DB-01 (schema_version) must deploy BEFORE hybrid scorer ships (Phase 30 before Phase 31)
 - ScoreResponse v2: categories removed, per-criterion fulfillment added, field names preserved
+
+### Roadmap Evolution
+
+- Phase 33 added: Dashboard Home, Nav Polish, Profile Creation Flow, and Analyses Titles Fix
 
 ### Blockers/Concerns
 
