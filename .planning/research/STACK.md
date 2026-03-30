@@ -1,287 +1,391 @@
-# Technology Stack: Hybrid Scoring Engine (v5.0)
+# Technology Stack: Integration of ListingProfile Enrichment + OpenRouter Gap-Fill
 
-**Project:** HomeMatch
-**Researched:** 2026-03-29
+**Project:** HomeMatch v5.0 (Phases 29-32 adjusted)
+**Researched:** 2026-03-30
 **Overall confidence:** HIGH
+**Focus:** Stack additions for integrating pre-computed ListingProfile data and OpenRouter gap-fill into the existing v5.0 hybrid scoring pipeline
+
+---
 
 ## Executive Summary
 
-The hybrid scoring engine requires **zero new library additions** to the Python backend. All deterministic formulas (price ratio, distance decay, size range, binary matching) use Python stdlib arithmetic. The existing Pydantic v2.12.5 handles the new response schemas. The existing Anthropic SDK v0.85.0 supports structured outputs on Haiku 4.5 via `messages.parse()`. The frontend needs only TypeScript type changes -- no new packages.
+The integration requires **one new dependency** (`httpx` -- already installed) and **one new environment variable** (`OPENROUTER_API_KEY`). The existing `httpx` async client is the correct choice for OpenRouter API calls. The critical finding is that the current OpenRouter model (`google/gemini-2.0-flash-001`) is **deprecated and will shut down June 1, 2026** -- the model constant must be updated to `google/gemini-2.5-flash-lite` before deployment.
 
-The main work is **schema evolution**, not library addition: a new `ScoreResponse` shape (per-criterion fulfillment list replacing 5-category breakdown), a `criterion_type` field on `DynamicField`, updated `IMPORTANCE_WEIGHT_MAP` values (5/3/2/1 replacing 90/70/50/30), and a `schema_version` field for cache invalidation.
+The deterministic scorer (Phase 28, 439 lines, 41 tests) currently consumes `FlatfoxListing` + `DynamicField` -- it does NOT consume `ListingProfile`. The integration requires an **adapter layer** that projects `ListingProfile` data into the same interfaces the deterministic scorer already understands, rather than rewriting the scorer itself.
+
+No new Python packages are needed. The `openrouter.py` module (372 lines) is well-structured but needs three fixes: model update, structured JSON output via `response_format`, and `ALLOW_CLAUDE_FALLBACK` gating. The `listing_profile_db.py` module (118 lines) is production-ready and follows existing Supabase patterns.
+
+---
 
 ## Recommended Stack Changes
 
-### Summary Table
+### New Runtime Dependencies
 
-| Library/Tool | Version | Purpose | Rationale |
-|-------------|---------|---------|-----------|
-| Python stdlib (`math`, `round`, `max`) | 3.x | Deterministic fulfillment formulas | All formulas are 5-15 lines of basic arithmetic. `max(0, 1 - x/y)` and `round(x, 1)` need no external library. |
-| Pydantic v2 (existing) | 2.12.5 | New `ScoreResponse` + `CriterionResult` + `ClaudeSubjectiveResponse` models | Already installed. Supports `float` fields with `ge=0.0, le=1.0`, `Literal` union types, `model_validator` for JSONB migration. |
-| Anthropic SDK (existing) | 0.85.0 | `messages.parse()` with new `ClaudeSubjectiveResponse` schema | Already installed. Structured outputs GA on Haiku 4.5. `output_format` parameter still works in `.parse()` helper. |
-| TypeScript types (code change) | -- | Update `ScoreResponse` interface in extension + web | No new npm packages. Shape change from `categories[]` + `checklist[]` to `criteria[]`. |
+| Technology | Version | Purpose | Rationale |
+|------------|---------|---------|-----------|
+| `httpx` (existing) | installed | OpenRouter API client | Already in `requirements.txt`. `openrouter.py` uses `httpx.AsyncClient` -- correct async pattern for FastAPI. |
+| `OPENROUTER_API_KEY` env var | -- | OpenRouter API auth | New env var on EC2 only. Not needed locally (fallback to Claude). |
+| `ALLOW_CLAUDE_FALLBACK` env var | -- | Feature flag: allow expensive Claude scoring for listings without ListingProfile | Boolean gating. When `false`, listings without a pre-computed profile return a "not yet analyzed" response instead of burning $0.06 on Claude. |
 
-### No New Libraries Needed
+### Model Update (CRITICAL)
+
+| Technology | Current | Recommended | Rationale |
+|------------|---------|-------------|-----------|
+| OpenRouter model | `google/gemini-2.0-flash-001` | `google/gemini-2.5-flash-lite` | **Gemini 2.0 Flash is deprecated, shutting down June 1, 2026.** Gemini 2.5 Flash Lite has identical pricing ($0.10/M input, $0.40/M output), 1M context window, structured output support, and is the direct successor for cost-optimized workloads. |
+
+**Confidence: HIGH** -- verified on [OpenRouter model page](https://openrouter.ai/google/gemini-2.0-flash-001) showing "Going away June 1, 2026" badge and on [Gemini 2.5 Flash Lite page](https://openrouter.ai/google/gemini-2.5-flash-lite) showing active availability.
+
+**Alternative considered:** `google/gemini-2.5-flash` ($0.30/M input, $2.50/M output) -- 3x input cost, 6x output cost. The "reasoning" capability is unnecessary for gap-fill (binary yes/no/partial questions about listing features). Use `2.5-flash-lite` because gap-fill prompts are simple factual extraction, not reasoning tasks.
+
+### No New Python Packages
 
 | Question | Answer | Rationale |
 |----------|--------|-----------|
-| Python math/formula libraries? | **No. Use stdlib.** | `price_fulfillment = max(0, 1 - (price - budget_max) / budget_max)` is basic arithmetic. Distance decay `max(0, 1 - dist/radius)` is the same. `math.exp()` available in stdlib if exponential decay is ever preferred. No NumPy/SciPy warranted for 5-10 simple formulas. |
-| Schema migration tools for Supabase JSONB? | **No. Use Pydantic model_validator migration pattern (already established).** | `DynamicField` already has a `model_validator(mode="before")` migration path in `preferences.py`. Adding `criterion_type` with a default value means old JSONB rows auto-migrate on read. No Alembic or SQL migration tool needed -- the JSONB column is schemaless by design. |
-| Pydantic v2 upgrade? | **No. Already on v2.12.5.** | Current version supports all needed patterns: `Literal` types, `Field(ge=0, le=1)` for fulfillment floats, `model_validator` for migration, `ConfigDict` with `alias_generator`. |
-| Anthropic SDK upgrade? | **No.** | SDK v0.85.0 supports `messages.parse()` with `output_format`. Structured outputs are GA on Haiku 4.5. The deprecated `output_format` parameter still works in the `.parse()` helper (SDK translates to `output_config.format` internally). |
-| Frontend data fetching libraries? | **No. Update TypeScript types only.** | The Next.js analysis page and extension already fetch `ScoreResponse` as JSON from Supabase. Only the TypeScript interface shape changes. |
+| OpenAI SDK for OpenRouter? | **No. Use raw httpx.** | The existing `openrouter.py` uses `httpx.AsyncClient` directly, which is correct. OpenRouter is OpenAI-compatible, but adding `openai` as a dependency just for one gap-fill endpoint adds unnecessary weight. The raw HTTP approach gives full control over error handling and JSON parsing. |
+| pydantic-settings for env vars? | **No. Use os.environ.** | The project consistently uses `os.environ.get()` for all env vars (see `claude.py`, `supabase.py`, `openrouter.py`). Adding `pydantic-settings` for one boolean flag breaks the established pattern. |
+| aiohttp or requests? | **No. httpx is already standard.** | httpx is already used by `flatfox_client`, `openrouter.py`. No reason to add a second HTTP library. |
+| tenacity for retries? | **No. httpx retry + manual fallback.** | `openrouter.py` already implements batch-then-individual fallback. Adding tenacity for a single API call is overkill. |
 
 ---
 
-## Specific Implementation Patterns
+## Integration Architecture: ListingProfile to Deterministic Scorer
 
-### 1. New ScoreResponse Schema (Pydantic v2)
+### The Core Problem
 
-**Confidence: HIGH** (verified against existing codebase + Pydantic v2 docs + Anthropic structured output docs)
+The Phase 28 deterministic scorer consumes `FlatfoxListing` (from live Flatfox API) and `DynamicField` (from user preferences). The new `ListingProfile` (from pre-computed enrichment) has different field names, richer data, and additional AI-analyzed scores. These two models are **not interchangeable**.
 
-The new `ScoreResponse` replaces `categories: list[CategoryScore]` and `checklist: list[ChecklistItem]` with a unified `criteria: list[CriterionResult]`.
+**Confidence: HIGH** -- verified by reading both models:
 
-```python
-class CriterionResult(BaseModel):
-    """Result for a single scored criterion."""
-    name: str = Field(description="Criterion name matching DynamicField.name or built-in label")
-    criterion_type: Literal["price", "distance", "size", "binary_feature", "proximity_quality", "subjective"]
-    fulfillment: float = Field(ge=0.0, le=1.0, description="0.0 to 1.0 in 0.1 steps")
-    importance: Literal["critical", "high", "medium", "low"]
-    reasoning: str = Field(description="One-line explanation with data citation")
-    source: Literal["deterministic", "llm"] = Field(description="How fulfillment was computed")
+| Field | FlatfoxListing | ListingProfile |
+|-------|---------------|----------------|
+| Price | `price_display: Optional[int]` | `price: Optional[int]` |
+| Rooms | `number_of_rooms: Optional[str]` (string!) | `rooms: Optional[float]` |
+| Size | `surface_living: Optional[int]` | `sqm: Optional[int]` |
+| Attributes | `attributes: list[FlatfoxAttribute]` (objects with `.name`) | `attributes: list[str]` (plain strings) |
+| Location | `latitude/longitude: Optional[float]` | `latitude/longitude: Optional[float]` (same) |
+| Condition | Not available (images only) | `condition_score`, `kitchen_quality_score`, etc. |
+| Amenities | Not available (fetched at runtime) | `amenities: dict[str, AmenityCategory]` |
+| Description | `description: Optional[str]` | `description: Optional[str]` (same) |
 
-class ScoreResponse(BaseModel):
-    """Hybrid scoring response -- deterministic + LLM."""
-    overall_score: int = Field(ge=0, le=100)
-    match_tier: Literal["excellent", "good", "fair", "poor"]
-    summary_bullets: list[str] = Field(min_length=3, max_length=5)
-    criteria: list[CriterionResult]
-    language: str
-    schema_version: int = Field(default=2)
-```
+### Recommended Approach: Adapter Function, Not Scorer Rewrite
 
-**Key design decisions:**
-
-- `fulfillment` as `float` with `ge=0.0, le=1.0`: Pydantic v2 validates this natively. The 0.1-step constraint is enforced via `round(x, 1)` in deterministic formulas and via prompt instruction for Claude. Structured outputs support `float` but not step enumeration in the JSON schema.
-- `source` field: Enables frontend to distinguish deterministic vs LLM-evaluated criteria. Useful for transparency ("computed" vs "AI assessed" badges).
-- `criterion_type` on the result: Lets the frontend group and display criteria by type without re-classifying.
-- `categories` and `checklist` removed: The weighted aggregation formula replaces Claude's `overall_score`. No separate category scores -- every criterion is scored equally via fulfillment x weight.
-
-### 2. Claude-Only Response Schema (Separate from Full ScoreResponse)
-
-**Confidence: HIGH**
-
-Claude no longer returns the full `ScoreResponse`. It returns only subjective evaluations. The scoring pipeline assembles the final response.
+**Do NOT rewrite `deterministic_scorer.py` to accept `ListingProfile`.** The scorer has 41 passing tests against `FlatfoxListing`. Instead, create an adapter that converts `ListingProfile` into a `FlatfoxListing`-compatible object.
 
 ```python
-class SubjectiveCriterionResult(BaseModel):
-    """Claude's evaluation of a single subjective criterion."""
-    name: str = Field(description="Criterion name, must match exactly one of the provided criterion names")
-    fulfillment: float = Field(ge=0.0, le=1.0, description="How well the listing meets this criterion")
-    reasoning: str = Field(description="One-line explanation citing listing data")
+# backend/app/services/profile_adapter.py
 
-class ClaudeSubjectiveResponse(BaseModel):
-    """What Claude returns -- only subjective evaluations + summary."""
-    criteria: list[SubjectiveCriterionResult]
-    summary_bullets: list[str] = Field(min_length=3, max_length=5)
-    language: str
+from app.models.listing import FlatfoxListing, FlatfoxAttribute
+from app.models.listing_profile import ListingProfile
+
+
+def listing_profile_to_flatfox(profile: ListingProfile) -> FlatfoxListing:
+    """Convert a pre-computed ListingProfile to a FlatfoxListing for the scorer.
+
+    This adapter bridges the enrichment pipeline output (ListingProfile)
+    to the deterministic scorer input (FlatfoxListing) without changing
+    either model or the scorer's 41 passing tests.
+    """
+    return FlatfoxListing(
+        pk=profile.listing_id,
+        slug=profile.slug,
+        url=f"https://flatfox.ch/en/flat/{profile.slug}/",
+        short_url=f"https://flatfox.ch/en/flat/{profile.slug}/",
+        status="ACTIVE",
+        offer_type=profile.offer_type,
+        object_category=profile.object_category,
+        object_type=profile.object_type,
+        price_display=profile.price,
+        rent_net=profile.rent_net,
+        rent_charges=profile.rent_charges,
+        rent_gross=profile.price if profile.offer_type == "RENT" else None,
+        short_title=profile.title,
+        description=profile.description,
+        surface_living=profile.sqm,
+        number_of_rooms=str(profile.rooms) if profile.rooms else None,
+        floor=profile.floor,
+        street=profile.address,
+        zipcode=profile.zipcode,
+        city=profile.city,
+        latitude=profile.latitude,
+        longitude=profile.longitude,
+        state=profile.canton,
+        country=profile.country,
+        attributes=[FlatfoxAttribute(name=a) for a in profile.attributes],
+        is_furnished=profile.is_furnished,
+        is_temporary=profile.is_temporary,
+        year_built=profile.year_built,
+        year_renovated=profile.year_renovated,
+        moving_date=profile.moving_date,
+        moving_date_type=profile.moving_date_type,
+    )
 ```
 
-This is the model passed to `client.messages.parse(output_format=ClaudeSubjectiveResponse)`. It is much smaller than the current `ScoreResponse`, reducing token usage and Claude's cognitive load.
+**Why this approach:**
+1. **Zero test breakage** -- the scorer's 41 tests remain valid
+2. **Zero scorer changes** -- formulas stay proven
+3. **Single point of field mapping** -- one file to update if either model changes
+4. **ListingProfile data is richer** -- the adapter can select the best available data (e.g., gross rent from `price` field)
 
-### 3. DynamicField.criterion_type (JSONB Schema Evolution)
+### Proximity Data from ListingProfile
 
-**Confidence: HIGH** (verified against existing `model_validator` migration pattern in `preferences.py`)
+The Phase 28 scorer's `score_proximity_quality()` accepts `proximity_data: dict[str, list[dict]]` -- a runtime-fetched dict from Google Places. The ListingProfile stores pre-computed amenities as `amenities: dict[str, AmenityCategory]`.
+
+An adapter function converts ListingProfile amenities to the scorer's expected format:
 
 ```python
-class CriterionType(str, Enum):
-    PRICE = "price"
-    DISTANCE = "distance"
-    SIZE = "size"
-    BINARY_FEATURE = "binary_feature"
-    PROXIMITY_QUALITY = "proximity_quality"
-    SUBJECTIVE = "subjective"
-
-class DynamicField(BaseModel):
-    # ... existing fields (name, value, importance) ...
-    criterion_type: CriterionType = CriterionType.SUBJECTIVE  # default = subjective
+def extract_proximity_data(profile: ListingProfile) -> dict[str, list[dict]]:
+    """Convert ListingProfile amenities to the proximity_data format
+    expected by score_proximity_quality()."""
+    result: dict[str, list[dict]] = {}
+    for category, amenity_cat in profile.amenities.items():
+        entries = []
+        for r in amenity_cat.results:
+            entries.append({
+                "distance_km": r.distance_km,
+                "rating": r.rating or 3.0,
+                "is_fallback": False,
+                "name": r.name,
+            })
+        if entries:
+            result[category] = entries
+    return result
 ```
 
-**No SQL migration needed.** Existing JSONB rows without `criterion_type` deserialize with the default `"subjective"` via Pydantic's default mechanism. The existing `model_validator(mode="before")` pattern in `UserPreferences` already handles missing fields.
-
-Classification logic runs at **profile save time** in the web app's preferences API endpoint, NOT at scoring time. The classifier examines the field name/value and assigns the appropriate type. This keeps the scoring hot path simple.
-
-### 4. Weight Map Update
-
-**Confidence: HIGH** (specified in milestone requirements)
-
-```python
-# OLD (used as prompt hints for Claude's internal weighting)
-IMPORTANCE_WEIGHT_MAP = {
-    ImportanceLevel.CRITICAL: 90,
-    ImportanceLevel.HIGH: 70,
-    ImportanceLevel.MEDIUM: 50,
-    ImportanceLevel.LOW: 30,
-}
-
-# NEW (used in actual weighted aggregation formula)
-IMPORTANCE_WEIGHT_MAP = {
-    ImportanceLevel.CRITICAL: 5,
-    ImportanceLevel.HIGH: 3,
-    ImportanceLevel.MEDIUM: 2,
-    ImportanceLevel.LOW: 1,
-}
-```
-
-Same dict location, different values. The old values were arbitrary numbers passed to Claude. The new values are the actual weights in the aggregation formula: `score = (sum(weight * fulfillment) / sum(weights)) * 100`.
-
-### 5. Score Cache Version Bump
-
-**Confidence: HIGH**
-
-Currently there is NO cache version field. Old cached analyses have the v1 `ScoreResponse` shape (with `categories`, `checklist`, Claude-generated `overall_score`). The new shape is incompatible.
-
-**Approach:** Add `schema_version` to the `breakdown` JSONB when saving:
-
-```python
-score_data["schema_version"] = 2  # v5.0 hybrid scoring
-```
-
-On cache read in the scoring router, check `schema_version`. If absent or < 2, treat as cache miss (force re-score). This avoids the complexity of migrating old cached analyses, which have low value anyway.
-
-The `save_analysis` method in `supabase.py` also references `score_data["overall_score"]` for the top-level `score` column in the `analyses` table. This still works because `overall_score` remains a field in the new schema (just computed deterministically instead of by Claude).
-
-### 6. Frontend TypeScript Type Changes
-
-**Confidence: HIGH** (verified against `extension/src/types/scoring.ts` and web components)
-
-```typescript
-// NEW -- replaces CategoryScore + ChecklistItem
-interface CriterionResult {
-  name: string;
-  criterion_type: 'price' | 'distance' | 'size' | 'binary_feature' | 'proximity_quality' | 'subjective';
-  fulfillment: number; // 0.0 - 1.0
-  importance: 'critical' | 'high' | 'medium' | 'low';
-  reasoning: string;
-  source: 'deterministic' | 'llm';
-}
-
-interface ScoreResponse {
-  overall_score: number;
-  match_tier: 'excellent' | 'good' | 'fair' | 'poor';
-  summary_bullets: string[];
-  criteria: CriterionResult[];  // replaces categories[] + checklist[]
-  language: string;
-  schema_version?: number;
-}
-```
-
-**Affected frontend files (verified by grep):**
-
-| File | Change Needed |
-|------|---------------|
-| `extension/src/types/scoring.ts` | Replace `CategoryScore`, `ChecklistItem`, `ScoreResponse` interfaces |
-| `web/src/components/analysis/CategoryBreakdown.tsx` | Rewrite to render `CriterionResult[]` grouped by type |
-| `web/src/components/analysis/ChecklistSection.tsx` | Merge into criterion list display (or remove, since checklist is now part of criteria) |
-| `web/src/app/(dashboard)/analysis/[listingId]/page.tsx` | Adapt to new `ScoreResponse.criteria` shape |
-| `extension/src/entrypoints/content/components/SummaryPanel.tsx` | Adapt to new shape |
-| `extension/src/entrypoints/content/components/ScoreBadge.tsx` | **No change** -- uses `overall_score` and `match_tier` which are unchanged |
-| `web/src/app/(dashboard)/analyses/page.tsx` | **No change** -- reads top-level `score` column, not `breakdown` JSONB |
-
-No new npm packages needed. No new data fetching patterns. The same Supabase query returns the `breakdown` JSONB, which now has a different internal shape.
+This eliminates the runtime Google Places API call for pre-enriched listings -- proximity data is already baked into the ListingProfile.
 
 ---
 
-## Deterministic Formula Functions (stdlib only)
+## OpenRouter Integration Patterns
 
-All formulas are pure Python, no dependencies. Each is a standalone function returning `float` in [0.0, 1.0]:
+### Current State (openrouter.py, 372 lines)
 
-| Formula | Inputs | Logic | Notes |
-|---------|--------|-------|-------|
-| `price_fulfillment` | listing price, budget_min, budget_max | Within range = 1.0; over budget = linear decay `max(0, 1 - overshoot/budget_max)` | Uses basic arithmetic only |
-| `distance_fulfillment` | listing distance to target, max_radius | `max(0, 1 - dist/radius)` | Linear decay. `math.exp()` available if exponential preferred later. |
-| `size_fulfillment` | listing sqm/rooms, user min/max | Within range = 1.0; outside = linear decay based on shortfall | Same pattern as price |
-| `binary_feature_fulfillment` | listing attributes, required feature | 1.0 if present, 0.0 if absent | Lookup in `listing.attributes[].name` |
-| `proximity_quality_fulfillment` | distance + rating from nearby_places cache | `distance_decay * (1 + rating_bonus)` clamped to [0, 1] | Combines two existing data sources |
+The existing `openrouter.py` is well-structured:
+- `OpenRouterService` class with lazy `httpx.AsyncClient` init
+- Batch gap-fill with fallback to individual calls
+- Robust JSON parsing (handles markdown fences, malformed output)
+- Module-level singleton `openrouter_service`
 
-Using `round(x, 1)` snaps results to 0.1 steps. Using `max(0.0, ...)` clamps to non-negative. All stdlib.
+**Confidence: HIGH** -- read the full 372-line implementation.
 
----
+### Required Changes
 
-## What NOT to Add
-
-| Library/Tool | Why NOT |
-|--------------|---------|
-| **NumPy / SciPy** | The formulas are 5 lines of arithmetic each. `max(0, 1 - x/y)` does not need a 30MB dependency. |
-| **Alembic / SQL migration tools** | The DB schema (SQL columns) does not change. JSONB content evolves via Pydantic defaults. Alembic for a hackathon project with schemaless JSONB is over-engineering. |
-| **Redis / caching layer** | Score caching already works via Supabase `analyses` table with `schema_version` check. Adding Redis adds infrastructure with no benefit at current scale. |
-| **Celery / task queues** | Scoring is synchronous request-response. The user clicks FAB and waits. No background processing needed. |
-| **Instructor library** | Already using Anthropic's native `messages.parse()` with Pydantic. Instructor adds an abstraction layer over something that works. |
-| **JSON Schema migration libraries** | `schema_version` check + re-score is simpler than migrating old JSONB. |
-| **Pandas** | No tabular data processing needed. Weighted average is one list comprehension. |
-| **jsonschema / fastjsonschema** | Pydantic handles all validation. Adding a separate JSON schema validator is redundant. |
-| **New Anthropic SDK version** | v0.85.0 works. The `output_format` -> `output_config.format` migration is handled internally by the SDK's `.parse()` helper. No breaking change until Anthropic removes the convenience parameter. |
-
----
-
-## Integration Notes
-
-### Anthropic SDK: `output_format` Status
-
-The existing code uses `client.messages.parse(output_format=ScoreResponse)`. Per official Anthropic docs (verified 2026-03-29):
-
-- `output_format` has moved to `output_config.format` at the raw API level
-- The SDK's `.parse()` **helper method still accepts `output_format` as a convenience parameter** and translates internally
-- The old beta header `structured-outputs-2025-11-13` is no longer needed -- structured outputs are GA
-- Haiku 4.5 is confirmed supported for structured outputs
-
-**Action:** Continue using `output_format` in `.parse()`. Optionally migrate to `output_config` syntax, but not required or urgent.
-
-### Structured Output Schema Change = Automatic API Cache Bust
-
-From Anthropic docs: "Changing the `output_config.format` parameter will invalidate any prompt cache for that conversation thread." Since the Pydantic model sent to Claude changes (from `ScoreResponse` to `ClaudeSubjectiveResponse`), Anthropic's server-side prompt cache is automatically invalidated. No manual cache-busting needed on the API side.
-
-### Application-Level Cache Invalidation
-
-The `schema_version` field in the `breakdown` JSONB handles cache invalidation for stored scores in the `analyses` table. The scoring router's cache lookup (lines 43-54 of `backend/app/routers/scoring.py`) should add a version check:
+#### 1. Model Constant Update
 
 ```python
-if cached:
-    if cached.get("schema_version", 1) >= 2:
-        return ScoreResponse.model_validate(cached)
-    # else: cache miss, re-score with new pipeline
+# BEFORE (deprecated, shuts down June 1, 2026)
+OPENROUTER_MODEL = "google/gemini-2.0-flash-001"
+
+# AFTER
+OPENROUTER_MODEL = "google/gemini-2.5-flash-lite"
 ```
 
-### Scoring Pipeline Architecture Change
+**Confidence: HIGH** -- [Gemini 2.0 Flash deprecation](https://openrouter.ai/google/gemini-2.0-flash-001) confirmed on OpenRouter.
 
-The current pipeline is a single Claude call that returns everything. The new pipeline splits into three phases:
+#### 2. Structured JSON Output (Optional Enhancement)
 
-1. **Classify** -- separate criteria into deterministic vs subjective (using `criterion_type` from `DynamicField`)
-2. **Compute** -- run deterministic formulas for price/distance/size/binary/proximity criteria
-3. **Evaluate** -- send only subjective criteria to Claude via `messages.parse(output_format=ClaudeSubjectiveResponse)`
-4. **Aggregate** -- combine all `CriterionResult`s, compute weighted `overall_score`, determine `match_tier`
+The current implementation uses prompt-based JSON enforcement ("Respond ONLY with the JSON array, no other text") with regex fallback parsing. OpenRouter supports `response_format: { type: "json_object" }` for Gemini models, which would eliminate the need for the `_parse_json_response()` fallback chain.
 
-This reduces Claude's workload significantly (fewer criteria to evaluate, no numeric score generation) and makes deterministic criteria instantly reproducible.
+```python
+# Enhanced request body
+json={
+    "model": OPENROUTER_MODEL,
+    "messages": [{"role": "user", "content": prompt}],
+    "temperature": 0.1,
+    "max_tokens": 2048,
+    "response_format": {"type": "json_object"},  # NEW
+}
+```
 
-### DynamicField Classification Timing
+**Confidence: MEDIUM** -- [OpenRouter structured outputs docs](https://openrouter.ai/docs/guides/features/structured-outputs) confirm support but don't explicitly list Gemini 2.5 Flash Lite. The existing fallback parsing chain handles this gracefully either way, so this is a low-risk optimization, not a requirement.
 
-Classification happens at **profile save time**, not scoring time:
-1. Web app preferences form submits to API
-2. API classifies each `DynamicField.name`/`DynamicField.value` to set `criterion_type`
-3. Classification stored in JSONB alongside the field
-4. Scoring pipeline reads `criterion_type` and routes accordingly
+#### 3. Make Model Configurable via Environment
 
-This means the classifier logic lives in the preferences save endpoint (or a shared utility), not in the scoring service.
+```python
+OPENROUTER_MODEL = os.environ.get(
+    "OPENROUTER_MODEL", "google/gemini-2.5-flash-lite"
+)
+```
 
-### Built-in Criteria (Not from DynamicField)
+This allows switching models without code changes -- useful for testing or if pricing changes.
 
-Some criteria are always present from the structured `UserPreferences` fields (budget, rooms, living_space) rather than from `dynamic_fields`. These are treated as implicit criteria:
-- `budget_max` / `budget_min` -> always generates a `price` criterion
-- `rooms_min` / `rooms_max` -> always generates a `size` criterion (rooms)
-- `living_space_min` / `living_space_max` -> always generates a `size` criterion (sqm)
+### Cost Analysis
 
-The `importance` for these comes from `UserPreferences.importance.price`, `.size`, etc. The `dealbreaker` booleans map to `CRITICAL` importance with `fulfillment=0 -> force match_tier="poor"`.
+| Model | Input (per 1M tokens) | Output (per 1M tokens) | Est. cost per gap-fill (5 gaps) |
+|-------|----------------------|------------------------|-------------------------------|
+| Gemini 2.0 Flash (current, deprecated) | $0.10 | $0.40 | ~$0.0075 |
+| Gemini 2.5 Flash Lite (recommended) | $0.10 | $0.40 | ~$0.0075 |
+| Gemini 2.5 Flash (overkill) | $0.30 | $2.50 | ~$0.025 |
+| Claude Haiku 4.5 (current fallback) | $0.80 | $4.00 | ~$0.06 |
+
+Gap-fill via OpenRouter is **8x cheaper** than Claude Haiku per listing. At 1,792 Zurich listings, that is ~$13.50 total vs ~$107.50 via Claude.
+
+---
+
+## Environment Variable Gating: ALLOW_CLAUDE_FALLBACK
+
+### Pattern
+
+The scoring router currently always falls through to Claude when no ListingProfile exists. With enrichment coverage growing, most listings will have profiles. The `ALLOW_CLAUDE_FALLBACK` flag gates whether to burn Claude API credits for unenriched listings.
+
+```python
+# In scoring router
+import os
+
+ALLOW_CLAUDE_FALLBACK = os.environ.get("ALLOW_CLAUDE_FALLBACK", "true").lower() == "true"
+
+
+# In the score_listing endpoint:
+if listing_profile is None:
+    if ALLOW_CLAUDE_FALLBACK:
+        # Existing Claude pipeline ($0.06/listing)
+        result = await claude_scorer.score_listing(...)
+    else:
+        raise HTTPException(
+            status_code=202,
+            detail="Listing not yet analyzed. Score will be available after enrichment."
+        )
+```
+
+**Why `os.environ.get()` not pydantic-settings:** The project uses `os.environ.get()` everywhere (`claude.py` line 28, `openrouter.py` line 152). Consistency trumps "best practice" in a 7-developer-day hackathon project.
+
+**Default: `true`** -- backward compatible. Existing behavior (Claude fallback) is preserved unless explicitly disabled. Set to `false` on EC2 once enrichment coverage exceeds 90% to eliminate surprise Claude costs.
+
+**Why 202 not 404/503:** The listing exists, it just hasn't been pre-analyzed yet. HTTP 202 (Accepted) signals "we received your request but the result isn't ready" -- semantically correct. The extension can display "Enrichment pending" instead of an error.
+
+---
+
+## Supabase JSONB Best Practices for listing_profiles
+
+### Current State
+
+Migration `005_listing_profiles.sql` creates a well-designed table:
+- `listing_id` as `integer NOT NULL UNIQUE` with index -- correct for lookups
+- `amenities` as `JSONB NOT NULL DEFAULT '{}'` -- correct for nested amenity data
+- `attributes` as `JSONB NOT NULL DEFAULT '[]'` -- correct for string arrays
+- `research_json` (migration 006) as nullable `JSONB` -- correct for optional raw data
+
+**Confidence: HIGH** -- read both migration files.
+
+### JSONB Column Patterns (Verified)
+
+| Column | Type | Index | Query Pattern |
+|--------|------|-------|---------------|
+| `amenities` | JSONB | No index needed | Read full column, deserialize in Python via `ListingProfile.model_validate()` |
+| `attributes` | JSONB | No index needed | Read full column, deserialized as `list[str]` |
+| `research_json` | JSONB | No index needed | Debugging only -- never queried in scoring hot path |
+
+**Why no GIN index on JSONB columns:** The scoring pipeline always reads the full row by `listing_id` (unique index). It never queries *into* the JSONB (e.g., "find listings where amenities.supermarket.distance < 0.5km"). If that use case emerges, add a GIN index then. Per [Supabase JSONB docs](https://supabase.com/docs/guides/database/json): "Use GIN indexes for JSONB columns that are frequently queried with containment operators."
+
+### listing_profile_db.py Patterns (Verified)
+
+The existing CRUD module follows correct patterns:
+- Uses `supabase_service.get_client()` -- same singleton as the rest of the backend
+- `maybeSingle()` for get operations -- returns None instead of throwing
+- `upsert(data, on_conflict="listing_id")` for saves -- idempotent
+- Synchronous calls wrapped with `asyncio.to_thread()` in FastAPI endpoints
+
+**One concern:** The `get_stale_profiles()` function makes two separate queries (one for `lt("analyzed_at", threshold)`, one for `is_("analyzed_at", "null")`). This could be a single query with an `or_` filter, but since it's only used by the poller (not the scoring hot path), it's not a performance issue.
+
+---
+
+## What NOT to Change in Phase 27-28 Code
+
+### Phase 27 (CriterionType + Classifier) -- DO NOT TOUCH
+
+| File | Why Hands-Off |
+|------|--------------|
+| `backend/app/models/preferences.py` | `CriterionType` enum, `IMPORTANCE_WEIGHT_MAP`, `DynamicField.criterion_type` -- all complete and wired into Phase 28 tests |
+| `backend/app/routers/classifier.py` | POST `/classify-criteria` endpoint -- working, used by frontend at profile save time |
+| `backend/app/services/classifier.py` | Claude-based criterion classification -- working, no changes needed |
+
+### Phase 28 (Deterministic Scorer) -- DO NOT TOUCH
+
+| File | Why Hands-Off |
+|------|--------------|
+| `backend/app/services/deterministic_scorer.py` | 439 lines, 41 tests passing. All 6 scorer functions (`score_price`, `score_distance`, `score_size`, `score_binary_feature`, `score_proximity_quality`, `synthesize_builtin_results`) consume `FlatfoxListing` + `DynamicField`. The adapter pattern (above) feeds them ListingProfile data without modification. |
+| `backend/tests/test_deterministic_scorer.py` | 428 lines, 41 tests. Must remain green after integration. |
+
+### Why Adapter Over Rewrite
+
+Rewriting `deterministic_scorer.py` to accept `ListingProfile` directly would:
+1. Invalidate all 41 tests (need rewrite for new input type)
+2. Create a hard dependency on the enrichment pipeline (can't score without a profile)
+3. Break the Claude fallback path (which still needs `FlatfoxListing` input)
+4. Lose the proven exponential decay formulas while refactoring
+
+The adapter is ~40 lines of field mapping. The scorer stays stable.
+
+---
+
+## Scoring Router Integration Flow
+
+The modified `scoring.py` router should follow this flow:
+
+```
+POST /score request
+  |
+  +-- Cache check (existing, add schema_version >= 2 gate)
+  |
+  +-- Look up ListingProfile from Supabase (listing_profile_db.get_listing_profile)
+  |
+  +-- IF ListingProfile exists (Layer 2 + Layer 3):
+  |     |
+  |     +-- Convert to FlatfoxListing via adapter
+  |     +-- Extract proximity_data from ListingProfile.amenities
+  |     +-- Run deterministic scorer (score_price, score_distance, etc.)
+  |     +-- Run synthesize_builtin_results
+  |     +-- Collect subjective-type criteria
+  |     +-- IF subjective criteria exist:
+  |     |     +-- Phase 29: ClaudeSubjectiveResponse via messages.parse()
+  |     |
+  |     +-- Detect gaps (Phase 28 gap_detector.detect_gaps)
+  |     +-- IF gaps exist:
+  |     |     +-- OpenRouter gap-fill (openrouter_service.fill_gaps)
+  |     |     +-- Merge results (openrouter.merge_gap_results)
+  |     |
+  |     +-- Aggregate: weighted average formula (Phase 31)
+  |     +-- CRITICAL override: f=0 forces poor tier, cap at 39
+  |     +-- Build ScoreResponse v2
+  |     +-- Save + return
+  |
+  +-- ELSE IF ALLOW_CLAUDE_FALLBACK (Layer 4):
+  |     |
+  |     +-- Existing Claude pipeline (unchanged)
+  |     +-- Save + return
+  |
+  +-- ELSE:
+        +-- Return 202 "Not yet analyzed"
+```
+
+### Key Integration Point: Subjective Scorer vs Gap-Fill
+
+There is a **design tension** between two gap-handling approaches:
+
+1. **Phase 29 (v5.0 plan):** Claude evaluates subjective criteria via `ClaudeSubjectiveResponse` -- returns `fulfillment` floats + reasoning
+2. **Enrichment pipeline:** OpenRouter fills `[GAP]` markers from deterministic scorer -- returns `score`/`met`/`note` dicts
+
+**Resolution:** These handle different things:
+- **Subjective scorer** (Phase 29): Evaluates criteria that are *inherently* subjective ("modern kitchen", "quiet neighborhood", "family-friendly area") -- criterion_type is `subjective`
+- **Gap detector + OpenRouter** (existing): Fills data gaps where the deterministic scorer *should* have had an answer but the ListingProfile was missing data (e.g., binary feature not in attributes list but mentioned in description text)
+
+Both can coexist. The subjective scorer runs first (for `criterion_type == "subjective"` fields), then gap detection runs on the deterministic results (for `criterion_type != "subjective"` fields that returned `None`).
+
+---
+
+## Lifespan Management
+
+The existing `main.py` lifespan closes `flatfox_client` and `conversation_service` on shutdown. The `openrouter_service` singleton also has a `.close()` method that should be called:
+
+```python
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    await flatfox_client.close()
+    await conversation_service.close()
+    await openrouter_service.close()  # ADD THIS
+```
+
+**Confidence: HIGH** -- `openrouter.py` line 308-312 defines `async def close()` which calls `self._client.aclose()`.
 
 ---
 
@@ -289,29 +393,31 @@ The `importance` for these comes from `UserPreferences.importance.price`, `.size
 
 ```bash
 # Backend (Python) -- NO NEW PACKAGES
-# All formulas use stdlib math/arithmetic
-# Pydantic 2.12.5 already installed
-# Anthropic SDK 0.85.0 already installed
+# httpx is already installed (used by flatfox_client)
+# All other dependencies are existing
 
-# Frontend (Next.js) -- NO NEW PACKAGES
-# TypeScript type changes only
+# Environment variables to set on EC2:
+echo 'OPENROUTER_API_KEY=sk-or-...' >> ~/gen-ai-hackathon/backend/.env
+echo 'ALLOW_CLAUDE_FALLBACK=true' >> ~/gen-ai-hackathon/backend/.env
+# OPENROUTER_MODEL defaults to google/gemini-2.5-flash-lite if not set
 
-# Extension (WXT) -- NO NEW PACKAGES
-# TypeScript type changes only
+# Database migrations to apply:
+# 005_listing_profiles.sql -- creates listing_profiles table
+# 006_add_research_json.sql -- adds research_json JSONB column
 ```
 
 ---
 
 ## Sources
 
-- [Anthropic Structured Outputs Docs (GA)](https://platform.claude.com/docs/en/build-with-claude/structured-outputs) -- confirmed Haiku 4.5 support, `output_format` -> `output_config.format` migration path, schema change cache invalidation behavior (HIGH confidence)
-- [Pydantic v2 Fields Documentation](https://docs.pydantic.dev/latest/concepts/fields/) -- `ge`/`le` constraints on floats, `Field` descriptor patterns (HIGH confidence)
-- [Pydantic v2 Unions Documentation](https://docs.pydantic.dev/latest/concepts/unions/) -- discriminated union patterns with `Literal` (HIGH confidence)
-- Existing codebase verified: `backend/app/models/scoring.py` (current ScoreResponse), `backend/app/models/preferences.py` (DynamicField + model_validator pattern), `backend/app/services/claude.py` (messages.parse usage), `backend/app/routers/scoring.py` (cache logic), `backend/app/services/supabase.py` (save_analysis structure) -- all HIGH confidence
-- Installed versions verified via `pip show`: Pydantic 2.12.5, Anthropic SDK 0.85.0 (HIGH confidence)
-- `backend/requirements.txt`: fastapi, uvicorn, httpx, anthropic, supabase, python-dotenv, pytest, pytest-asyncio (HIGH confidence)
+- [OpenRouter Gemini 2.0 Flash model page](https://openrouter.ai/google/gemini-2.0-flash-001) -- confirmed "Going away June 1, 2026" deprecation badge (HIGH confidence)
+- [OpenRouter Gemini 2.5 Flash Lite model page](https://openrouter.ai/google/gemini-2.5-flash-lite) -- confirmed $0.10/M input, $0.40/M output pricing, active availability (HIGH confidence)
+- [OpenRouter Structured Outputs docs](https://openrouter.ai/docs/guides/features/structured-outputs) -- confirmed `response_format` support for JSON mode (MEDIUM confidence -- model-specific support not confirmed for 2.5 Flash Lite)
+- [Supabase JSONB docs](https://supabase.com/docs/guides/database/json) -- GIN index guidance, arrow operators (HIGH confidence)
+- [FastAPI Settings docs](https://fastapi.tiangolo.com/advanced/settings/) -- env var patterns (HIGH confidence, but project uses `os.environ.get()` pattern instead)
+- Existing codebase verified: `deterministic_scorer.py` (439 lines, consumes FlatfoxListing), `openrouter.py` (372 lines, httpx-based), `listing_profile.py` (155 lines, different field names than FlatfoxListing), `listing_profile_db.py` (118 lines, Supabase CRUD), `gap_detector.py` (77 lines, finds [GAP] markers), `scoring.py` router (179 lines, current Claude-only pipeline), `main.py` (lifespan management) -- all HIGH confidence
 
 ---
 
-*Stack research for: HomeMatch v5.0 -- Hybrid Scoring Engine*
-*Researched: 2026-03-29*
+*Stack research for: HomeMatch v5.0 -- Integration of ListingProfile Enrichment + OpenRouter Gap-Fill*
+*Researched: 2026-03-30*

@@ -1,568 +1,991 @@
-# Domain Pitfalls: v5.0 Hybrid Scoring Engine
+# Merge Pitfalls: ListingProfile Pipeline + CriterionType Deterministic Scorer
 
-**Domain:** Replacing LLM-generated scores with deterministic formulas + AI subjective evaluation in a cached, multi-consumer system
-**Researched:** 2026-03-29
-**Milestone:** v5.0 Hybrid Scoring Engine
-**Confidence:** HIGH (all pitfalls verified against codebase evidence -- scoring.py, preferences.py, listing.py, scoring router, edge function, extension types, frontend analysis page, analyses list page)
+**Domain:** Merging pre-computed ListingProfile scoring (v6.0 local work) with CriterionType-routed deterministic scorer (v5.0 Phase 28 committed code)
+**Researched:** 2026-03-30
+**Confidence:** HIGH -- all pitfalls verified against actual codebase: `deterministic_scorer.py` (439 lines, Phase 28 committed), `listing_profile.py` (155 lines, local), `gap_detector.py` (78 lines, local), `openrouter.py` (373 lines, local), `scoring.py` router (179 lines, committed), edge function `score-proxy/index.ts` (157 lines), extension `ScoreBadge.tsx`, `App.tsx`, `api.ts`, analysis page, and all DB migrations.
+
+**Scope:** This document covers ONLY pitfalls specific to merging these two approaches. For generic v5.0 scoring pitfalls (cache schema migration, frontend consumer breakage, etc.), see the previous version of this file in git history.
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause data corruption, user-visible breakage across the 3 consumers (extension badge, extension summary panel, web analysis page), or scoring errors that produce wrong results silently.
+Mistakes that cause silent wrong scores, data corruption, or production outages when merging the two systems.
 
 ---
 
-### Pitfall 1: Cached Analyses Have Old ScoreResponse Schema -- Frontend Crashes on Missing Fields
+### Pitfall 1: FlatfoxListing vs ListingProfile -- Input Model Mismatch
 
 **What goes wrong:**
-The `analyses` table stores the full `ScoreResponse` as JSONB in the `breakdown` column. Existing cached rows have the v1.1 schema: `{ overall_score, match_tier, summary_bullets, categories: [{name, score, weight, reasoning}], checklist, language }`. The v5.0 schema removes `categories` (replaced by per-criterion fulfillment) and changes `overall_score` from Claude-generated to formula-computed. After deploying v5.0, cached rows still have the old schema. Three consumers read `breakdown` directly:
+The Phase 28 deterministic scorer (`backend/app/services/deterministic_scorer.py`) takes `FlatfoxListing` as input for every scoring function. The function signatures are:
 
-1. **Web analysis page** (`/analysis/[listingId]/page.tsx` line 74-90): casts `breakdown` to a typed object expecting `categories` array with `score` and `weight` fields. `CategoryBreakdown` component renders `cat.score` as text and `cat.weight` as an importance label. With v5.0 schema, `categories` is gone -- the component receives `undefined`, the `categories.map()` call is guarded by `if (!categories || categories.length === 0) return null` so it silently shows nothing. The user sees a blank analysis page with no category breakdown.
+```python
+def score_price(field: DynamicField, listing: FlatfoxListing) -> Optional[float]
+def score_distance(field: DynamicField, listing: FlatfoxListing, actual_km: Optional[float]) -> Optional[float]
+def score_size(field: DynamicField, listing: FlatfoxListing) -> Optional[float]
+def score_binary_feature(field: DynamicField, listing: FlatfoxListing) -> Optional[float]
+def score_proximity_quality(field: DynamicField, listing: FlatfoxListing, proximity_data: dict) -> Optional[float]
+def synthesize_builtin_results(prefs: UserPreferences, listing: FlatfoxListing) -> list[FulfillmentResult]
+```
 
-2. **Web analyses list** (`/analyses/page.tsx` line 102-108): reads `breakdown.match_tier` with fallback `getTierFromScore(analysis.score)`. This survives because it falls back to the `score` column. But the `score` column itself (line 82 of `supabase.py`) is written as `score_data["overall_score"]` -- if v5.0 renames or recomputes this field, the `score` column in the DB still has the old Claude-generated value. Old and new scores coexist in the same list, using different scales.
+The ListingProfile model (`backend/app/models/listing_profile.py`) has the same data but different field names and types:
 
-3. **Chrome extension** (`ScoreBadge.tsx` line 67): renders `score.overall_score` directly in the badge circle. The extension casts the API response as `ScoreResponse` (`api.ts` line 51). If the new schema changes the field name or removes it, the badge shows `undefined` or `NaN`.
+| Data | FlatfoxListing | ListingProfile | Mismatch |
+|------|---------------|----------------|----------|
+| Price | `price_display: Optional[int]` | `price: Optional[int]` | **Field name differs** |
+| Area | `surface_living: Optional[int]` | `sqm: Optional[int]` | **Field name differs** |
+| Rooms | `number_of_rooms: Optional[str]` (STRING!) | `rooms: Optional[float]` | **Name AND type differ** |
+| Attributes | `attributes: list[FlatfoxAttribute]` (objects with `.name`) | `attributes: list[str]` (plain strings) | **Structure differs** |
+| Slug | `slug: str` | `slug: str` | OK |
+| Latitude/Longitude | `latitude/longitude: Optional[float]` | Same | OK |
+| Condition data | NOT present | `condition_score`, `natural_light_score`, etc. | **LP has richer data** |
+| Amenities | NOT present | `amenities: dict[str, AmenityCategory]` | **LP has richer data** |
+
+**Specific field-level breakage if you try to pass ListingProfile where FlatfoxListing is expected:**
+
+1. **`score_price` (line 201):** reads `listing.price_display`. ListingProfile has `price`, not `price_display`. Returns `None` (skips criterion), so budget checks silently stop working. Every listing appears to have no price data.
+
+2. **`score_size` (line 275):** reads `listing.surface_living`. ListingProfile has `sqm`. Returns `None`, so size checks silently stop working.
+
+3. **`score_binary_feature` (line 182):** does `{attr.name.strip().lower() for attr in listing.attributes}`. ListingProfile's `attributes` is `list[str]`, not `list[FlatfoxAttribute]`. This will raise `AttributeError: 'str' object has no attribute 'name'` -- a runtime crash, not a silent failure.
+
+4. **`synthesize_builtin_results` (line 387-392):** reads `listing.price_display` for budget, `listing.number_of_rooms` for rooms (and casts it to float from string), `listing.surface_living` for space. All three are named/typed differently in ListingProfile.
 
 **Why it happens:**
-No cache versioning mechanism exists. The edge function returns cached `breakdown` JSONB verbatim (line 105 of `score-proxy/index.ts`). There is no schema version field in the analyses table. Old and new records are indistinguishable.
+The collaborator's Phase 28 scorer was developed against the existing `FlatfoxListing` model (which is what the current production scoring router feeds in). The local ListingProfile was developed in parallel as a richer data model for pre-computed data. Neither team knew about the other's field naming choices.
 
 **Consequences:**
-- Analysis pages show blank category section for all previously-scored listings
-- Extension badges show stale scores from old algorithm mixed with new deterministic scores
-- Users see inconsistent scoring: same listing scored twice shows different algorithms' results
-- No way to distinguish which algorithm produced a cached result
+- Budget/size scoring silently returns None for all ListingProfile-based scores (score ignores these criteria, inflating scores)
+- Binary feature scoring crashes with `AttributeError` (500 error to extension)
+- Rooms scoring reads wrong field, gets `AttributeError` on the string type mismatch
 
 **Prevention:**
-1. Add a `schema_version: int` column to the `analyses` table (default 1 for existing rows, 2 for v5.0)
-2. In the edge function cache check, filter by schema version: `.eq("schema_version", CURRENT_SCHEMA_VERSION)` -- old rows become cache misses, triggering fresh scoring
-3. Make ALL frontend consumers backward-compatible: check for both old and new fields with fallbacks
-4. Do NOT delete old cached analyses -- they are still valid as historical records. Add a migration flag but do not bulk-delete
-5. The `score` column in `analyses` table must always contain the numeric score regardless of schema version, since the analyses list page uses it directly
+Build an adapter function (NOT a rewrite of Phase 28) that converts `ListingProfile` to a `FlatfoxListing`-compatible object. Two approaches:
 
-**Detection:**
-- `CategoryBreakdown` renders nothing (empty div) on previously-scored listings
-- Extension badge shows a number but analysis page shows different/missing data
-- Backend logs show `ScoreResponse.model_validate(cached)` failing with ValidationError for old rows
+**Approach A -- Thin adapter (recommended):**
+```python
+# backend/app/services/listing_profile_adapter.py
 
-**Phase to address:** FIRST phase -- schema migration and cache versioning must ship before any ScoreResponse changes.
+from app.models.listing import FlatfoxListing, FlatfoxAttribute
+from app.models.listing_profile import ListingProfile
+
+def listing_profile_to_flatfox(profile: ListingProfile) -> FlatfoxListing:
+    """Convert a ListingProfile to FlatfoxListing for Phase 28 scorer consumption.
+
+    Maps field names and normalizes types so the deterministic scorer
+    functions work without modification.
+    """
+    return FlatfoxListing(
+        pk=profile.listing_id,
+        slug=profile.slug,
+        url=f"https://flatfox.ch/en/flat/{profile.slug}/",
+        short_url=f"https://flatfox.ch/en/flat/{profile.slug}/",
+        status="ACTIVE",
+        offer_type=profile.offer_type,
+        object_category=profile.object_category,
+        object_type=profile.object_type,
+        price_display=profile.price,                          # price -> price_display
+        rent_net=profile.rent_net,
+        rent_charges=profile.rent_charges,
+        rent_gross=profile.price if profile.offer_type == "RENT" else None,
+        surface_living=profile.sqm,                           # sqm -> surface_living
+        number_of_rooms=str(profile.rooms) if profile.rooms else None,  # float -> str
+        floor=profile.floor,
+        street=profile.address,
+        zipcode=profile.zipcode,
+        city=profile.city,
+        latitude=profile.latitude,
+        longitude=profile.longitude,
+        state=profile.canton,
+        country=profile.country,
+        attributes=[FlatfoxAttribute(name=a) for a in profile.attributes],  # str -> FlatfoxAttribute
+        is_furnished=profile.is_furnished,
+        is_temporary=profile.is_temporary,
+        year_built=profile.year_built,
+        year_renovated=profile.year_renovated,
+        moving_date_type=profile.moving_date_type,
+        moving_date=profile.moving_date,
+        description=profile.description,
+        short_title=profile.title,
+    )
+```
+
+**Approach B -- Protocol/interface (over-engineered for now):**
+Define a protocol that both models implement. Requires modifying Phase 28 scorer to use the protocol, which means rewriting tested code.
+
+**Approach A is better** because it preserves Phase 28's tested code untouched and centralizes the mapping in one place.
+
+**Warning signs:** Any test that passes a ListingProfile to a function typed `FlatfoxListing` without the adapter will silently produce wrong results (except `score_binary_feature` which crashes).
+
+**Detection:** Add a type check assertion at the top of the scoring router's deterministic path: `assert isinstance(listing, FlatfoxListing), f"Expected FlatfoxListing, got {type(listing)}"`.
+
+**Phase:** Address in Phase 31 (Hybrid Scorer & Router Integration) -- this is the phase that wires the two systems together.
 
 ---
 
-### Pitfall 2: Division by Zero in Deterministic Formulas
+### Pitfall 2: Gap Detection Convention Mismatch -- [GAP] Markers vs fulfillment=None
 
 **What goes wrong:**
-Three specific division-by-zero scenarios in the proposed deterministic formulas:
+Two incompatible conventions for "missing data" exist:
 
-1. **Size formula when target=0:** If `living_space_min` and `living_space_max` are both None (user didn't set a preference), and the formula computes `f = actual / target`, target resolves to 0 or None. `living_space_min` defaults to `None` in `UserPreferences` (line 119 of preferences.py). A naive formula like `f = listing.surface_living / prefs.living_space_max` crashes with ZeroDivisionError when `living_space_max` is None.
+**Our gap detector** (`backend/app/services/gap_detector.py` lines 51-54):
+```python
+if item.met is not None:
+    continue
+if not item.note.startswith("[GAP]"):
+    continue
+```
+It looks for `ChecklistItem` objects where `met=None` AND `note` starts with `"[GAP]"`. These are items our old 1086-line deterministic scorer produced.
 
-2. **Price formula when budget_max=0 or None:** Same pattern. `budget_max` defaults to `None` (line 115). The formula `f = 1 - (price - budget_max) / budget_max` divides by zero if budget_max is 0 or crashes if None.
+**Phase 28 scorer** (`backend/app/services/deterministic_scorer.py` lines 31-47):
+```python
+class FulfillmentResult(BaseModel):
+    fulfillment: Optional[float] = Field(None, ge=0.0, le=1.0)
+    reasoning: Optional[str] = None
+```
+It returns `FulfillmentResult` objects where `fulfillment=None` means data was unavailable. There are no `[GAP]` markers, no `ChecklistItem` objects, and no `met` field.
 
-3. **Weighted aggregation when no criteria have scores:** If ALL criteria are skipped (missing data for all deterministic criteria, no subjective criteria), the aggregation formula `overall_score = sum(f_i * w_i) / sum(w_i)` divides by zero because `sum(w_i) = 0`.
+**The gap detector cannot consume Phase 28 output** because:
+1. It expects `list[ChecklistItem]` (with `criterion`, `met`, `note` fields)
+2. Phase 28 returns `list[FulfillmentResult]` (with `criterion_name`, `fulfillment`, `importance`, `reasoning`)
+3. Even if you converted FulfillmentResult to ChecklistItem, Phase 28 never sets `note` to `"[GAP]..."` -- it just sets `fulfillment=None`
+4. The gap detector's matching logic (`dynamic_by_name[criterion_lower]`) relies on `ChecklistItem.criterion` matching `DynamicField.name` exactly. Phase 28's `FulfillmentResult.criterion_name` uses the same field names, so this would work IF the models were bridged.
 
 **Why it happens:**
-The `UserPreferences` model allows all numeric fields to be None. This is by design -- users can leave fields blank. The deterministic formulas must handle None inputs gracefully, but it is easy to forget that EVERY numeric preference field can be None.
+Gap detector was written for the old 1086-line scorer that produced ChecklistItem + [GAP] conventions. Phase 28 was written to a different spec (FulfillmentResult model). Neither knew about the other.
 
 **Consequences:**
-- Unhandled exception returns 500 to the edge function, which returns 502 to the extension
-- User sees scoring error for listings that previously scored fine with Claude (which handled None values via natural language)
-- Regression compared to v1.1 where Claude never crashed on missing data
+- Gap detector finds zero gaps (empty list), even when Phase 28 returns `fulfillment=None` for multiple criteria
+- OpenRouter gap-fill never runs, even for criteria that genuinely need LLM help
+- Those criteria get `fulfillment=None` in aggregation, which means they are skipped (per HA-02)
+- Scores computed from fewer criteria than necessary, potentially inflated or deflated
 
 **Prevention:**
-1. Guard every formula with None checks: if the preference field needed for the formula is None, SKIP that criterion (return `None` for fulfillment, exclude from aggregation)
-2. Guard the aggregation denominator: `if sum(w_i) == 0: return default_score` (or return None with "insufficient data" tier)
-3. Write unit tests for EVERY formula with None inputs: `test_price_formula_budget_max_none`, `test_size_formula_no_preference`, `test_aggregation_all_skipped`
-4. Use the `living_space_min` / `living_space_max` / `budget_min` / `budget_max` pattern consistently: if both min and max are None, skip the criterion entirely
+Rewrite `detect_gaps` to consume `list[FulfillmentResult]` instead of `list[ChecklistItem]`:
 
-**Detection:**
-- 500 errors in backend logs with `ZeroDivisionError` or `TypeError: unsupported operand type(s) for /: 'int' and 'NoneType'`
-- Listings that scored successfully in v1.1 now fail in v5.0 for users with sparse preferences
+```python
+def detect_gaps(
+    results: list[FulfillmentResult],
+    preferences: UserPreferences,
+) -> list[dict]:
+    """Find criteria that couldn't be scored deterministically.
 
-**Phase to address:** Deterministic formula implementation phase -- every formula function must have None-input tests before integration.
+    A gap is any FulfillmentResult where fulfillment is None.
+    """
+    dynamic_by_name = {
+        df.name.strip().lower(): df for df in preferences.dynamic_fields
+    }
+
+    gaps = []
+    for result in results:
+        if result.fulfillment is not None:
+            continue
+
+        criterion_lower = result.criterion_name.strip().lower()
+        matched_field = dynamic_by_name.get(criterion_lower)
+
+        if matched_field:
+            gaps.append({
+                "field_name": result.criterion_name,
+                "field_value": matched_field.value or matched_field.name,
+                "importance": matched_field.importance.value,
+            })
+        else:
+            gaps.append({
+                "field_name": result.criterion_name,
+                "field_value": result.criterion_name,
+                "importance": "medium",
+            })
+
+    return gaps
+```
+
+**Warning signs:** If gap-fill costs drop to $0.00 per listing after merge, gaps are not being detected.
+
+**Detection:** Log `len(gaps)` in the scoring router. If it's consistently 0 for listings you know have missing data, the bridge is broken.
+
+**Phase:** Address in Phase 31 (Hybrid Scorer & Router Integration).
 
 ---
 
-### Pitfall 3: CRITICAL f=0 Override Logic Applied at Wrong Layer
+### Pitfall 3: OpenRouter Gap-Fill Returns score/met/note but Aggregation Needs fulfillment
 
 **What goes wrong:**
-The v5.0 spec says: "If any criterion with importance=CRITICAL has fulfillment f=0, force match_tier='poor' regardless of overall_score." This override must happen AFTER all criteria are scored but BEFORE the response is returned. There are three places this could be implemented, and choosing the wrong one causes bugs:
+The OpenRouter gap-fill pipeline returns results in the OLD format:
+```python
+# openrouter.py line 211
+return {
+    "field_name": gap["field_name"],
+    "score": int(parsed.get("score", 50)),  # 0-100 integer
+    "met": parsed.get("met"),               # bool | None
+    "note": str(parsed.get("note", "...")),
+}
+```
 
-1. **Inside individual formula functions** (wrong): Each formula returns `f=0` but does not know about other criteria. It cannot set `match_tier` because it operates on a single criterion.
+But the Phase 31 weighted aggregation formula needs `fulfillment` (0.0-1.0 float):
+```
+score = (sum of weight * fulfillment) / (sum of weights) * 100
+```
 
-2. **Inside the aggregation function** (partially right): The aggregation sees all fulfillment values and weights. It can check for CRITICAL f=0. But if the aggregation function both computes the overall_score AND overrides match_tier, the tier override might be reversed by a later `tier = get_tier(overall_score)` call in the router.
+If you naively plug OpenRouter's `score: 75` into the aggregation as `fulfillment=75`, you get:
+- A single criterion with weight=5 and "fulfillment"=75 produces: `(5 * 75) / 5 * 100 = 7500`
+- The overall_score exceeds the 0-100 bound and either crashes (Pydantic validation `ge=0, le=100`) or gets clamped nonsensically
 
-3. **In the scoring router after aggregation** (right place, but fragile): The router calls the aggregation function, gets the overall_score, computes match_tier from score ranges, THEN checks for CRITICAL f=0 override. But the match_tier computation is currently done by Claude in the response -- in v5.0 it moves to Python. If the tier computation and the override are in separate functions called sequentially, a future developer might reorder them.
+If you use `met` (True/False/None) instead, you lose granularity -- no partial fulfillment.
 
 **Why it happens:**
-The dealbreaker logic in v1.1 is enforced by Claude's system prompt (line 70-76 of `scoring.py` prompt): "When the user marks a constraint as a DEALBREAKER... Set the overall match_tier to 'poor'." Claude handles this atomically. Moving it to Python code means the atomic "score + tier + override" must be implemented as an explicit multi-step procedure.
+The OpenRouter service was designed for the old system where gap-fill produced `ChecklistItem` updates (met/note). The Phase 28 FulfillmentResult model was not designed with gap-fill in mind -- it assumes all non-None values come from deterministic formulas.
 
 **Consequences:**
-- A listing that violates a CRITICAL criterion (e.g., price is 2x budget with budget marked CRITICAL) gets `match_tier="good"` because the score is still high from other criteria
-- Extension badge shows green/blue for a listing that should be red
-- User trusts the badge, visits the listing, discovers it violates their top priority
-- Trust in the scoring system destroyed
+- If `score` is used as `fulfillment`: Pydantic validation crash or absurd overall scores
+- If `met` is used (True=1.0, False=0.0): loss of partial fulfillment (a listing 70% meeting a criterion is scored as 100%)
+- If gap results are ignored: criteria with gaps are skipped, distorting the weighted average
 
 **Prevention:**
-1. Implement the full scoring pipeline as a SINGLE function that returns `(overall_score, match_tier, criteria_results)` -- never separate score computation from tier assignment
-2. The function's last step before returning: `if any(c.importance == CRITICAL and c.fulfillment == 0 for c in criteria_results): match_tier = "poor"`
-3. Write a test: `test_critical_f0_overrides_match_tier` -- set price CRITICAL, listing price 3x budget, verify match_tier=="poor" even if other criteria score 100
-4. Write a second test: `test_critical_f_nonzero_no_override` -- set price CRITICAL, listing price within budget, verify match_tier is NOT forced to "poor"
-5. Add a comment in the code: `# INVARIANT: This override MUST be the last step before returning. Do not move.`
+Modify `merge_gap_results` (or add a new function) that converts OpenRouter's 0-100 score to 0.0-1.0 fulfillment:
 
-**Detection:**
-- Listings violating CRITICAL criteria show non-poor badges
-- Analysis page shows "poor" in text but badge shows green (if override is only applied on one consumer path)
+```python
+def gap_result_to_fulfillment(gap_result: dict) -> float:
+    """Convert OpenRouter's 0-100 score to 0.0-1.0 fulfillment."""
+    score = gap_result.get("score", 50)
+    return round(min(1.0, max(0.0, score / 100.0)), 1)
+```
 
-**Phase to address:** Aggregation formula phase -- implement score+tier+override as an atomic unit with dedicated tests.
+Also update the OpenRouter prompt to request fulfillment directly:
+```
+"Respond with a JSON array: [{"field_name": "...", "fulfillment": <0.0-1.0>, "reasoning": "..."}]"
+```
+
+This way gap results natively fit the FulfillmentResult model.
+
+**Warning signs:** Overall scores exceeding 100 or Pydantic `ValidationError` on `fulfillment` field bounds.
+
+**Detection:** Add `assert 0.0 <= f <= 1.0` for every fulfillment value before aggregation.
+
+**Phase:** Address in Phase 31 alongside gap detector rewrite.
 
 ---
 
-### Pitfall 4: Binary Feature Matching Fails on German Flatfox Attribute Names
+### Pitfall 4: Cache Invalidation -- Same listing+profile, Different Algorithm, Stale Scores
 
 **What goes wrong:**
-The user preference `features: list[str]` contains UI-selected features like `["Balcony", "Elevator", "Dishwasher"]`. The Flatfox API returns attributes as `FlatfoxAttribute` objects with German `.name` fields: `"Balkon"`, `"Lift"`, `"Geschirrspueler"`, `"Minergie"`, `"Rollstuhlgaengig"`. The deterministic binary feature formula needs to check: "does the listing have the feature the user wants?" A naive `feature.lower() in [a.name.lower() for a in listing.attributes]` fails because `"balcony" != "balkon"`.
+The cache key is `(user_id, listing_id, profile_id)` with upsert on conflict (see `002_profiles_schema.sql` line 56: `unique(user_id, listing_id, profile_id)`). When the scoring algorithm changes from Claude-generated to deterministic+aggregation:
 
-The current system avoids this entirely -- Claude reads both the English feature name and the German attribute list and matches them semantically in the prompt. Moving to deterministic matching requires an explicit mapping layer.
+1. A listing previously scored by Claude gets `overall_score: 72` stored in `analyses.score` and `analyses.breakdown`.
+2. After deploying the new scorer, the same listing+profile returns `overall_score: 65` (different formula).
+3. But the edge function cache check (`score-proxy/index.ts` lines 94-115) returns the cached v1 result BEFORE the request reaches the backend.
+4. The user sees the old Claude score, not the new deterministic score.
+5. Since `stale` is `false` on the cached row (it was valid when written), it never gets re-scored.
+
+**This is worse than just stale data** because:
+- The extension has already displayed v1 badges for 8051+ listings across all users
+- The `score` column in `analyses` has Claude-generated values
+- The `breakdown` column has v1 schema (with `categories`, no `criteria_results`)
+- When v2 scores start appearing for NEW listings, users see two different scoring scales on the same page -- some badges from Claude (softer scores), some from deterministic (different distribution)
 
 **Why it happens:**
-Flatfox is a Swiss platform. Its API returns attributes in German (and sometimes French/Italian depending on the listing region). The web app's feature selection UI uses English labels (or the user's chosen language). There is no normalization layer between the two vocabularies.
+Phase 30 (DB-01) adds `schema_version` to the `breakdown` JSONB and Phase 31 (DB-02) adds cache rejection for `schema_version < 2`. But this protection exists only in the BACKEND (`scoring.py` router). The EDGE FUNCTION has its own independent cache check (lines 94-115 of `score-proxy/index.ts`) that reads `analyses` directly and returns `breakdown` without checking `schema_version`.
 
-Real Flatfox attribute names observed in the codebase and API:
-- `Balkon` (Balcony), `Lift` (Elevator), `Geschirrspueler` (Dishwasher)
-- `Waschmaschine` (Washing machine), `Tumbler` (Dryer), `Parkplatz` (Parking)
-- `Minergie` (Swiss energy standard -- no direct English equivalent)
-- `Rollstuhlgaengig` (Wheelchair accessible)
-- Some attributes have no standard translation: `Cheminee` (Fireplace, but French loan)
+**This means the edge function will happily return v1 cached scores forever**, bypassing the backend's version check entirely.
 
 **Consequences:**
-- All binary feature checks return "not met" even when the listing has the feature
-- Fulfillment for binary features is systematically 0, dragging down overall scores
-- Users see all their desired features marked as unmet, think the scoring is broken
-- Regression: v1.1 Claude correctly matched "Balcony" to "Balkon" via semantic understanding
+- Users see old Claude scores for previously-scored listings
+- Mixed v1/v2 scores on same page (different scales, confusing)
+- New score algorithm deployed but appears to do nothing for existing listings
+- Only `force_rescore=true` (FAB long-press) would bypass the edge function cache
 
-**Prevention:**
-1. Build a static normalization map: `FEATURE_ALIAS_MAP = {"balcony": ["balkon", "balcon"], "elevator": ["lift", "aufzug"], "dishwasher": ["geschirrspueler", "geschirrspüler", "lave-vaisselle"], ...}`
-2. Normalize both sides to lowercase before matching
-3. For features NOT in the map, fall back to Claude with a focused prompt: "Does attribute X match feature Y? Answer true/false." -- this is cheap (10 tokens) and handles edge cases
-4. Populate the map by fetching 50+ real Flatfox listings and collecting all unique attribute names. The Flatfox API vocabulary is finite (probably 30-50 unique attribute names)
-5. Handle umlaut normalization: `ue -> u-umlaut`, `ae -> a-umlaut`, `oe -> o-umlaut` (Flatfox sometimes uses ASCII transliteration, sometimes Unicode)
+**Prevention (both layers required):**
 
-**Detection:**
-- All binary feature scores return 0 despite listings having relevant attributes
-- Comparison test: score a listing with Claude (v1.1) and deterministic (v5.0), binary features diverge significantly
-- The normalization map has fewer entries than the set of unique Flatfox attribute names across test listings
+**Backend (Phase 31):** Already planned per DB-02. Add to `get_analysis` in `supabase.py`:
+```python
+def get_analysis(self, user_id, profile_id, listing_id):
+    result = self.get_client().table("analyses")...
+    if result.data:
+        breakdown = result.data.get("breakdown", {})
+        if breakdown.get("schema_version", 0) < 2:
+            return None  # force re-score
+        return breakdown
+    return None
+```
 
-**Phase to address:** Binary feature matching phase -- build and validate the normalization map BEFORE integrating into the scoring pipeline. Use real Flatfox data, not guesses.
+**Edge function (NOT in Phase 30/31 plans -- MUST ADD):** The edge function must ALSO check schema_version:
+```typescript
+if (cached && !cached.stale) {
+  const schemaVersion = cached.breakdown?.schema_version ?? 0;
+  if (schemaVersion >= 2) {
+    return new Response(JSON.stringify(cached.breakdown), ...);
+  }
+  // v1 cache -- fall through to backend for re-score
+}
+```
+
+**Nuclear option (simpler but destructive):** Run a one-time SQL update to mark all existing analyses as stale:
+```sql
+UPDATE analyses SET stale = true WHERE (breakdown->>'schema_version')::int IS DISTINCT FROM 2;
+```
+This forces re-scoring for all existing listings on next request. Combined with the edge function `stale` check (line 103: `if (cached && !cached.stale)`), this clears the entire cache without code changes.
+
+**Warning signs:** After deploying the new scorer, check if any response still contains `"categories"` in the breakdown. If yes, stale v1 responses are leaking through.
+
+**Detection:** Add `X-HomeMatch-Schema-Version` response header from the edge function.
+
+**Phase:** MUST be addressed in Phase 30 (edge function update) AND Phase 31 (backend cache check). Missing the edge function update is the most likely oversight because DB-02 only mentions backend cache logic.
 
 ---
 
-### Pitfall 5: ScoreResponse Schema Change Breaks Extension Without Version Gate
+### Pitfall 5: ALLOW_CLAUDE_FALLBACK Default -- Accidental Per-Request Claude Costs
 
 **What goes wrong:**
-The Chrome extension has its own copy of the `ScoreResponse` interface (`extension/src/types/scoring.ts`). It is manually kept in sync with the backend Pydantic model. The v5.0 changes to `ScoreResponse` include:
-- Removing `categories: CategoryScore[]` (5 fixed categories with score/weight/reasoning)
-- Adding per-criterion fulfillment fields (new shape)
-- Potentially changing `overall_score` from int (0-100) to a float (0.0-1.0) or keeping int but with different semantics
+The scoring router (`backend/app/routers/scoring.py`) currently calls `claude_scorer.score_listing()` for EVERY listing (the entire current scoring pipeline). In the merged architecture, Claude should only be called for:
+1. Subjective criteria (Phase 29, SS-02: batched call)
+2. Summary bullets when all criteria are deterministic (Phase 29, SS-04: minimal call)
+3. Full fallback when no ListingProfile exists (legacy path)
 
-The extension is deployed via manual sideloading. Users must rebuild and reload the extension manually. There is NO auto-update mechanism. If the backend deploys v5.0 first:
+If the `ALLOW_CLAUDE_FALLBACK` environment variable is not explicitly set to control fallback behavior, the default path matters enormously:
 
-1. Old extension calls score-proxy, gets a v5.0 response
-2. Extension casts response as old `ScoreResponse` type
-3. `score.overall_score` might be present (backward compat) but `score.categories` is undefined
-4. `SummaryPanel` renders `summary_bullets` -- this survives if the field name is unchanged
-5. `ScoreBadge` renders `score.overall_score` in the badge -- survives if field name unchanged
-6. User clicks "See full analysis" link to web app -- the web analysis page is already updated (Vercel auto-deploys), so the analysis page works
-7. BUT: if any field name changes (e.g., `overall_score` -> `score`), the badge shows `undefined`
+- **Default=True (dangerous):** Every listing without a ListingProfile (i.e., NOT in the pre-enriched set of 27 listings in zipcode 8051) falls through to the full Claude scoring pipeline. With ~1,792 Zurich listings and only 27 enriched, that's 1,765 listings hitting Claude at ~$0.06 each = **$106 per full-city scoring sweep**.
 
-The REAL problem: the extension user has a stale extension that cannot parse v5.0 responses. They see broken badges until they manually rebuild. There is no mechanism to notify them.
+- **Default=False (safe but degraded):** Unenriched listings return an error or empty response. Users see no scores for most listings. The extension shows loading skeletons that never resolve.
+
+Neither default is acceptable. The correct behavior is a tiered response:
+1. ListingProfile exists -> deterministic + gap-fill ($0.0075)
+2. No ListingProfile, subjective criteria only -> minimal Claude call (~$0.01)
+3. No ListingProfile, full fallback -> Claude full scoring (~$0.06) ONLY if explicitly opted in
 
 **Why it happens:**
-The extension is sideloaded (not on Chrome Web Store). There is no auto-update path. The backend and web app deploy automatically (EC2 + Vercel), but the extension is frozen at the user's last build.
+The existing router has a single code path that always calls Claude. Adding the ListingProfile path creates a fork, but the fallback default is not specified anywhere in the v5.0 requirements. Someone deploying will forget to set the env var, and the default behavior determines cost.
 
 **Consequences:**
-- Extension badges break for all existing users until they manually rebuild
-- No notification mechanism tells users to update
-- If the user does not rebuild, the extension is permanently broken against the new API
-- Demo to Bellevia pilot fails if they have the old extension
+- Default=True: Potentially $100+ in Claude API costs on first deployment if users score multiple pages
+- Default=False: Users see broken experience for 98.5% of listings (1765/1792)
+- Forgetting to set the env var: Behavior depends on code default, which may change between deploys
 
 **Prevention:**
-1. **Keep `overall_score` and `match_tier` field names unchanged** -- these are consumed by the badge and are the minimum viable response shape
-2. **Keep `summary_bullets` field name unchanged** -- consumed by the summary panel
-3. Add new fields (per-criterion fulfillment data) alongside old fields, do not remove old fields in the first deployment
-4. Add an API version header: `X-HomeMatch-API-Version: 2` in the score-proxy response. The extension can check this and show a "Please update your extension" banner if the version is higher than expected
-5. Deploy in phases: (a) backend returns BOTH old and new fields, (b) update extension to use new fields, (c) after all users have updated, remove old fields
 
-**Detection:**
-- Extension badge shows `undefined` or `NaN` instead of a number
-- Extension console shows TypeScript-level type errors or undefined property access
-- Users report "scoring stopped working" after a backend deployment
+1. **Make Claude fallback explicit in the router**, with a logged warning:
+```python
+ALLOW_CLAUDE_FALLBACK = os.environ.get("ALLOW_CLAUDE_FALLBACK", "false").lower() == "true"
 
-**Phase to address:** ScoreResponse schema change phase -- design the response shape to be backward-compatible FIRST, then plan the extension migration as a follow-up.
+# In the scoring router:
+if not listing_profile:
+    if ALLOW_CLAUDE_FALLBACK:
+        logger.warning(
+            "No ListingProfile for listing %d -- falling back to Claude ($0.06)",
+            request.listing_id,
+        )
+        return await _score_with_claude(listing, preferences, ...)
+    else:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Listing {request.listing_id} has not been enriched yet. Score unavailable."
+        )
+```
+
+2. **Add a cost-tracking log line** for every Claude fallback call:
+```python
+logger.warning("CLAUDE_FALLBACK listing=%d cost=~$0.06", listing.pk)
+```
+
+3. **Set ALLOW_CLAUDE_FALLBACK=false on EC2 by default.** Only enable after verifying enrichment coverage.
+
+4. **Add a startup log line** that reports the env var state:
+```python
+logger.info("ALLOW_CLAUDE_FALLBACK=%s", ALLOW_CLAUDE_FALLBACK)
+```
+
+**Warning signs:** Claude API costs spike after deployment. Backend logs show "CLAUDE_FALLBACK" entries for many listings.
+
+**Detection:** Monitor `ANTHROPIC_API_KEY` usage on the Claude API dashboard. If costs exceed $1/day, fallback is running unchecked.
+
+**Phase:** Address in Phase 31 (router integration). This is a deployment safety concern, not a code complexity concern.
 
 ---
 
-### Pitfall 6: Criterion Type Classification Non-Determinism at Save Time
+### Pitfall 6: Uniform Noise/Neighborhood Data Producing Uniform Scores
 
 **What goes wrong:**
-The v5.0 design classifies each `DynamicField` into a `criterion_type` (price, size, binary_feature, proximity, or subjective) at profile save time, not at scoring time. This classification determines which formula is used. The classification is done by Claude (or a rules-based classifier). If the classification is wrong, the wrong formula is applied permanently:
+The HANDOFF.md (Part 7) documents known data limitations from the zipcode-batched enrichment:
+- **Noise score is identical for all 27 listings in zipcode 8051:** 40/100
+- **Neighborhood character text is identical for all listings**
 
-- User adds "max CHF 2500/month" as a dynamic field. Classifier labels it `subjective` instead of `price`. Claude evaluates it subjectively instead of using the deterministic price formula. The score is inconsistent across rescores because Claude is non-deterministic.
-- User adds "near a Coop" as a dynamic field. Classifier labels it `binary_feature` instead of `proximity`. The binary feature matcher looks for "Coop" in listing attributes (which are structural features like "Balkon", not nearby businesses). The check always returns false.
+This means any user criterion about noise ("ruhige Lage", "quiet location") or neighborhood character will produce the SAME fulfillment score for every listing in the same zipcode. Since Zurich has ~25 zipcodes and each zipcode will be enriched as a batch, this pattern scales:
+- ~1,792 listings / 25 zipcodes = ~72 listings per zipcode average
+- Within each zipcode, noise-related and neighborhood-related criteria contribute the same fulfillment value
+
+For a user with "quiet location" as a CRITICAL criterion (weight=5):
+- Every listing in the same zipcode gets the same fulfillment for this criterion
+- The overall score distribution compresses -- listings differentiate ONLY on price/size/distance/features/condition
+- If the user has multiple neighborhood criteria, the compression is worse
+
+**Quantified impact:**
+With 10 criteria total and 2 uniform criteria (noise + neighborhood), those 2 criteria contribute (2 * weight) / (sum of all weights) of the total score. With medium importance (weight=2): `(2*2) / (10*2) = 20%` of the score is static per zipcode. With high importance (weight=3): `(2*3) / (10*3) = 20%` still. The ratio is constant regardless of weight, but the absolute spread of scores shrinks.
+
+If the true noise difference between two listings is 20 points (e.g., street-facing vs courtyard), and both show 40/100, the scorer misattributes 20 points of differentiation. For badge tiers (excellent/good/fair/poor), a 5-7 point swing can change the tier.
 
 **Why it happens:**
-Natural language criterion descriptions are ambiguous. "Good public transport" could be `proximity` (near a train station) or `subjective` (Claude evaluates transport quality from description). "Modern kitchen" is `subjective` (requires visual analysis) but could be confused with `binary_feature` (check for "Einbaukueche" attribute). The classifier must handle this ambiguity correctly for every user-generated criterion.
+The zipcode enrichment pipeline uses shared area research (one Sonnet agent researches the zipcode, then N Haiku agents analyze individual listings). Noise and neighborhood are area-level attributes, not per-listing. This is a fundamental data architecture limitation, not a bug.
 
 **Consequences:**
-- Wrong formula applied permanently (until user re-saves profile)
-- Deterministic criteria misclassified as subjective get non-deterministic scores (defeats the purpose of v5.0)
-- Subjective criteria misclassified as deterministic get wrong scores (formula cannot evaluate "nice neighborhood")
-- User has no visibility into classification -- they do not see `criterion_type` in the UI
+- Listings on a quiet side street score identically to listings on a busy main road (within same zipcode)
+- Users may distrust scores if they know one apartment is noisier than another but scores don't reflect it
+- Badge tier distribution within a zipcode is compressed, reducing the tool's discrimination value
 
 **Prevention:**
-1. Build a rules-based pre-classifier that handles obvious cases: contains "CHF" or currency -> `price`, contains "sqm" or "m2" -> `size`, matches known feature names -> `binary_feature`, contains distance/proximity keywords ("near", "within", "close to", "walking distance") -> `proximity`. Everything else -> `subjective`
-2. For ambiguous cases, use Claude with a focused classification prompt (cheap, 50 tokens output). Include few-shot examples of each type
-3. Store the classified `criterion_type` on the `DynamicField` in the preferences JSONB so it is visible and debuggable
-4. Allow manual override in the UI: show the inferred type as a subtle badge next to each dynamic field, let the user correct it
-5. Write classification tests with 20+ real-world criterion strings covering edge cases
+1. **Accept the limitation for v5.0** -- document in user-facing summary bullets: "Noise assessment is based on neighborhood averages, not building-specific data"
+2. **Reduce weight of uniform criteria** -- in the deterministic scorer, detect when multiple listings share the exact same neighborhood scores and log a warning
+3. **Phase-specific enrichment upgrade (v5.1):** Per-listing noise estimates using Google Street View noise mapping or OpenStreetMap road proximity data. This is too complex for the initial merge.
+4. **In Claude summary bullets (SS-04):** Instruct Claude to note when noise data appears uniform -- "Note: Noise assessment is a neighborhood average; this building faces a main road and may be noisier."
 
-**Detection:**
-- A criterion like "max CHF 2000" scored by Claude as subjective instead of deterministic price formula
-- Same listing rescored twice produces different scores for criteria that should be deterministic
-- Debug log shows criterion_type for each dynamic field -- verify manually against expectations
+**Warning signs:** All listings in user's search results show identical scores for noise-related criteria.
 
-**Phase to address:** Criterion classification phase -- build and validate the classifier BEFORE integrating it into the scoring pipeline.
+**Detection:** In the scoring router, log a warning if >80% of listings in a single scoring batch have identical `noise_level_estimate`.
+
+**Phase:** Accept for Phase 31 (initial merge). Flag for v5.1 as a data quality improvement.
 
 ---
 
 ## Moderate Pitfalls
 
----
-
-### Pitfall 7: IMPORTANCE_WEIGHT_MAP Values Change Silently Between v1.1 and v5.0
-
-**What goes wrong:**
-v1.1 uses `IMPORTANCE_WEIGHT_MAP = {CRITICAL: 90, HIGH: 70, MEDIUM: 50, LOW: 30}` (line 48-53 of preferences.py). These weights are passed to Claude in the system prompt as `weight` field values. The v5.0 spec proposes different weights for aggregation: `CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1`. If the `IMPORTANCE_WEIGHT_MAP` constant is updated in-place, the Claude prompt (which still uses `IMPORTANCE_WEIGHT_MAP` for the `weight` field instruction in the system prompt line 87) will tell Claude to use `weight=5` instead of `weight=90`, confusing Claude's scoring.
-
-Even if the prompt is updated too, existing test assertions (`test_preferences.py` lines 136-140) will break. And the frontend `CategoryBreakdown` component uses `getImportanceLabel(weight)` with thresholds `>=70` for Critical, `>=50` for High (line 33-37 of CategoryBreakdown.tsx). If weights change to 1-5, all labels will show "Low".
-
-**Why it happens:**
-The same constant serves two purposes: (1) weight values sent to Claude in the prompt, and (2) weight values used in the deterministic aggregation formula. These need different scales if the aggregation formula changes.
-
-**Consequences:**
-- `CategoryBreakdown` importance labels all show "Low" for every category
-- Claude prompt tells Claude to use wrong weight values
-- Test suite breaks on weight value assertions
-- Subtle: the old `analyses.breakdown` JSONB has `weight: 90` in category entries; new ones would have `weight: 5` -- inconsistent display
-
-**Prevention:**
-1. Create a NEW constant for v5.0 aggregation weights: `AGGREGATION_WEIGHTS = {CRITICAL: 5, HIGH: 3, MEDIUM: 2, LOW: 1}`
-2. Keep `IMPORTANCE_WEIGHT_MAP` unchanged for backward compatibility with cached analyses and any remaining Claude prompt usage
-3. Update the frontend `getImportanceLabel` to accept either scale, or change it to read the importance level name directly from the new response format instead of deriving it from numeric weights
-4. If `categories` is removed from ScoreResponse, the `CategoryBreakdown` component needs a complete rewrite anyway -- do not try to make old weight thresholds work with new data
-
-**Detection:**
-- All importance badges in CategoryBreakdown show "Low"
-- Test `test_importance_weight_map` fails after constant change
-- Claude response has unexpected weight values
-
-**Phase to address:** Schema migration phase -- define new constants WITHOUT modifying existing ones.
+Mistakes that cause degraded experience, harder debugging, or require rework but don't cause data corruption.
 
 ---
 
-### Pitfall 8: Supabase JSONB Migration for DynamicField.criterion_type Breaks Frontend Parsing
+### Pitfall 7: OpenRouter Downtime -- No Graceful Degradation
 
 **What goes wrong:**
-Adding `criterion_type: str` to `DynamicField` in the backend Pydantic model is safe because Pydantic defaults handle missing fields. But the preferences JSONB in Supabase already contains `dynamicFields` arrays without `criterionType`. Three things can go wrong:
+The OpenRouter service (`backend/app/services/openrouter.py`) has a 60-second timeout per request (line 147). When OpenRouter is unreachable:
 
-1. **Frontend Zod schema validation fails:** If the Zod schema is updated to require `criterionType` before existing JSONB is migrated, loading any profile with old-format dynamic fields will throw a validation error. The preferences form will not render. The user cannot access their preferences.
+1. **Batch call fails** (line 296-297): exception caught, falls back to individual calls
+2. **Individual calls fail** (line 216): exception caught, returns `{"score": 50, "met": None, "note": "Could not evaluate"}`
+3. But the caller doesn't know these are fallback results vs real evaluations
 
-2. **Backend classification writes camelCase but reads snake_case:** The `DynamicField` model has `alias_generator=to_camel` and `populate_by_name=True`. When serialized to JSONB via the frontend (camelCase), the field is `criterionType`. When the backend writes it, it might serialize as `criterion_type` (snake_case Pydantic default) if `model_dump()` is called without `by_alias=True`. The JSONB ends up with mixed naming: some fields with `criterionType`, others with `criterion_type`.
+The 60-second timeout means if OpenRouter is down, EACH gap-fill attempt blocks for 60 seconds before failing. With 5 gaps, that's 5 minutes of blocking (batch attempt + 5 individual attempts = 6 * 60s = 360 seconds). The extension shows a loading skeleton for 6 minutes before the score appears.
 
-3. **The `migrate_legacy_format` validator does not handle missing criterion_type:** The existing validator (lines 143-202 of preferences.py) migrates old formats but does not add `criterionType` to existing dynamic fields. Fields saved before v5.0 will have `{name, value, importance}` but no `criterionType`. If classification happens at save time, re-saving triggers classification. But if the user never re-saves, their dynamic fields are never classified, and the scoring pipeline does not know which formula to use.
+**The scoring router does not have a circuit breaker.** Every subsequent request also blocks for 60+ seconds. Under load (10 concurrent users scoring), this exhausts FastAPI's thread pool and blocks ALL endpoints, including `/health`.
 
 **Why it happens:**
-JSONB schema evolution in Supabase has no built-in migration tooling. The application layer must handle all backward compatibility. The camelCase/snake_case duality in `DynamicField` adds a naming hazard.
+OpenRouter is a third-party API aggregator with no SLA guarantee. The current code has timeout + fallback but no circuit breaker pattern to fast-fail after detecting persistent failure.
 
 **Consequences:**
-- Profiles page crashes for users with existing dynamic fields (Zod validation error)
-- Mixed camelCase/snake_case in JSONB causes fields to appear missing depending on which layer reads them
-- Unclassified dynamic fields default to... what? If `criterion_type` defaults to `"subjective"`, price criteria are scored by Claude instead of deterministically. If it defaults to None, the scoring pipeline crashes
+- 1-6 minute scoring latency when OpenRouter is down (vs ~200ms normal)
+- Thread pool exhaustion under concurrent load
+- Health check timeout -> EC2 appears dead
+- Gap results default to `score: 50, met: None` which is misleading (50 is "average" but the real answer is "unknown")
 
 **Prevention:**
-1. Add `criterion_type` as Optional with default None to both Pydantic and Zod schemas
-2. In the scoring pipeline, treat `criterion_type=None` as "needs classification" and run the classifier on-the-fly (then optionally save back)
-3. Add a migration in `migrate_legacy_format`: if `dynamicFields` exist but items lack `criterionType`, add `criterionType: null` to each
-4. Always use `by_alias=True` when serializing DynamicField to JSONB (consistent camelCase)
-5. Write a test: load preferences JSONB from before v5.0 (no criterionType), verify parsing succeeds and criterion_type is None
 
-**Detection:**
-- Preferences form shows blank/error for profiles with dynamic fields
-- Backend logs show Pydantic `ValidationError` on preferences with missing `criterionType`
-- JSONB contains both `criterionType` and `criterion_type` keys in the same object
+1. **Add a circuit breaker** with exponential backoff:
+```python
+class OpenRouterService:
+    def __init__(self):
+        self._client = None
+        self._consecutive_failures = 0
+        self._circuit_open_until = 0.0  # timestamp
 
-**Phase to address:** Schema migration phase -- add criterion_type as Optional[None] FIRST, then build classification logic.
+    async def _call_openrouter(self, prompt: str) -> str:
+        import time
+        if time.time() < self._circuit_open_until:
+            raise RuntimeError("OpenRouter circuit open -- skipping gap-fill")
+        try:
+            result = await self._do_call(prompt)
+            self._consecutive_failures = 0
+            return result
+        except Exception:
+            self._consecutive_failures += 1
+            if self._consecutive_failures >= 3:
+                backoff = min(300, 30 * (2 ** (self._consecutive_failures - 3)))
+                self._circuit_open_until = time.time() + backoff
+            raise
+```
+
+2. **Reduce timeout to 15 seconds** (from 60). Gap-fill prompts are small; if OpenRouter hasn't responded in 15s, it won't.
+
+3. **Skip gap-fill when circuit is open** -- return `fulfillment=None` for gap criteria (they get excluded from aggregation per HA-02). This is better than a fake `score: 50`.
+
+4. **Log when gap-fill is skipped** so operators know OpenRouter is down:
+```python
+logger.warning("OpenRouter circuit open -- %d gaps skipped for listing %d", len(gaps), listing_id)
+```
+
+**Warning signs:** Scoring latency spikes to >30s. Backend logs show repeated OpenRouter timeout errors.
+
+**Detection:** Add a Prometheus-style counter for OpenRouter success/failure/skip. Alert if failure rate exceeds 50% over 5 minutes.
+
+**Phase:** Address in Phase 31. The circuit breaker is ~30 lines of code and prevents cascading failures.
 
 ---
 
-### Pitfall 9: Scoring Pipeline Becomes Partially Synchronous, Breaking the Async Flow
+### Pitfall 8: Extension Expects Full ScoreResponse -- No "Not Enriched" State
 
 **What goes wrong:**
-The current scoring pipeline is fully async: `await claude_scorer.score_listing(...)`. The v5.0 pipeline mixes deterministic computation (CPU-bound, synchronous) with Claude API calls (IO-bound, async). If the deterministic formulas are implemented as regular Python functions called inside the async router, they block the event loop for the duration of computation. For a single listing, this is negligible (microseconds). But for batch scoring (10+ listings in parallel), synchronous formula computation for all criteria of all listings could accumulate, especially if the binary feature normalization involves string matching against a large map.
+The extension's `api.ts` (line 51) casts the response as `ScoreResponse`:
+```typescript
+const data = (await res.json()) as ScoreResponse;
+```
 
-More critically: if subjective criteria use `await claude_scorer.score_listing()` but deterministic criteria use synchronous functions, the orchestration must be hybrid. A naive implementation might `await` Claude for ALL criteria (including deterministic ones) because the developer wraps everything in the same async pipeline.
+The `ScoreBadge.tsx` unconditionally renders `score.overall_score` (line 67) and `score.match_tier` (line 22). There is no handling for:
+
+1. **HTTP 422 response** (listing not enriched, ALLOW_CLAUDE_FALLBACK=false): The extension's error handling (`api.ts` lines 43-48) throws an error, which `App.tsx` catches and shows as `"X listing(s) failed to score"`. The user sees loading skeletons that never resolve for unenriched listings, mixed with successful badges for enriched ones. This looks broken.
+
+2. **Partial enrichment**: If 3 of 20 visible listings are enriched and 17 are not, the user sees 3 badges and 17 loading skeletons (or 17 "failed" messages). The loading skeletons persist until cleanup (line 272-275 of `App.tsx`), at which point they just disappear -- no explanation.
+
+3. **"Beta" badge concept**: The milestone context mentions an extension "beta" badge for unenriched listings. No such component exists in the extension code. The `ScoreBadge` component only renders scored listings.
 
 **Why it happens:**
-Mixing sync and async code in FastAPI is a common source of bugs. The deterministic formulas are pure computation and do not need to be async. But calling them alongside `await claude_scorer.score_listing()` requires careful orchestration.
+The extension was designed for a world where every score request produces a `ScoreResponse` (either live-scored or cached). The concept of "listing not yet enriched" didn't exist before the ListingProfile system.
 
 **Consequences:**
-- Event loop blocked during formula computation (minor for single listings, noticeable for batch)
-- Unnecessary Claude API calls if deterministic criteria are accidentally routed to Claude
-- Increased latency if deterministic and subjective scoring run sequentially instead of in parallel
+- Users see a mix of scores and blank spots -- looks like the extension is broken
+- No way to communicate "this listing hasn't been analyzed yet" vs "scoring failed"
+- User frustration: "Why does it work for some listings but not others?"
 
 **Prevention:**
-1. Structure the pipeline as: (a) classify criteria, (b) compute ALL deterministic fulfillments synchronously, (c) `await` Claude for subjective fulfillments ONLY, (d) aggregate. Steps (b) and (c) can run in parallel since they are independent
-2. For batch scoring, run deterministic computation for all listings first (fast), then batch Claude calls for subjective criteria
-3. Do NOT wrap deterministic functions in `asyncio.to_thread()` unless profiling shows they take >1ms -- the overhead of thread dispatch exceeds the computation time for simple formulas
-4. Keep a clear separation: `deterministic_scorer.py` (sync functions) and `claude_scorer.py` (async class). Do not mix them in the same module
 
-**Detection:**
-- Backend response time for deterministic-only listings (no subjective criteria) is suspiciously close to Claude API latency (~1-2 seconds) instead of near-instant
-- `asyncio` event loop warnings in logs about long-running synchronous code
+1. **Return a specific response code for "not enriched"** instead of 422:
+```python
+# Backend returns a 200 with a special response shape:
+if not listing_profile and not ALLOW_CLAUDE_FALLBACK:
+    return ScoreResponse(
+        overall_score=0,
+        match_tier="poor",
+        summary_bullets=["This listing has not been enriched yet."],
+        categories=[],
+        checklist=[],
+        language=preferences.language,
+        enrichment_status="pending",  # new field
+    )
+```
 
-**Phase to address:** Pipeline orchestration phase -- design the hybrid flow architecture before implementing individual formulas.
+OR better:
+
+2. **Add a "not enriched" badge component** to the extension:
+```typescript
+// extension/src/types/scoring.ts -- add to ScoreResponse:
+export interface ScoreResponse {
+  // ... existing fields ...
+  enrichment_status?: 'ready' | 'pending' | 'error';
+}
+```
+```typescript
+// In ScoreBadge, check enrichment_status:
+if (score.enrichment_status === 'pending') {
+  return <PendingBadge listingId={listingId} />;
+}
+```
+
+3. **Or simplest: don't show anything for unenriched listings.** The extension already filters out failed requests (line 272-275 of `App.tsx`). Just let them fail silently. This is the least-effort approach but provides no user feedback.
+
+**Warning signs:** User reports "extension only works for some listings" or "loading dots never go away."
+
+**Detection:** Check error rate in extension console logs after deployment.
+
+**Phase:** Phase 32 (Frontend Consumers). The extension type update is already planned in FE-03, but the "not enriched" state handling needs to be added to the requirements.
 
 ---
 
-### Pitfall 10: The `save_analysis` Function Hardcodes `overall_score` Key for the `score` Column
+### Pitfall 9: DB Migration Ordering -- 005/006 Must Deploy Before Any ListingProfile Code
 
 **What goes wrong:**
-`supabase_service.save_analysis()` (line 82 of supabase.py) extracts `score_data["overall_score"]` and writes it to the `score` column in the `analyses` table. The analyses list page (`/analyses/page.tsx` line 142) renders this `score` column directly in the badge. If v5.0 changes the key name (e.g., to `computed_score`) or changes the score range (e.g., from 0-100 int to 0.0-1.0 float), the `save_analysis` function will:
+The scoring router imports `listing_profile_db.py` which queries the `listing_profiles` table. If the backend code is deployed before migrations 005 and 006 are applied:
 
-1. KeyError on `score_data["overall_score"]` if the key is renamed
-2. Save a float like `0.73` to the `score` column (which is integer type in Postgres), causing a type error or silent truncation to `0`
-3. Save a value on a different scale, making old and new scores incomparable in the analyses list
+1. FastAPI starts successfully (imports are lazy -- `listing_profile_db` is only imported on first use)
+2. First score request triggers `listing_profile_db.get_by_listing_id()` which runs `SELECT * FROM listing_profiles WHERE listing_id = ?`
+3. Supabase returns `PostgrestAPIError: relation "listing_profiles" does not exist`
+4. The error propagates up as a 500 error to the edge function and extension
+
+**This is worse than a clean startup failure** because:
+- The backend appears healthy (`/health` returns 200)
+- The error only manifests on the first score request
+- The edge function returns 502 to the extension
+- The extension shows "Backend unreachable" or "Scoring failed"
+- Debugging requires checking backend logs on EC2
+
+Additionally, migration 005 creates the `listing_profiles` table, and 006 adds the `research_json` column. If 006 is applied before 005, it fails (`ALTER TABLE listing_profiles ADD COLUMN` on a nonexistent table). If 005 is applied but the Phase 30 migration (adding `schema_version` to `analyses.breakdown`) is not, the cache version check in Phase 31 code reads `breakdown.schema_version` which is `undefined` -- this is handled gracefully (defaults to 0, triggers re-score), but only if the code handles `undefined` correctly.
 
 **Why it happens:**
-The `save_analysis` function was written for v1.1's ScoreResponse and hardcodes the key access pattern. It does not use Pydantic model serialization -- it operates on the raw dict from `result.model_dump()`.
+Supabase migrations are applied in alphabetical/numeric order by filename. But code deploys (git pull + restart) happen independently of migration deploys (supabase db push). There's no automated check that migrations are up-to-date before code starts.
 
 **Consequences:**
-- 500 error on save (KeyError) -- scoring succeeds but result is not cached
-- Score column has 0 for all v5.0 analyses (float truncation)
-- Analyses list shows misleading badge numbers
+- 500 errors on all score requests if migrations aren't applied first
+- Silent table existence errors that look like backend crashes
+- If Phase 30 migration is forgotten, cache version gating doesn't work (but fails gracefully)
 
 **Prevention:**
-1. Keep `overall_score` as the field name in the new ScoreResponse -- it serves the same purpose
-2. Keep the score as int 0-100 -- changing to float provides no user benefit and breaks the `score` column type
-3. If the score computation changes range, add a conversion step in `save_analysis`: `score=int(round(score_data["overall_score"] * 100))` if using 0-1 internally
-4. Update `save_analysis` to use the Pydantic model directly instead of dict access: `score=result.overall_score`
 
-**Detection:**
-- Backend logs show `KeyError: 'overall_score'` in the save_analysis exception handler
-- Analyses list shows `0` for all newly scored listings
-- Score column in DB has unexpected values
+1. **Add a startup health check** that verifies table existence:
+```python
+# In main.py lifespan:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Verify critical tables exist
+    import asyncio
+    from app.services.supabase import supabase_service
+    try:
+        client = supabase_service.get_client()
+        # This will fail fast if table doesn't exist
+        client.table("listing_profiles").select("id").limit(1).execute()
+        logger.info("listing_profiles table verified")
+    except Exception as e:
+        logger.error("CRITICAL: listing_profiles table not found -- apply migration 005 first: %s", e)
+        # Don't crash -- let the backend start but log loudly
+    yield
+    ...
+```
 
-**Phase to address:** ScoreResponse schema change phase -- update save_analysis alongside the model change, not after.
+2. **Deploy in order:** Always: migrations first, then code. Document this in the deploy script:
+```bash
+# DEPLOY CHECKLIST:
+# 1. npx supabase db push --linked  (applies 005, 006, Phase 30 migration)
+# 2. git push to main
+# 3. SSH deploy script (git pull + restart)
+```
+
+3. **Name migrations with phase prefixes** so ordering is explicit:
+- `005_listing_profiles.sql` (existing)
+- `006_add_research_json.sql` (existing)
+- `007_schema_version_and_fulfillment.sql` (Phase 30 -- must come before Phase 31 code)
+
+**Warning signs:** 500 errors on score requests immediately after deployment, but /health returns 200.
+
+**Detection:** Add a `GET /readiness` endpoint that checks all required tables exist (separate from `/health` which just confirms the process is running).
+
+**Phase:** Phase 30 (Database Schema Prep) should include the migration ordering protocol. Phase 31 code MUST NOT merge before Phase 30 migrations are applied.
 
 ---
 
-### Pitfall 11: Proximity Quality Formula Double-Counts Distance
+### Pitfall 10: Proximity Data Bridge -- ListingProfile amenities vs Phase 28 proximity_data
 
 **What goes wrong:**
-The v5.0 spec mentions a "proximity quality hybrid formula (distance decay + rating bonus)." If this formula is `f = distance_decay(d) * (1 + rating_bonus(r))`, and `distance_decay` already penalizes far distances, but the nearby_places data returned by the Apify/Google Places integration already filters by radius, the distance decay might be unnecessarily harsh. A place at 0.9 km when the user requested 1.0 km radius is "just barely within range" but the distance decay function might give it a low score (e.g., `f = 1 - 0.9/1.0 = 0.1`). The user expected "within 1 km" to mean binary pass/fail, not a linear penalty.
+Phase 28's `score_proximity_quality` function (line 326-359) expects `proximity_data` as a `dict[str, list[dict]]` where:
+```python
+proximity_data = {
+    "supermarket": [{"distance_km": 0.3, "rating": 4.5, "is_fallback": False}],
+    "gym": [{"distance_km": 1.2, "rating": 3.8, "is_fallback": True}],
+}
+```
+
+ListingProfile stores proximity data in a completely different structure:
+```python
+amenities: dict[str, AmenityCategory]
+# where AmenityCategory has:
+#   results: list[AmenityResult]
+#   AmenityResult has: name, distance_km, rating, review_count, address, type
+```
+
+The key differences:
+1. **Different dict value types:** Phase 28 expects `list[dict]` with flat keys; ListingProfile has `AmenityCategory` objects with `AmenityResult` objects
+2. **Key naming might differ:** Phase 28 uses the field name from DynamicField.name as the key. ListingProfile uses category names like "supermarket", "public_transport". These may not match if the user typed "Supermarkt" (German) but the category is keyed as "supermarket".
+3. **No `is_fallback` flag in ListingProfile:** The AmenityResult model has no fallback concept -- it stores all results within the search radius.
+
+If you pass `ListingProfile.amenities` to `score_proximity_quality`, it will fail because:
+```python
+entries = proximity_data.get(field.name)  # returns AmenityCategory, not list[dict]
+entry = entries[0]  # AmenityCategory is not subscriptable
+```
 
 **Why it happens:**
-The current system has Claude interpret proximity results with nuance. A place at 0.9 km within a 1.0 km radius is "very close, well within range." A deterministic formula cannot apply this nuance unless designed carefully.
+Phase 28's proximity scorer was designed to consume the output of the Phase 26 proximity pipeline (`fetch_all_proximity_data`), which returns `dict[str, list[dict]]`. ListingProfile's amenities come from the research agent's Google Places scraping, which stores richer structured data.
 
 **Consequences:**
-- Proximity scores are systematically lower than Claude's scores for the same data
-- Users perceive the scoring as harsher after v5.0
-- Listings that Claude rated "excellent proximity" now get "fair" from the formula
+- `TypeError: 'AmenityCategory' object is not subscriptable` -- runtime crash
+- All proximity_quality criteria fail to score
+- OR if caught silently, proximity returns None, criteria excluded from aggregation
 
 **Prevention:**
-1. Define the distance decay clearly: `f = max(0, 1 - (d / max_radius))` is a linear decay that gives 1.0 at d=0 and 0.0 at d=max_radius. This makes anything within radius get a positive score, with closer being better
-2. For binary "within X km" criteria, use a step function: `f = 1.0 if d <= max_radius else 0.0`. No decay
-3. Let the criterion type determine the formula shape: `proximity_binary` vs `proximity_quality`
-4. Compare formula results against Claude's scores for 10 test cases before deploying. If the formula is systematically 20+ points lower, adjust the decay curve
+Add a converter in the adapter module:
 
-**Detection:**
-- Proximity criterion scores are systematically lower in v5.0 than v1.1
-- Users report "proximity scoring got worse" after the update
-- Test comparison shows formula gives f=0.1 for a place at 900m when user requested 1km
+```python
+def listing_profile_amenities_to_proximity_data(
+    profile: ListingProfile,
+) -> dict[str, list[dict]]:
+    """Convert ListingProfile amenities to Phase 28 proximity_data format."""
+    proximity_data = {}
+    for category_key, category in profile.amenities.items():
+        entries = []
+        for result in category.results:
+            entries.append({
+                "distance_km": result.distance_km,
+                "rating": result.rating or 3.0,
+                "is_fallback": False,  # pre-computed data is never fallback
+                "name": result.name,
+            })
+        # Sort by distance (nearest first) to match Phase 28's expectation
+        entries.sort(key=lambda x: x.get("distance_km") or float("inf"))
+        if entries:
+            proximity_data[category_key] = entries
+    return proximity_data
+```
 
-**Phase to address:** Proximity formula phase -- validate against Claude baseline before integrating.
+Also need to handle the German/English key mapping:
+```python
+# DynamicField.name might be "Supermarkt" but amenity key is "supermarket"
+AMENITY_KEY_ALIASES = {
+    "supermarkt": "supermarket",
+    "oeffentlicher_verkehr": "public_transport",
+    "ov": "public_transport",
+    "offentlicher verkehr": "public_transport",
+    "schule": "school",
+    "fitnesscenter": "gym",
+    "fitness": "gym",
+    "apotheke": "pharmacy",
+    "spital": "hospital",
+    "krankenhaus": "hospital",
+    "park": "park",
+    "kindergarten": "kindergarten",
+    "restaurant": "restaurant",
+}
+```
+
+**Warning signs:** All proximity_quality criteria return `None` (fulfillment=None) even when ListingProfile has amenity data.
+
+**Detection:** Log when `score_proximity_quality` returns None along with whether amenity data existed in the profile.
+
+**Phase:** Address in Phase 31, as part of the adapter module from Pitfall 1.
+
+---
+
+### Pitfall 11: Two Incompatible Weight Scales in Cache
+
+**What goes wrong:**
+Existing cached analyses (v1) store category weights using the old scale in the `breakdown` JSONB:
+```json
+{
+  "categories": [
+    {"name": "price", "weight": 70, "score": 85, ...},
+    {"name": "location", "weight": 90, "score": 62, ...}
+  ]
+}
+```
+
+New v2 analyses use the new weight scale (CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1):
+```json
+{
+  "criteria_results": [
+    {"criterion_name": "budget", "fulfillment": 0.85, "importance": "high", ...}
+  ]
+}
+```
+
+The analysis page (`web/src/app/(dashboard)/analysis/[listingId]/page.tsx` lines 74-97) and the analyses list page both read from the `analyses` table. When FE-04 (schema_version branching) is implemented, v1 responses render the old category breakdown and v2 responses render the new fulfillment view. But:
+
+1. The `analyses` list page (`/analyses`) shows `score` column for all analyses. V1 scores were Claude-generated (typically 55-85 range). V2 scores are formula-generated (potentially different distribution). Mixed in the same list, scores from different algorithms are compared as if equivalent.
+
+2. The `CategoryBreakdown.tsx` component (line 33-38) maps old weight values to importance labels: `weight >= 70 -> "Critical"`. The new system uses `CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1`. If someone accidentally renders v2 weights (5) through the v1 CategoryBreakdown component, `getImportanceLabel(5)` returns `{label: "Low", variant: "outline"}` because `5 < 30`.
+
+**Why it happens:**
+Two parallel weight scale systems existed. The cache retains old values. Frontend branching on `schema_version` is planned but the analysis LIST page (not the detail page) doesn't have schema_version branching planned in the requirements.
+
+**Consequences:**
+- Analysis list shows mixed-algorithm scores as if comparable
+- If schema_version branching is incomplete, v2 weights render as "Low" importance in the v1 component
+
+**Prevention:**
+1. **FE-04 must cover the analyses LIST page too**, not just the detail page. Add visual indicator: "v1" tag on old analyses.
+2. **Consider a one-time cache bust** (SQL update to `stale=true` on all analyses, per Pitfall 4's nuclear option). This eliminates mixed-version display entirely.
+3. **The analysis page should detect v2 weights** and not pass them to `CategoryBreakdown`:
+```typescript
+const schemaVersion = breakdown.schema_version ?? 1;
+if (schemaVersion >= 2) {
+  // Render FulfillmentBreakdown
+} else {
+  // Render CategoryBreakdown
+}
+```
+
+**Phase:** Phase 32 (Frontend Consumers). Ensure FE-04 covers both detail AND list pages.
 
 ---
 
 ## Minor Pitfalls
 
----
-
-### Pitfall 12: Claude Subjective Fulfillment Prompt Returns Score Outside Expected Range
-
-**What goes wrong:**
-The v5.0 design has Claude return `fulfillment in {0.0...1.0}` for subjective criteria. Claude currently returns `score: int` in 0-100 range (line 19 of scoring.py). Changing the expected output format requires updating the structured output schema. If the Pydantic model constrains fulfillment to `ge=0.0, le=1.0` but Claude returns `0.85` as a string or returns `85` (old habit from 0-100 scale), the `messages.parse()` call might accept it (85 > 1.0, validation error) or reject it.
-
-**Prevention:**
-- Add explicit instruction in the prompt: "Return fulfillment as a decimal between 0.0 and 1.0, where 1.0 means fully met"
-- Include few-shot examples in the prompt
-- If Claude returns values > 1.0, add a post-processing guard: `fulfillment = min(1.0, fulfillment / 100) if fulfillment > 1.0 else fulfillment`
+Issues that cause confusion, extra debugging time, or minor UX problems.
 
 ---
 
-### Pitfall 13: Frontend CategoryBreakdown Component Has No Replacement Planned
+### Pitfall 12: ListingProfile attributes Field -- list[str] vs Flatfox API Response
 
 **What goes wrong:**
-Removing `categories` from ScoreResponse means the `CategoryBreakdown` component (web/src/components/analysis/CategoryBreakdown.tsx, 124 lines) renders nothing. But no replacement component is designed for the new per-criterion fulfillment view. The analysis page becomes visually empty between the summary bullets and the checklist.
+The ListingProfile model defines `attributes: list[str]` (line 84). But the enrichment pipeline saves attributes from Flatfox API, which returns objects: `[{"name": "balcony"}, {"name": "lift"}]`. Depending on how the save_research.py script processes attributes, they might be stored as:
+- `["balcony", "lift"]` (correct -- extracted names)
+- `[{"name": "balcony"}, {"name": "lift"}]` (wrong -- raw API objects)
 
-**Prevention:**
-- Design the replacement component BEFORE removing categories from the response
-- Consider a "Criteria Breakdown" component that shows each criterion with its fulfillment bar, type (deterministic/subjective), and reasoning
-- The new component should handle both old (cached) and new response formats, or the analysis page should detect the schema version and render the appropriate component
+If stored as dicts, the adapter from Pitfall 1 would create `FlatfoxAttribute(name={"name": "balcony"})` -- the name becomes a dict representation instead of a string. `score_binary_feature` would then try to match `"{'name': 'balcony'}"` against the FEATURE_ALIAS_MAP, find no match, and return None.
+
+**Prevention:** Verify `save_research.py` extracts attribute names as strings. Add validation in ListingProfile:
+```python
+@field_validator("attributes", mode="before")
+@classmethod
+def normalize_attributes(cls, v):
+    if not v:
+        return []
+    return [item["name"] if isinstance(item, dict) else str(item) for item in v]
+```
+
+**Phase:** Address in Phase 31 adapter code.
 
 ---
 
-### Pitfall 14: Missing Data Criterion Skip Inflates Overall Score
+### Pitfall 13: OpenRouter API Key Not Set on EC2 -- Silent Failure
 
 **What goes wrong:**
-The v5.0 spec says: "Missing data -> skip criterion in weighted aggregation." If 3 of 5 criteria are skipped because the listing has no data, the overall score is computed from only 2 criteria. If those 2 happen to be well-matched, the score is artificially high. Example: listing has no price, no size, no features data -- only location and condition are scoreable. Both score 90. Overall: 90. But the listing is missing critical information the user cares about.
+`openrouter.py` line 152-155:
+```python
+def _get_api_key(self) -> str:
+    key = os.environ.get("OPENROUTER_API_KEY", "")
+    if not key:
+        logger.error("OPENROUTER_API_KEY is not set in environment")
+    return key
+```
+
+When the key is missing, it logs an error but returns an empty string. The API call proceeds with `Authorization: Bearer ` (empty bearer token). OpenRouter returns 401. The batch call fails, falls back to individual calls, those also fail, and all gaps get `{"score": 50, "met": None, "note": "Could not evaluate"}`. The scoring pipeline continues as if gap-fill returned neutral results.
+
+The user never sees an error. The scores are subtly wrong because genuinely subjective criteria that needed LLM evaluation are all scored at 50/100 (0.5 fulfillment if converted).
 
 **Prevention:**
-- Set a minimum number of scored criteria threshold (e.g., at least 2 criteria must have data for a score to be meaningful)
-- If below threshold, return a special tier: "insufficient_data" instead of computing a misleading score
-- Show a badge indicating data completeness: "Score based on 2/5 criteria"
-- Weight the confidence: if important criteria are skipped, penalize the score or flag it
+1. Fail fast at startup if gap-fill is enabled but key is missing:
+```python
+# In lifespan:
+if not os.environ.get("OPENROUTER_API_KEY"):
+    logger.warning("OPENROUTER_API_KEY not set -- gap-fill will be disabled")
+```
+
+2. Track in the response whether gap-fill actually ran:
+```json
+{"gap_fill_status": "success" | "skipped_no_key" | "failed_api_error"}
+```
+
+**Phase:** Phase 31. Add to deployment checklist in Phase 30 docs.
+
+---
+
+### Pitfall 14: Price Field Confusion -- rent_gross vs price_display vs price
+
+**What goes wrong:**
+Three different "price" fields exist across the system:
+
+| Model | Price Field | Meaning |
+|-------|-----------|---------|
+| FlatfoxListing | `price_display` | Displayed price (may be stale from API) |
+| FlatfoxListing | `rent_gross` | Monthly gross rent (API value, often stale) |
+| ListingProfile | `price` | rent_gross or purchase price (enriched) |
+| Scoring router | `listing.rent_gross = wp.rent_gross` | Web-scraped override (most accurate) |
+
+The current scoring router (lines 126-138) overrides API prices with web-scraped prices:
+```python
+if wp.rent_gross is not None and wp.rent_gross != listing.rent_gross:
+    listing.rent_gross = wp.rent_gross
+    listing.price_display = wp.rent_gross
+```
+
+But ListingProfile's `price` was set at enrichment time, potentially weeks ago. The web-scraped price might have changed since enrichment. The adapter (Pitfall 1) maps `profile.price -> listing.price_display`, bypassing the web-scraping override.
+
+**Consequences:**
+- Stale prices in ListingProfile produce wrong price fulfillment scores
+- A listing reduced from CHF 3,000 to CHF 2,500 still shows the old price in the deterministic score
+
+**Prevention:**
+In the hybrid scoring router, when using a ListingProfile, STILL fetch the current web price and override:
+```python
+# Fetch current web price even when using ListingProfile
+page_data = await flatfox_client.get_listing_page_data(profile.slug, profile.listing_id)
+wp = page_data.web_prices
+if wp.rent_gross is not None:
+    adapted_listing.price_display = wp.rent_gross
+    adapted_listing.rent_gross = wp.rent_gross
+```
+
+This adds ~500ms latency but ensures price accuracy. Alternatively, add a `price_last_checked` timestamp to ListingProfile and only re-scrape if stale (>24h).
+
+**Phase:** Phase 31. This is a data freshness concern that compounds over time.
+
+---
+
+### Pitfall 15: Edge Function Double-Cache -- Stale Results Served Despite Backend Re-score
+
+**What goes wrong:**
+Both the edge function AND the backend check the cache independently:
+
+1. **Edge function** (lines 94-115): `SELECT ... FROM analyses WHERE user_id=X AND listing_id=Y AND profile_id=Z`
+2. **Backend** (lines 43-54): `supabase_service.get_analysis(user_id, profile_id, listing_id)`
+
+When a listing is re-scored (e.g., after schema version bump), the flow is:
+1. Edge function checks cache -> finds v1 entry with `stale=false`
+2. Edge function returns cached v1 response (never reaches backend)
+3. Backend's schema_version check never runs
+
+Even if the backend correctly rejects v1 cache entries, the edge function has already short-circuited. The only way to bypass is `force_rescore=true`.
+
+**This is the same issue as Pitfall 4** but from the edge function perspective. Listed separately because the fix requires edge function deployment (different deployment process than backend).
+
+**Prevention:** See Pitfall 4. The edge function MUST check schema_version.
+
+**Phase:** Phase 30 (deploy edge function update alongside DB migration).
 
 ---
 
 ## Phase-Specific Warnings
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Schema migration / cache versioning | Old cached analyses have v1.1 schema (Pitfall 1) | Add schema_version column, filter cache by version |
-| Schema migration / DynamicField | criterion_type missing in existing JSONB (Pitfall 8) | Optional[None] default, on-the-fly classification fallback |
-| Deterministic formula implementation | Division by zero on None preferences (Pitfall 2) | Guard every formula, skip criteria with None inputs |
-| Deterministic formula implementation | Proximity formula double-counts distance (Pitfall 11) | Define decay curve explicitly, compare against Claude baseline |
-| Binary feature matching | German attribute name mismatch (Pitfall 4) | Static normalization map + Claude fallback for unknowns |
-| Criterion classification | Misclassification of ambiguous criteria (Pitfall 6) | Rules-based pre-classifier + Claude for ambiguous + manual override |
-| Aggregation formula | CRITICAL f=0 override at wrong layer (Pitfall 3) | Atomic score+tier+override function, dedicated test |
-| Aggregation formula | Missing data inflates score (Pitfall 14) | Minimum criteria threshold, "insufficient_data" tier |
-| ScoreResponse schema change | Extension breaks without version gate (Pitfall 5) | Keep field names, add new fields alongside old ones |
-| ScoreResponse schema change | save_analysis hardcodes key names (Pitfall 10) | Keep overall_score name, update save_analysis |
-| Weight constants | IMPORTANCE_WEIGHT_MAP dual-purpose conflict (Pitfall 7) | New AGGREGATION_WEIGHTS constant, keep old unchanged |
-| Pipeline orchestration | Sync/async mixing blocks event loop (Pitfall 9) | Separate deterministic (sync) and subjective (async), run in parallel |
-| Frontend update | CategoryBreakdown has no replacement (Pitfall 13) | Design replacement component before removing categories |
+| Phase | Likely Pitfall | Mitigation |
+|-------|---------------|------------|
+| Phase 30 (DB Schema Prep) | Migration ordering: listing_profiles (005) and schema_version migration must deploy before any Phase 31 code | Deploy migrations first, verify with `SELECT count(*) FROM listing_profiles`, document in deploy script |
+| Phase 30 (DB Schema Prep) | Edge function cache bypass: DB-02 only mentions backend cache check, not edge function | Add schema_version check to score-proxy edge function AND redeploy it in Phase 30 |
+| Phase 31 (Hybrid Scorer) | FlatfoxListing/ListingProfile mismatch: passing wrong model to scorer functions | Build `listing_profile_to_flatfox` adapter, add type assertion at router level |
+| Phase 31 (Hybrid Scorer) | Gap detection finds zero gaps because it looks for [GAP] markers in ChecklistItem | Rewrite `detect_gaps` to consume FulfillmentResult (fulfillment=None) |
+| Phase 31 (Hybrid Scorer) | OpenRouter returns 0-100 score but aggregation needs 0.0-1.0 fulfillment | Convert `score/100` to fulfillment, or update OpenRouter prompt to return fulfillment directly |
+| Phase 31 (Hybrid Scorer) | ALLOW_CLAUDE_FALLBACK defaults to True, causing unexpected Claude costs | Default to False, log every fallback call with cost estimate |
+| Phase 31 (Hybrid Scorer) | Proximity data format mismatch: AmenityCategory objects vs flat dicts | Add `amenities_to_proximity_data` converter to adapter module |
+| Phase 31 (Hybrid Scorer) | OpenRouter down = 6-minute scoring delay per listing | Add circuit breaker (3 failures -> skip gap-fill), reduce timeout to 15s |
+| Phase 31 (Hybrid Scorer) | Price stale in ListingProfile (enriched weeks ago) | Re-scrape web price even when using ListingProfile |
+| Phase 32 (Frontend) | Extension shows loading skeletons for unenriched listings | Either add "pending" badge or return graceful empty response |
+| Phase 32 (Frontend) | Mixed v1/v2 scores in analyses list, different algorithms look comparable | Add visual indicator for score version on analyses list page |
+| Phase 32 (Frontend) | v2 weights (5/3/2/1) rendered through v1 CategoryBreakdown shows wrong labels | schema_version branching must cover BOTH detail and list pages |
+| All phases | Uniform noise/neighborhood scores (40/100 for all in zipcode) | Accept for v5.0, document limitation, flag for per-listing enrichment in v5.1 |
 
 ---
 
-## Integration Gotchas
+## Integration Test Checklist
 
-| Integration Point | What Breaks | Correct Approach |
-|-------------------|-------------|------------------|
-| Edge function cache -> v5.0 response | Returns old v1.1 JSONB verbatim to extension | Add schema_version filter to cache query |
-| `save_analysis` -> `analyses.score` column | KeyError or type mismatch if field name/type changes | Keep `overall_score` as int 0-100, update save_analysis |
-| Extension `ScoreResponse` TypeScript -> backend Pydantic | Extension has stale type definition, no auto-update | Keep field names backward-compatible, add API version header |
-| Frontend `CategoryBreakdown` -> `breakdown.categories` | Component renders nothing when categories removed | Detect schema version, render appropriate component |
-| Frontend `getImportanceLabel(weight)` -> weight thresholds | Thresholds (>=70, >=50, >=30) assume old 30-90 scale | Use new constant or read importance level name directly |
-| `DynamicField` serialization -> JSONB | Mixed camelCase/snake_case for criterion_type | Always use `by_alias=True` for JSONB serialization |
-| Deterministic price formula -> `UserPreferences.budget_max` | budget_max is None (user didn't set it) | Skip criterion when preference field is None |
-| Binary feature formula -> `listing.attributes[].name` | German names don't match English feature names | Normalization map + umlaut handling + Claude fallback |
+Before declaring the merge complete, verify these scenarios:
 
----
-
-## Testing Strategy for Hybrid Scoring
-
-### Unit Tests (Per Formula)
-
-| Formula | Critical Test Cases |
-|---------|-------------------|
-| Price fulfillment | budget_max=None (skip), price=budget_max (f=1.0), price=2*budget_max (f=0), price=0 (f=1.0), SALE vs RENT price interpretation |
-| Size fulfillment | living_space_min=None AND max=None (skip), exact match (f=1.0), half the minimum (f=0), surface_living=None on listing (skip) |
-| Binary feature | All features matched (f=1.0), none matched (f=0), partial match (f=0.6), empty feature list (skip), German attribute names, umlaut variations |
-| Proximity | Within radius (f=1.0 or decay), outside radius (f=0), no coordinates (skip), rating bonus caps, zero radius (edge case) |
-| Aggregation | All criteria scored (normal), all criteria skipped (return default), CRITICAL f=0 override, single criterion only, mixed weights |
-
-### Integration Tests (Pipeline)
-
-| Scenario | What to Verify |
-|----------|---------------|
-| Listing with all data available | Deterministic criteria use formulas, subjective use Claude, aggregation correct |
-| Listing with sparse data | Missing data criteria skipped, remaining criteria scored, no division by zero |
-| Profile with no dynamic fields | Falls back to standard scoring (price/size from standard fields only) |
-| Profile with CRITICAL dealbreaker violated | match_tier forced to "poor", overall_score reflects violation |
-| Old cached analysis loaded | Frontend renders old format correctly without crash |
-| Re-score after v5.0 deploy | New score replaces old cached score, schema_version=2 |
-
-### Cross-Consumer Consistency Tests
-
-| Consumer | Test |
-|----------|------|
-| Extension badge | Render with v5.0 response: badge shows number, tier color correct |
-| Extension summary | Render with v5.0 response: bullets display correctly |
-| Web analysis page | Render with v5.0 response: new criteria breakdown component works |
-| Web analysis page | Render with v1.1 cached response: fallback rendering works |
-| Web analyses list | Mix of v1.1 and v5.0 analyses: both render correctly in same list |
-
-### Regression Tests (v1.1 Parity)
-
-Score 10 real Flatfox listings with both v1.1 (Claude-only) and v5.0 (hybrid) using identical preferences. Compare:
-- Overall scores: should be within 15 points (not exact match, but same ballpark)
-- match_tier: should agree for 8/10 listings
-- CRITICAL dealbreaker handling: must agree for 10/10 listings
-- Binary features: must agree for 8/10 features (allowing for normalization gaps)
-
----
-
-## "Looks Done But Isn't" Checklist
-
-- [ ] **Cache versioning:** Deploy v5.0 backend, load a pre-existing analysis page -- verify it shows old data correctly, not a blank/crashed page
-- [ ] **CRITICAL override:** Score a listing that violates a CRITICAL criterion -- verify badge shows "poor" (red), not "good" (blue)
-- [ ] **Binary feature German matching:** Score a listing with "Balkon" attribute when user wants "Balcony" -- verify it shows as met
-- [ ] **Division by zero:** Score a listing with a profile that has NO budget, NO room, NO size preferences -- verify no 500 error
-- [ ] **Extension backward compat:** Use OLD extension (pre-v5.0) against NEW backend -- verify badge still renders a number and tier
-- [ ] **save_analysis:** Score a listing, check the `analyses` table `score` column -- verify it contains the correct integer
-- [ ] **Aggregation with skipped criteria:** Score a listing where 3 of 5 criteria have no data -- verify score is reasonable (not inflated to 95+)
-- [ ] **DynamicField JSONB:** Load a profile with old dynamic fields (no criterionType) -- verify preferences form loads without error
-- [ ] **Weight constants:** Check CategoryBreakdown component -- verify importance labels show correct names (Critical/High/Medium/Low), not all "Low"
-- [ ] **Proximity formula:** Score a listing with a place at 0.9 km when user requested 1.0 km -- verify fulfillment is high (>0.5), not 0.1
-
----
-
-## Recovery Strategies
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Old cache breaks frontend (Pitfall 1) | LOW | Add schema_version column, deploy migration, old rows become cache misses |
-| Division by zero (Pitfall 2) | LOW | Add None guards, redeploy, no data loss |
-| CRITICAL override missing (Pitfall 3) | MEDIUM | Fix aggregation function, redeploy, re-score affected listings |
-| German feature mismatch (Pitfall 4) | MEDIUM | Build normalization map, redeploy, re-score listings; old scores still valid |
-| Extension breaks (Pitfall 5) | HIGH for users | Cannot force-update sideloaded extensions; must contact users individually |
-| Misclassified criteria (Pitfall 6) | MEDIUM | Fix classifier, re-classify by re-saving profiles; scores are wrong until re-scored |
-| Weight constant conflict (Pitfall 7) | LOW | Add new constant, revert old, redeploy; 15-minute fix |
-| JSONB migration (Pitfall 8) | LOW | Make criterion_type Optional, deploy; no data loss |
-| save_analysis crash (Pitfall 10) | MEDIUM | Scores computed but not cached; fix and redeploy; re-score to populate cache |
+1. **ListingProfile exists, all criteria deterministic:** Score computed without any LLM call, returned in <200ms
+2. **ListingProfile exists, some criteria subjective:** Deterministic + Claude subjective + aggregation
+3. **ListingProfile exists, some criteria have gaps:** Deterministic + gap detection + OpenRouter fill + aggregation
+4. **ListingProfile does NOT exist, ALLOW_CLAUDE_FALLBACK=false:** Returns 422 or graceful "not enriched" response
+5. **ListingProfile does NOT exist, ALLOW_CLAUDE_FALLBACK=true:** Full Claude fallback path still works
+6. **Cached v1 analysis:** Edge function AND backend both reject it, trigger re-score
+7. **Cached v2 analysis:** Edge function returns it immediately
+8. **OpenRouter down:** Circuit breaker activates, scoring completes without gap-fill, criteria with gaps excluded from aggregation
+9. **OPENROUTER_API_KEY missing:** Logged warning at startup, gap-fill skipped gracefully
+10. **Extension renders v1 cached score:** CategoryBreakdown shown
+11. **Extension renders v2 new score:** FulfillmentBreakdown shown
+12. **Analysis list shows mix of v1 and v2:** Each clearly labeled with version indicator
 
 ---
 
 ## Sources
 
-- Direct codebase analysis (HIGH confidence):
-  - `backend/app/models/scoring.py` -- ScoreResponse and CategoryScore schema (lines 15-61)
-  - `backend/app/models/preferences.py` -- UserPreferences with Optional fields, DynamicField with alias_generator, IMPORTANCE_WEIGHT_MAP (lines 48-53, 66-80, 91-202)
-  - `backend/app/models/listing.py` -- FlatfoxAttribute.name is German (lines 32-36, 89)
-  - `backend/app/routers/scoring.py` -- cache check, Claude call, save_analysis flow (lines 42-178)
-  - `backend/app/services/supabase.py` -- save_analysis hardcodes score_data["overall_score"] (line 82)
-  - `backend/app/services/claude.py` -- messages.parse() with output_format=ScoreResponse (line 85-93)
-  - `backend/app/prompts/scoring.py` -- system prompt with IMPORTANCE LEVELS section (line 86-87), dealbreaker rules (lines 70-77)
-  - `supabase/functions/score-proxy/index.ts` -- cache returns breakdown verbatim (line 105), no schema version filter
-  - `extension/src/types/scoring.ts` -- TypeScript ScoreResponse mirror, TIER_COLORS (lines 6-40)
-  - `extension/src/entrypoints/content/components/ScoreBadge.tsx` -- renders score.overall_score and score.match_tier (lines 67, 72-76)
-  - `extension/src/entrypoints/content/components/SummaryPanel.tsx` -- renders score.summary_bullets (line 49)
-  - `extension/src/lib/api.ts` -- casts response as ScoreResponse (line 51)
-  - `web/src/app/(dashboard)/analysis/[listingId]/page.tsx` -- casts breakdown to typed object with categories (lines 74-97)
-  - `web/src/components/analysis/CategoryBreakdown.tsx` -- renders categories with getImportanceLabel thresholds (lines 33-37)
-  - `web/src/components/analysis/ChecklistSection.tsx` -- renders checklist items with met/partial/false states
-  - `web/src/app/(dashboard)/analyses/page.tsx` -- reads analysis.score and breakdown.match_tier (lines 102-110)
+All pitfalls verified against actual source code in the repository:
 
----
-*Pitfalls research for: HomeMatch v5.0 -- Hybrid Deterministic + AI Scoring Engine*
-*Researched: 2026-03-29*
+- `backend/app/services/deterministic_scorer.py` -- Phase 28 committed scorer (439 lines)
+- `backend/app/models/listing_profile.py` -- ListingProfile model (local, 155 lines)
+- `backend/app/services/gap_detector.py` -- Gap detector (local, 78 lines)
+- `backend/app/services/openrouter.py` -- OpenRouter client (local, 373 lines)
+- `backend/app/routers/scoring.py` -- Scoring router (committed, 179 lines)
+- `backend/app/models/scoring.py` -- ScoreResponse/ChecklistItem models (62 lines)
+- `backend/app/models/preferences.py` -- UserPreferences/DynamicField/CriterionType (220 lines)
+- `backend/app/models/listing.py` -- FlatfoxListing model (111 lines)
+- `backend/app/services/supabase.py` -- Cache read/write (157 lines)
+- `backend/app/services/claude.py` -- Claude scorer (104 lines)
+- `supabase/functions/score-proxy/index.ts` -- Edge function (157 lines)
+- `extension/src/types/scoring.ts` -- Extension TypeScript types (41 lines)
+- `extension/src/entrypoints/content/components/ScoreBadge.tsx` -- Badge component (79 lines)
+- `extension/src/entrypoints/content/App.tsx` -- Extension app (299 lines)
+- `extension/src/lib/api.ts` -- Extension API client (94 lines)
+- `web/src/components/analysis/CategoryBreakdown.tsx` -- Category UI (125 lines)
+- `web/src/components/analysis/ChecklistSection.tsx` -- Checklist UI (104 lines)
+- `web/src/app/(dashboard)/analysis/[listingId]/page.tsx` -- Analysis page (141 lines)
+- `supabase/migrations/002_profiles_schema.sql` -- analyses table schema
+- `supabase/migrations/005_listing_profiles.sql` -- listing_profiles table
+- `.planning/HANDOFF.md` -- Data quality assessment, side-by-side comparison
+- `.planning/REQUIREMENTS.md` -- v5.0 requirements (24 items)
+- `.planning/ROADMAP.md` -- Phase dependencies and ordering

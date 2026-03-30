@@ -1,85 +1,107 @@
-# Research Summary: HomeMatch v5.0 Hybrid Scoring Engine
+# Research Summary: ListingProfile + OpenRouter Integration into v5.0
 
-**Domain:** Hybrid deterministic + AI property scoring pipeline
-**Researched:** 2026-03-29
+**Domain:** Integration of pre-computed enrichment pipeline into hybrid scoring architecture
+**Researched:** 2026-03-30
 **Overall confidence:** HIGH
 
 ## Executive Summary
 
-HomeMatch v5.0 replaces the current all-Claude scoring system with a hybrid architecture where numeric scores are computed deterministically in Python and Claude handles only subjective evaluation. The current system sends every criterion to Claude in a single `messages.parse()` call that returns category scores (0-100), an overall score, and a checklist. The new system classifies each user criterion by type (price, size, distance, binary_feature, proximity_quality, subjective), computes fulfillment (0.0-1.0) deterministically for all non-subjective criteria, and calls Claude only for genuinely subjective ones (e.g., "quiet neighborhood", "good natural light", "modern kitchen").
+The integration of the ListingProfile enrichment pipeline and OpenRouter gap-fill into the existing v5.0 hybrid scoring architecture is straightforward but requires careful attention to three key decisions: (1) how pre-computed ListingProfile data feeds into the Phase 28 deterministic scorer without modifying its proven interface, (2) updating the deprecated OpenRouter model before deployment, and (3) gating the expensive Claude fallback via environment variable.
 
-The most important architectural insight from the codebase analysis is that Flatfox attribute names are English slugs ("balconygarden", "petsallowed", "lift"), NOT German strings. The frontend `FEATURE_SUGGESTIONS` already stores these exact slugs. This eliminates the need for a complex normalization layer -- binary feature matching is a simple set membership check with a small alias map for German free-text inputs.
+Two parallel code paths have converged. The committed v5.0 code (Phases 27-28) provides criterion classification and deterministic scoring against `FlatfoxListing` (live Flatfox API data). The untracked enrichment code provides `ListingProfile` (pre-computed property data with haversine-accurate amenity distances, AI-analyzed condition scores, and market context). These are complementary: FlatfoxListing provides authoritative live data (price, rooms, sqm, attributes), while ListingProfile provides enrichment data (amenity distances, condition, neighborhood) that cannot be obtained at score time without expensive research.
 
-The migration strategy is additive: new columns added to the analyses table, schema_version field in the response JSONB, frontend branches on version for backward-compatible rendering. No data migration needed. The existing proximity.py module already contains the keyword-matching and distance-computation patterns that the new deterministic scorer will reuse.
+The recommended integration pattern is an **adapter function** that converts `ListingProfile` fields to `FlatfoxListing`-compatible format, allowing all 41 deterministic scorer tests to remain green. For distance and proximity criteria, the adapter extracts pre-computed amenity data from the profile and passes it as the `actual_km` and `proximity_data` arguments the scorer already expects. When no ListingProfile exists, the system degrades gracefully to live Apify proximity data or skips criteria with missing data.
 
-The build order is driven by a clear dependency chain: data models and classifier first (everything depends on criterion_type), deterministic scorer second (pure functions, fully testable), subjective scorer third (Claude prompt refactor), hybrid orchestrator fourth (wires everything together), database migration fifth, frontend consumers last.
+The most urgent finding is that **Gemini 2.0 Flash (`google/gemini-2.0-flash-001`) is deprecated and will shut down June 1, 2026**. The model constant in `openrouter.py` must be updated to `google/gemini-2.5-flash-lite` (same pricing: $0.10/M input, $0.40/M output) before any deployment.
 
 ## Key Findings
 
-**Stack:** No new Python packages needed. The existing `anthropic` SDK, Pydantic, and Python stdlib (`math`, `re`) provide everything. Frontend needs only a new React component for fulfillment display.
+**Stack:** Zero new Python packages. One model constant update (Gemini 2.0 Flash to 2.5 Flash Lite -- same price, not deprecated). Two new env vars (`OPENROUTER_API_KEY`, `ALLOW_CLAUDE_FALLBACK`). `httpx` already installed.
 
-**Architecture:** Single Claude call for all subjective criteria (not per-criterion). Criterion type classified at profile save time via backend regex/keyword matching. Built-in preferences (budget, rooms, living_space) synthesized as virtual fulfillment results without migrating them into dynamic_fields.
+**Architecture:** Adapter pattern bridges ListingProfile to FlatfoxListing. Phase 28 scorer (439 lines, 41 tests) stays untouched. Scoring router becomes a multi-path orchestrator: cache -> deterministic -> subjective (Claude) -> gap-fill (OpenRouter) -> aggregation. ListingProfile is optional -- system degrades gracefully without it.
 
-**Critical pitfall:** The `Importance` model (per-category: location/price/size/features/condition) is being replaced by per-criterion importance on `DynamicField`, but built-in fields (budget, rooms, living_space) still need importance mapping. The hybrid scorer must synthesize importance from dealbreaker flags and the old per-category importance during the transition period.
+**Critical pitfall:** Gemini 2.0 Flash deprecation (June 1, 2026) -- must update model constant before deployment. Second pitfall: the gap detector (`gap_detector.py`) outputs `ChecklistItem` objects while the deterministic scorer outputs `FulfillmentResult` objects -- these are different models from different eras of the codebase. Phase 31 must bridge them or choose one format.
+
+**Design tension resolved:** The subjective scorer (Phase 29, Claude) and the gap-fill (OpenRouter) handle different concerns and can coexist. Subjective scorer evaluates criteria typed `criterion_type == "subjective"`. Gap-fill fills data holes where the deterministic scorer should have answered but ListingProfile data was missing. However, the v5.0 approach of skipping missing data in aggregation (HA-02) is simpler and more predictable than gap-filling. Recommend keeping OpenRouter gap-fill as optional diagnostic, not in critical scoring path.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on research, the existing phase structure (29-32) is correct with these adjustments:
 
-1. **Data Model + Classifier** - Foundation phase
-   - Addresses: CriterionType enum, DynamicField.criterion_type, classify_dynamic_fields(), updated IMPORTANCE_WEIGHT_MAP
-   - Avoids: Downstream phases depending on untyped criteria
+1. **Phase 29: Subjective Scorer (Claude Refactor)** - Unchanged scope
+   - Addresses: SS-01 through SS-04
+   - Independent of ListingProfile integration (uses same FlatfoxListing + nearby_places inputs)
+   - Can optionally include ListingProfile enrichment context (condition scores, neighborhood data) in the Claude prompt for richer subjective evaluation
+   - Summary bullets generation needed even when all criteria are deterministic (separate minimal Claude call)
 
-2. **Deterministic Scorer** - Core computation engine
-   - Addresses: Price/size/distance/binary/proximity fulfillment formulas, FulfillmentResult model, FEATURE_ALIAS_MAP
-   - Avoids: Coupling deterministic logic to Claude calls
+2. **Phase 30: Database Schema Prep + Migration Deploy** - Expanded to include migration 005/006
+   - Addresses: DB-01, DB-03, plus migrations 005 (listing_profiles table) and 006 (research_json)
+   - Apply all four migrations before any scoring code ships
+   - Set `OPENROUTER_API_KEY` and `ALLOW_CLAUDE_FALLBACK` on EC2
+   - This is the infrastructure prep phase
 
-3. **Subjective Scorer (Claude refactor)** - AI-only path
-   - Addresses: SubjectiveEvaluation model, new prompts for fulfillment-only output, score_subjective() method
-   - Avoids: Breaking existing scoring during transition (old method kept temporarily)
+3. **Phase 31: Hybrid Scorer & Router Integration** - Expanded significantly
+   - Addresses: HA-01 through HA-04, DB-02, plus:
+   - Create `profile_adapter.py` (~40 lines: ListingProfile to FlatfoxListing conversion + proximity data extraction)
+   - Wire ListingProfile lookup into scoring router
+   - Update OpenRouter model constant to `google/gemini-2.5-flash-lite`
+   - Optionally wire gap detection + OpenRouter fill for data gaps
+   - Implement weighted aggregation formula
+   - CRITICAL override logic (f=0 forces poor tier, cap at 39)
+   - ScoreResponse v2 schema
+   - `ALLOW_CLAUDE_FALLBACK` gating in router
+   - Add `openrouter_service.close()` to lifespan
 
-4. **Hybrid Scorer + Router Integration** - Orchestration
-   - Addresses: Weighted aggregation, CRITICAL override, missing data handling, ScoreResponse v2, router wiring
-   - Avoids: Partial integration (deterministic + subjective must both be ready)
-
-5. **Database Migration + Cache Versioning** - Storage layer
-   - Addresses: schema_version column, fulfillment_data column, backward-compatible cache reads
-   - Avoids: Breaking existing cached analyses
-
-6. **Frontend Consumers** - Display layer
-   - Addresses: FulfillmentBreakdown component, schema_version branching, extension type updates
-   - Avoids: Building UI before response shape is finalized
+4. **Phase 32: Frontend Consumers** - Unchanged scope
+   - Addresses: FE-01 through FE-04
+   - FulfillmentBreakdown component, checklist threshold update
+   - schema_version branching for backward compat
+   - Extension TypeScript types (additive only)
 
 **Phase ordering rationale:**
-- Phase 1 before all others: criterion_type is the foundation for routing criteria to the right scorer
-- Phase 2 before Phase 4: deterministic scorer must exist before the hybrid orchestrator can call it
-- Phase 3 before Phase 4: subjective scorer must exist before the hybrid orchestrator can call it
-- Phase 5 can run in parallel with Phase 4 (SQL migration is independent, but testing needs Phase 4 output)
-- Phase 6 is strictly last: it consumes the final v2 response shape
+- Phase 29 can run in parallel with Phase 30 (no dependency between subjective scorer and DB migrations)
+- Phase 31 depends on both 29 and 30 (needs subjective scorer + DB ready)
+- Phase 32 depends on 31 (needs v2 response shape to render)
 
 **Research flags for phases:**
-- Phase 1: Standard patterns (regex classification) -- no deeper research needed
-- Phase 2: Standard patterns (pure math functions) -- no deeper research needed
-- Phase 3: Likely needs prompt engineering iteration -- the fulfillment (0.0-1.0) output format is new for the Claude prompt and may need tuning
-- Phase 4: Standard orchestration -- no deeper research needed
-- Phase 6: May need UX research for the fulfillment visualization design
+- Phase 29: Needs careful prompt engineering -- preserving existing prompt logic (sale/rent distinction, language rules, image analysis, proximity data section) while restricting Claude to subjective-only evaluation. May need iteration.
+- Phase 31: Most complex phase. Consider splitting into 31a (router + adapter + deterministic orchestration) and 31b (aggregation + ScoreResponse v2 + cache gating) if scope is too large.
+- Phase 30: Standard deployment work, no research needed.
+- Phase 32: Standard frontend work, no research needed.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | No new packages. All computation uses existing Python stdlib + Pydantic. |
-| Features | HIGH | v5.0 scope explicitly defined in PROJECT.md. All criteria types identified from codebase. |
-| Architecture | HIGH | All design decisions grounded in direct codebase reading. Flatfox slug format confirmed from test fixtures and live constants. |
-| Pitfalls | HIGH | Key risks identified: built-in field importance mapping, backward compatibility of cached analyses, criterion_type classification accuracy. |
+| Stack additions | HIGH | All dependencies verified against `requirements.txt`. Model deprecation confirmed on OpenRouter. No new packages. |
+| Adapter pattern | HIGH | Both models' fields read line-by-line. Impedance mismatch is clear and the adapter is ~40 lines. |
+| OpenRouter integration | HIGH | Existing 372-line implementation is well-structured. Only model constant change needed. |
+| Supabase JSONB | HIGH | Migration files read. Patterns match existing codebase conventions. |
+| Gap-fill vs subjective scorer coexistence | MEDIUM | Design is logical but untested. The two systems handle different concerns but have overlapping output formats. |
+| Gemini 2.5 Flash Lite structured output | MEDIUM | OpenRouter docs confirm Gemini support generically. Existing fallback JSON parsing handles any issues. |
 
 ## Gaps to Address
 
-- **Prompt engineering for subjective fulfillment:** Claude currently returns integer scores (0-100). The new prompt asks for float fulfillment (0.0-1.0). This is a format change that needs testing to ensure Claude produces well-calibrated values. May need example-based calibration in the prompt.
-- **Condition/image-based scoring path:** Currently Claude evaluates property condition from images as a category. In v5.0, this becomes a subjective criterion. If no user has a condition-related dynamic_field, image analysis may be skipped entirely. Decide whether to always include a synthetic "Property Condition" subjective criterion when images are available.
-- **Feature alias map completeness:** The FEATURE_ALIAS_MAP for German synonyms needs empirical population. Start with the 12 features in FEATURE_SUGGESTIONS, add German translations, then expand based on actual user input patterns from Supabase profiles data.
+- Gemini 2.5 Flash Lite structured output support -- test empirically during Phase 31 implementation
+- Gap detector output format (`ChecklistItem`) vs scorer output format (`FulfillmentResult`) -- Phase 31 must decide whether to bridge, convert, or deprecate the gap detector
+- Summary bullets generation when all criteria are deterministic -- Phase 29 needs the "no subjective criteria" code path (separate minimal Claude call)
+- Pre-enriched listing coverage -- only 27 listings in zipcode 8051. Phase 31 must handle the "no ListingProfile" case gracefully
+- Amenity category mapping -- `_infer_amenity_category()` function needs empirical testing against real user DynamicField names
 
 ## Sources
 
-- Direct codebase analysis of all files listed in ARCHITECTURE.md sources section
-- PROJECT.md v5.0 milestone definition and target features
+- Direct codebase analysis of all referenced files (HIGH confidence)
+- [OpenRouter Gemini 2.0 Flash page](https://openrouter.ai/google/gemini-2.0-flash-001) -- deprecation confirmed (HIGH)
+- [OpenRouter Gemini 2.5 Flash Lite page](https://openrouter.ai/google/gemini-2.5-flash-lite) -- pricing and availability confirmed (HIGH)
+- [OpenRouter Structured Outputs docs](https://openrouter.ai/docs/guides/features/structured-outputs) -- JSON mode support (MEDIUM)
+- [Supabase JSONB docs](https://supabase.com/docs/guides/database/json) -- index and query patterns (HIGH)
+- [FastAPI Settings docs](https://fastapi.tiangolo.com/advanced/settings/) -- env var patterns (HIGH)
+- HANDOFF.md side-by-side comparison of v5.0 and v6.0 approaches
+- Phase 28 verification report (10/10 truths verified)
+- ROADMAP.md phase dependencies and success criteria
+- REQUIREMENTS.md (24 requirements: DM/DS/SS/HA/DB/FE)
+
+---
+
+*Research Summary for: HomeMatch v5.0 -- Integration of ListingProfile Enrichment + OpenRouter Gap-Fill*
+*Researched: 2026-03-30*
