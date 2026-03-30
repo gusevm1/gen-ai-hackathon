@@ -169,7 +169,11 @@ Plans:
   3. Binary feature criteria (e.g., "balcony", "lift") resolve against Flatfox attribute slugs via set-membership check, with `FEATURE_ALIAS_MAP` handling German synonym inputs; present=1.0, absent=0.0
   4. Proximity quality criteria produce fulfillment combining distance decay and rating bonus per the hybrid formula; fallback results use fallback distance
   5. Built-in preferences (budget, rooms, living_space) appear as virtual `FulfillmentResult` entries using dealbreaker flags for importance, without being migrated into `dynamic_fields`
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 28-01-PLAN.md — TDD test scaffold: failing tests for all DS-01 through DS-06 scorer functions
+- [ ] 28-02-PLAN.md — Full deterministic_scorer.py implementation: FulfillmentResult + FEATURE_ALIAS_MAP + 5 scorer functions + built-in synthesizer
 
 ### Phase 29: Subjective Scorer (Claude Enhancement)
 
