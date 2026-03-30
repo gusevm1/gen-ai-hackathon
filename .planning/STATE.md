@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Scoring Engine
 status: in-progress
-stopped_at: Completed 31-01-PLAN.md (scoring building blocks)
-last_updated: "2026-03-30T15:18:30Z"
-last_activity: 2026-03-30 — Completed Phase 31 Plan 01 (scoring building blocks)
+stopped_at: Completed 31-03-PLAN.md
+last_updated: "2026-03-30T15:22:52.639Z"
+last_activity: 2026-03-30 — Completed Phase 31 Plan 03 (schema_version cache gating)
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 15
   completed_plans: 14
-  percent: 94
+  percent: 97
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Phase 31 in progress — Hybrid Scorer & Router Integration (Plan 01 of 03 complete)
+**Current focus:** Phase 31 in progress — Hybrid Scorer & Router Integration (Plan 03 of 03 complete, awaiting Plan 02)
 
 ## Current Position
 
 Phase: 31 of 32 (Hybrid Scorer & Router Integration)
-Plan: 1 of 3 in current phase (complete)
+Plan: 3 of 3 in current phase (Plans 01 and 03 complete, Plan 02 pending)
 Status: In progress
-Last activity: 2026-03-30 — Completed Phase 31 Plan 01 (scoring building blocks)
+Last activity: 2026-03-30 — Completed Phase 31 Plan 03 (schema_version cache gating)
 
-Progress: [█████████░] 94% (phases 27-31 in progress, 33 complete out-of-band)
+Progress: [██████████] 97% (phases 27-31 in progress, 33 complete out-of-band)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 2 plans, 30: 1 plan, 31: 1 plan)
+- Total plans completed: 12 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 2 plans, 30: 1 plan, 31: 2 plans)
 - Average duration: ~5min
 - Total execution time: --
 
@@ -45,6 +45,7 @@ Progress: [█████████░] 94% (phases 27-31 in progress, 33 com
 | 29    | 02   | 4min     | 2     | 4     |
 | 30    | 01   | 5min     | 3     | 3     |
 | 31    | 01   | 2min     | 3     | 3     |
+| 31    | 03   | 1min     | 2     | 2     |
 
 ## Accumulated Context
 
@@ -79,6 +80,11 @@ Progress: [█████████░] 94% (phases 27-31 in progress, 33 com
 - hybrid_scorer: weighted aggregation (HA-01), None exclusion (HA-02), CRITICAL cap at 39 (HA-03)
 - Pre-computed amenity data always is_fallback=False in proximity_data format
 
+### Phase 31 Plan 03 Decisions
+
+- Default schema_version to 0 when missing -- treats all legacy v1 entries as stale in both cache layers
+- Both cache layers (backend Python + edge function TypeScript) use identical gating logic
+
 ### Phase Ordering
 
 - Phase 29 and 30 can run in parallel (no dependency between them)
@@ -100,6 +106,6 @@ Progress: [█████████░] 94% (phases 27-31 in progress, 33 com
 
 ## Session Continuity
 
-Last session: 2026-03-30T15:18:30Z
-Stopped at: Completed 31-01-PLAN.md (scoring building blocks)
+Last session: 2026-03-30T15:22:52.637Z
+Stopped at: Completed 31-03-PLAN.md
 Resume file: None

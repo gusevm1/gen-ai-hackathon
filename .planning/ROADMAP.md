@@ -195,7 +195,7 @@ Plans:
   3. Any CRITICAL-importance criterion with `fulfillment=0` forces `match_tier="poor"` and caps the numeric score at 39
   4. The `ScoreResponse` includes `schema_version: 2`, `criteria_results` list, no `categories` list; `overall_score`, `match_tier`, and `summary_bullets` field names are preserved; cache reads reject entries with `schema_version < 2`; edge function cache also checks `schema_version`
   5. When `ALLOW_CLAUDE_FALLBACK=false` and no ListingProfile exists, the endpoint returns `enrichment_status="unavailable"` instead of calling Claude; the OpenRouter model constant is updated to `google/gemini-2.5-flash-lite`
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 31-01-PLAN.md — ScoreResponse v2 model + CriterionResult, profile_adapter.py, hybrid_scorer.py (aggregation engine)
@@ -246,5 +246,5 @@ Plans:
 | 28. Deterministic Scorer | ✅ Complete | 2026-03-30 |
 | 29. Subjective Scorer (OpenRouter) | ✅ Complete | 2026-03-30 |
 | 30. Database & Infrastructure Prep | ✅ Complete | 2026-03-30 |
-| 31. Hybrid Scorer & Router Integration | 1/3 | In Progress|  | 32. Frontend Consumers | Not started | - |
+| 31. Hybrid Scorer & Router Integration | 2/3 | In Progress|  | 32. Frontend Consumers | Not started | - |
 | 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |

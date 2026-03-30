@@ -48,7 +48,7 @@
 ### Database & Cache
 
 - [x] **DB-01**: `schema_version` field added to the `breakdown` JSONB column in the `analyses` table; this migration deploys before any `ScoreResponse` schema changes reach production
-- [ ] **DB-02**: Cache read logic checks `schema_version`; any cached analysis with `schema_version < 2` (or missing `schema_version`) triggers a re-score instead of returning the stale cached entry; edge function cache also updated
+- [x] **DB-02**: Cache read logic checks `schema_version`; any cached analysis with `schema_version < 2` (or missing `schema_version`) triggers a re-score instead of returning the stale cached entry; edge function cache also updated
 - [x] **DB-03**: `fulfillment_data` JSONB column added to `analyses` table (additive); existing `breakdown` column and `score` column retained for v1 backward compatibility
 
 ### Frontend Consumers
@@ -106,7 +106,7 @@
 | INT-04 | Phase 31 | Pending |
 | INT-05 | Phase 31 | Pending |
 | DB-01 | Phase 30 | Complete |
-| DB-02 | Phase 31 | Pending |
+| DB-02 | Phase 31 | Complete |
 | DB-03 | Phase 30 | Complete |
 | HA-01 | Phase 31 | Complete |
 | HA-02 | Phase 31 | Complete |
