@@ -192,7 +192,12 @@ Plans:
   3. Claude's system prompt instructs it to return fulfillment values only for subjective criteria -- it never produces an `overall_score` or category-level scores
   4. The response always includes 3-5 natural-language `summary_bullets` in the user's preferred language, even when all criteria were deterministic (a separate minimal Claude call is made if needed)
   5. Sale vs rent price interpretation, language output rules, and image/proximity evaluation guidance are preserved in the updated prompt
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 29-01-PLAN.md — TDD test scaffold: failing tests for SS-01 through SS-04
+- [ ] 29-02-PLAN.md — New Pydantic models (SubjectiveCriterionResult, ClaudeSubjectiveResponse, BulletsOnlyResponse) + rewritten scoring prompts
+- [ ] 29-03-PLAN.md — Two-path ClaudeScorer.score_listing() implementation + router update
 
 ### Phase 30: Database Schema Prep
 
