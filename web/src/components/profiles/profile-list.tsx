@@ -4,10 +4,12 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ProfileCard, type ProfileData } from '@/components/profiles/profile-card'
 import { CreateProfileDialog } from '@/components/profiles/create-profile-dialog'
 import { RenameProfileDialog } from '@/components/profiles/rename-profile-dialog'
 import { DeleteProfileDialog } from '@/components/profiles/delete-profile-dialog'
+import { ProfileCreationChooser } from '@/components/profile-creation-chooser'
 import {
   createProfile,
   renameProfile,
@@ -27,6 +29,7 @@ export function ProfileList({ profiles }: ProfileListProps) {
   const [isPending, startTransition] = useTransition()
   const { language } = useLanguage()
 
+  const [chooserOpen, setChooserOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [renameTarget, setRenameTarget] = useState<ProfileData | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ProfileData | null>(null)
@@ -99,10 +102,24 @@ export function ProfileList({ profiles }: ProfileListProps) {
         <p className="text-sm text-muted-foreground">
           {t(language, 'profiles_no_profiles_hint')}
         </p>
-        <Button onClick={() => setCreateOpen(true)} size="lg">
+        <Button onClick={() => setChooserOpen(true)} size="lg">
           <Plus className="size-4" />
           {t(language, 'profiles_create_first')}
         </Button>
+        <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
+          <DialogContent className="sm:max-w-2xl">
+            <ProfileCreationChooser
+              onManualClick={() => {
+                setChooserOpen(false)
+                setCreateOpen(true)
+              }}
+              onAiClick={() => {
+                setChooserOpen(false)
+                router.push('/ai-search')
+              }}
+            />
+          </DialogContent>
+        </Dialog>
         <CreateProfileDialog
           open={createOpen}
           onOpenChange={setCreateOpen}
@@ -115,7 +132,7 @@ export function ProfileList({ profiles }: ProfileListProps) {
   return (
     <div className={isPending ? 'opacity-60 pointer-events-none' : ''}>
       <div className="mb-4 flex justify-end">
-        <Button onClick={() => setCreateOpen(true)}>
+        <Button onClick={() => setChooserOpen(true)}>
           <Plus className="size-4" />
           {t(language, 'profiles_new')}
         </Button>
@@ -135,6 +152,21 @@ export function ProfileList({ profiles }: ProfileListProps) {
           />
         ))}
       </div>
+
+      <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <ProfileCreationChooser
+            onManualClick={() => {
+              setChooserOpen(false)
+              setCreateOpen(true)
+            }}
+            onAiClick={() => {
+              setChooserOpen(false)
+              router.push('/ai-search')
+            }}
+          />
+        </DialogContent>
+      </Dialog>
 
       <CreateProfileDialog
         open={createOpen}
