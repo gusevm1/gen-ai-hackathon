@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Scoring Engine
 status: executing
-stopped_at: Roadmap adjusted for phases 29-32 (OpenRouter + ListingProfile integration)
+stopped_at: Completed 29-01-PLAN.md (subjective models and prompts)
 last_updated: "2026-03-30"
 last_activity: 2026-03-30
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
-  percent: 33
+  total_plans: 9
+  completed_plans: 8
+  percent: 38
 ---
 
 # Project State
@@ -21,23 +21,27 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Phase 29 — Subjective Scorer (OpenRouter) [ready to plan]
+**Current focus:** Phase 29 — Subjective Scorer (OpenRouter) [executing]
 
 ## Current Position
 
 Phase: 29 of 32 (Subjective Scorer — OpenRouter)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-30 — Roadmap adjusted, phases 27-28 marked complete, 29-32 updated
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-03-30 — Completed Plan 01 (subjective models & prompts)
 
-Progress: [###-------] 33% (phases 27-28 complete, 33 complete out-of-band)
+Progress: [####------] 38% (phases 27-28 complete, 33 complete out-of-band, 29 plan 1/2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7 (27: 3 plans, 28: 2 plans, 33: 2 plans)
+- Total plans completed: 8 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 1 plan)
 - Average duration: --
 - Total execution time: --
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 29    | 01   | 5min     | 2     | 4     |
 
 ## Accumulated Context
 
@@ -56,6 +60,9 @@ Progress: [###-------] 33% (phases 27-28 complete, 33 complete out-of-band)
 - ListingProfile lookup + profile_adapter.py bridges to FlatfoxListing format (Phase 28 scorer unmodified)
 - OpenRouter model constant: google/gemini-2.5-flash-lite (Gemini 2.0 Flash deprecated June 2026)
 - Edge function cache must also check schema_version (pitfall from research)
+- Named model SubjectiveResponse (not ClaudeSubjectiveResponse) since provider is OpenRouter
+- JSON schema embedded in system prompt for OpenRouter (no auto-schema injection like Anthropic SDK)
+- Bullets-only prompt pattern for cases with no subjective criteria
 
 ### Phase Ordering
 
@@ -71,5 +78,5 @@ Progress: [###-------] 33% (phases 27-28 complete, 33 complete out-of-band)
 ## Session Continuity
 
 Last session: 2026-03-30
-Stopped at: Roadmap adjusted for v5.0 phases 29-32
+Stopped at: Completed 29-01-PLAN.md (subjective models & prompts)
 Resume file: None

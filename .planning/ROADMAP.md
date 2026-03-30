@@ -163,7 +163,7 @@ Plans:
   2. All subjective-type criteria are batched into a single OpenRouter call; model is configurable via `SUBJECTIVE_MODEL` env var (default: `google/gemini-2.5-flash-lite`); when zero subjective criteria exist, no call is made
   3. The prompt instructs the model to return fulfillment in 0.1 increments per criterion with reasoning; the model never produces an `overall_score` or category-level scores
   4. 3-5 natural-language `summary_bullets` in the user's preferred language are generated in the same OpenRouter call alongside subjective evaluation -- no separate call needed
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 29-01-PLAN.md — Pydantic models (SubjectiveCriterionResult, ClaudeSubjectiveResponse, BulletsOnlyResponse) + system prompt rewrite
@@ -236,8 +236,7 @@ Plans:
 |-------|--------|-----------|
 | 27. Data Model & Criterion Classifier | ✅ Complete | 2026-03-29 |
 | 28. Deterministic Scorer | ✅ Complete | 2026-03-30 |
-| 29. Subjective Scorer (OpenRouter) | Not started | - |
-| 30. Database & Infrastructure Prep | Not started | - |
+| 29. Subjective Scorer (OpenRouter) | 1/2 | In Progress|  | 30. Database & Infrastructure Prep | Not started | - |
 | 31. Hybrid Scorer & Router Integration | Not started | - |
 | 32. Frontend Consumers | Not started | - |
 | 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |

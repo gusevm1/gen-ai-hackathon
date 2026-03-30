@@ -25,9 +25,9 @@
 
 ### Subjective Scorer (OpenRouter)
 
-- [ ] **SS-01**: `SubjectiveCriterionResult` Pydantic model with `criterion: str`, `fulfillment: float` (0.0–1.0), and `reasoning: str`; `SubjectiveResponse` wraps list of results + `summary_bullets`
+- [x] **SS-01**: `SubjectiveCriterionResult` Pydantic model with `criterion: str`, `fulfillment: float` (0.0–1.0), and `reasoning: str`; `SubjectiveResponse` wraps list of results + `summary_bullets`
 - [ ] **SS-02**: All `subjective`-type criteria batched into a single OpenRouter call; model configurable via `SUBJECTIVE_MODEL` env var (default: `google/gemini-2.5-flash-lite`); call skipped entirely if zero subjective criteria exist
-- [ ] **SS-03**: Prompt instructs model to return `fulfillment ∈ {0.0, 0.1, ..., 1.0}` per criterion with reasoning; model must never produce an `overall_score` or category-level scores
+- [x] **SS-03**: Prompt instructs model to return `fulfillment ∈ {0.0, 0.1, ..., 1.0}` per criterion with reasoning; model must never produce an `overall_score` or category-level scores
 - [ ] **SS-04**: 3–5 natural-language `summary_bullets` in the user's preferred language included in the same OpenRouter call; no separate call needed — bullets generated alongside subjective evaluation
 
 ### Integration & Infrastructure
@@ -96,9 +96,9 @@
 | DS-04 | Phase 28 | Complete |
 | DS-05 | Phase 28 | Complete |
 | DS-06 | Phase 28 | Complete |
-| SS-01 | Phase 29 | Pending |
+| SS-01 | Phase 29 | Complete |
 | SS-02 | Phase 29 | Pending |
-| SS-03 | Phase 29 | Pending |
+| SS-03 | Phase 29 | Complete |
 | SS-04 | Phase 29 | Pending |
 | INT-01 | Phase 30 | Pending |
 | INT-02 | Phase 30 | Pending |
