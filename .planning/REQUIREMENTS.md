@@ -16,12 +16,12 @@
 
 ### Deterministic Scorer
 
-- [ ] **DS-01**: System computes price fulfillment deterministically: `f=1.0` if `price ≤ budget`, else `f=exp(-2.5 × (price-budget) / budget)`; None/missing price guarded (skip criterion)
-- [ ] **DS-02**: System computes distance fulfillment deterministically: `f=1.0` if `actual ≤ target`, else `f=exp(-1.0 × (actual-target) / target)`; None/missing distance guarded (skip criterion)
-- [ ] **DS-03**: System computes size fulfillment deterministically: `f=min(1.0, (actual/target)^1.5)`; target=0 or None guard returns `f=1.0` or skip
-- [ ] **DS-04**: System computes binary feature fulfillment via slug set-membership check against Flatfox attributes, with a `FEATURE_ALIAS_MAP` for German synonym inputs; `f=1.0` if present, `f=0.0` if absent
-- [ ] **DS-05**: System computes proximity quality fulfillment via `f=min(1.0, exp(-1×Δ/r) + min(0.2, (rating-3)/10))`; fallback results (outside requested radius) use fallback distance in formula
-- [ ] **DS-06**: Built-in preference fields (budget, rooms, living_space) are synthesized as virtual `FulfillmentResult` entries using dealbreaker flags for importance mapping, without migrating them into `dynamic_fields`
+- [x] **DS-01**: System computes price fulfillment deterministically: `f=1.0` if `price ≤ budget`, else `f=exp(-2.5 × (price-budget) / budget)`; None/missing price guarded (skip criterion)
+- [x] **DS-02**: System computes distance fulfillment deterministically: `f=1.0` if `actual ≤ target`, else `f=exp(-1.0 × (actual-target) / target)`; None/missing distance guarded (skip criterion)
+- [x] **DS-03**: System computes size fulfillment deterministically: `f=min(1.0, (actual/target)^1.5)`; target=0 or None guard returns `f=1.0` or skip
+- [x] **DS-04**: System computes binary feature fulfillment via slug set-membership check against Flatfox attributes, with a `FEATURE_ALIAS_MAP` for German synonym inputs; `f=1.0` if present, `f=0.0` if absent
+- [x] **DS-05**: System computes proximity quality fulfillment via `f=min(1.0, exp(-1×Δ/r) + min(0.2, (rating-3)/10))`; fallback results (outside requested radius) use fallback distance in formula
+- [x] **DS-06**: Built-in preference fields (budget, rooms, living_space) are synthesized as virtual `FulfillmentResult` entries using dealbreaker flags for importance mapping, without migrating them into `dynamic_fields`
 
 ### Subjective Scorer (Claude)
 

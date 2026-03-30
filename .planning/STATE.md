@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 ## Current Position
 
 Phase: 28 of 32 (Deterministic Scorer)
-Plan: 01 COMPLETE (28-01: TDD scaffold — 6 test classes, 41 test methods for DS-01 through DS-06)
+Plan: 02 COMPLETE (28-02: deterministic_scorer.py — all DS-01 through DS-06 implemented, 41 tests GREEN)
 Status: In Progress
-Last activity: 2026-03-30 -- 28-01 complete: test_deterministic_scorer.py scaffold committed (6 classes, 41 methods)
+Last activity: 2026-03-30 -- 28-02 complete: deterministic_scorer.py fully implemented, 41 tests passing
 
 Progress: [██████████] 95%
 
@@ -93,6 +93,13 @@ Progress: [██████████] 95%
 - proximity_data passed as dict keyed by field_name to score_proximity_quality (matches Phase 31 aggregator contract)
 - criterion_name field on FulfillmentResult used as lookup key for budget/rooms/living_space built-in entries
 
+### Phase 28 Decisions (28-02)
+
+- score_size(field, listing) uses field.value as target_min only; symmetric min+max handled in synthesize_builtin_results via UserPreferences
+- None-as-skip sentinel for all scorer functions: missing data returns None (never 0.0), skipped in Phase 31 weighted aggregation
+- FEATURE_ALIAS_MAP: unknown terms (not in alias map AND not a known slug) return None; known terms with no match return 0.0
+- All 6 DS requirements (DS-01 through DS-06) implemented and verified with 41 passing tests
+
 ### Blockers/Concerns
 
 - None
@@ -100,5 +107,5 @@ Progress: [██████████] 95%
 ## Session Continuity
 
 Last session: 2026-03-30T06:17:21.253Z
-Stopped at: Completed 28-01: Deterministic scorer TDD scaffold
-Resume file: None
+Stopped at: Completed 28-02: deterministic_scorer.py implementation, all 41 tests GREEN
+Resume file: .planning/phases/28-deterministic-scorer/28-02-SUMMARY.md
