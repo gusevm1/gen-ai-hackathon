@@ -5,6 +5,7 @@ export const LANG_COOKIE = 'homematch_lang'
 export const translations = {
   en: {
     // Navigation
+    nav_home: 'Home',
     nav_ai_search: 'AI-Powered Search',
     nav_profiles: 'Profiles',
     nav_analyses: 'Analyses',
@@ -87,6 +88,14 @@ export const translations = {
     // Section Credits
     landing_credits_label: 'A project from',
 
+
+    // Dashboard home
+    dashboard_welcome: 'Welcome to HomeMatch',
+    dashboard_subtitle: "Let's create your profile",
+    dashboard_manual_title: 'Manual profile creation',
+    dashboard_manual_desc: 'Prefer full control? Fill out a straightforward form and create your profile manually.',
+    dashboard_ai_title: 'AI-guided profile creation',
+    dashboard_ai_desc: "Tell us exactly what you're looking for and let our AI build your profile automatically.",
 
     // Profiles page
     profiles_title: 'Profiles',
@@ -230,6 +239,7 @@ export const translations = {
   },
   de: {
     // Navigation
+    nav_home: 'Startseite',
     nav_ai_search: 'KI-gestützte Suche',
     nav_profiles: 'Profile',
     nav_analyses: 'Analysen',
@@ -311,6 +321,14 @@ export const translations = {
 
     // Section Credits
     landing_credits_label: 'A project from',
+
+// Dashboard home
+    dashboard_welcome: 'Willkommen bei HomeMatch',
+    dashboard_subtitle: 'Erstellen Sie Ihr Profil',
+    dashboard_manual_title: 'Manuelle Profilerstellung',
+    dashboard_manual_desc: 'Volle Kontrolle gewuenscht? Fuellen Sie ein einfaches Formular aus und erstellen Sie Ihr Profil manuell.',
+    dashboard_ai_title: 'KI-gesteuerte Profilerstellung',
+    dashboard_ai_desc: 'Sagen Sie uns genau, wonach Sie suchen, und lassen Sie unsere KI Ihr Profil automatisch erstellen.',
 
 // Profiles page
     profiles_title: 'Profile',

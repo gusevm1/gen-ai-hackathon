@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { User, BarChart3, Settings, Sparkles, Download } from "lucide-react"
+import { User, BarChart3, Settings, Sparkles, Download, Home } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/lib/language-context"
 import { t } from "@/lib/translations"
@@ -12,6 +12,7 @@ export function TopNavbar() {
   const { language } = useLanguage()
 
   const navItems = [
+    { titleKey: "nav_home" as const, url: "/dashboard", icon: Home },
     { titleKey: "nav_ai_search" as const, url: "/ai-search", icon: Sparkles, accent: true },
     { titleKey: "nav_profiles" as const, url: "/profiles", icon: User },
     { titleKey: "nav_analyses" as const, url: "/analyses", icon: BarChart3 },
@@ -22,7 +23,7 @@ export function TopNavbar() {
   return (
     <nav className="flex items-center gap-1">
       {navItems.map((item) => {
-        const isActive = pathname.startsWith(item.url)
+        const isActive = item.url === "/dashboard" ? pathname === item.url : pathname.startsWith(item.url)
 
         return (
           <Link
