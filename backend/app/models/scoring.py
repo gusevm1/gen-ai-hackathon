@@ -1,15 +1,22 @@
 """Pydantic models for the scoring pipeline response.
 
-These models define the structured output format for Claude's property
-evaluation. Used with AsyncAnthropic messages.parse() to guarantee
-valid responses.
+These models define the structured output format for property evaluation.
 
-Covers: EVAL-02 (0-100 score + category breakdown), EVAL-03 (reasoning bullets).
+Legacy models (CategoryScore, ChecklistItem, ScoreResponse, ScoreRequest)
+are kept for v1 cache reads.
+
+New subjective models (SubjectiveCriterionResult, SubjectiveResponse,
+BulletsOnlyResponse) are used with OpenRouter for per-criterion fulfillment
+evaluation. Validated via model_validate_json() after receiving raw JSON
+from OpenRouter.
+
+Covers: EVAL-02, EVAL-03 (legacy), SS-01 (SubjectiveResponse).
 """
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
 
 
 class CategoryScore(BaseModel):
@@ -59,3 +66,44 @@ class ScoreRequest(BaseModel):
     profile_id: str = Field(description="Active profile UUID")
     preferences: dict = Field(description="Profile preferences JSONB")
     force_rescore: bool = Field(default=False, description="If True, bypass cached score and recompute")
+
+
+# ---------------------------------------------------------------------------
+# Subjective scoring models (v2 — OpenRouter per-criterion evaluation)
+# ---------------------------------------------------------------------------
+
+
+class SubjectiveCriterionResult(BaseModel):
+    """Result from LLM evaluation of a single subjective criterion."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    criterion: str
+    fulfillment: float = Field(ge=0.0, le=1.0)
+    reasoning: str
+
+
+class SubjectiveResponse(BaseModel):
+    """Structured output from the OpenRouter subjective scoring call.
+
+    Used for Pydantic validation after parsing raw JSON from OpenRouter.
+    The JSON schema for this model is embedded in the system prompt
+    so the LLM knows what shape to return.
+    """
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    criteria: list[SubjectiveCriterionResult]
+    summary_bullets: list[str] = Field(min_length=3, max_length=5)
+
+
+class BulletsOnlyResponse(BaseModel):
+    """Structured output from the minimal bullets-only call.
+
+    Used when no subjective criteria exist but summary bullets
+    are still needed.
+    """
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    summary_bullets: list[str] = Field(min_length=3, max_length=5)
