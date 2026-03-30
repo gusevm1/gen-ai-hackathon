@@ -35,21 +35,20 @@ class TestBuildSystemPrompt:
         prompt = build_system_prompt()
         assert "German" in prompt
 
-    def test_system_prompt_includes_dealbreaker_rules(self):
-        """System prompt contains DEALBREAKER RULES section with score-0 instructions."""
+    def test_system_prompt_no_dealbreaker_rules(self):
+        """System prompt no longer contains DEALBREAKER RULES (moved to deterministic scorer)."""
         from app.prompts.scoring import build_system_prompt
 
         prompt = build_system_prompt("de")
-        assert "DEALBREAKER" in prompt
-        assert "score" in prompt.lower() and "0" in prompt
+        assert "DEALBREAKER" not in prompt
 
-    def test_system_prompt_includes_importance_levels(self):
-        """System prompt contains IMPORTANCE LEVELS section with weight mapping."""
+    def test_system_prompt_no_importance_levels(self):
+        """System prompt no longer contains IMPORTANCE LEVELS weight mapping (moved to deterministic scorer)."""
         from app.prompts.scoring import build_system_prompt
 
         prompt = build_system_prompt("de")
-        assert "IMPORTANCE LEVELS" in prompt
-        assert "critical=90" in prompt
+        assert "IMPORTANCE LEVELS" not in prompt
+        assert "critical=90" not in prompt
 
 
 class TestBuildUserPrompt:
@@ -390,12 +389,12 @@ class TestDynamicFieldsPrompt:
         prompt = build_user_prompt(listing, prefs)
         assert "Custom Criteria" not in prompt
 
-    def test_system_prompt_references_custom_criterion(self):
-        """System prompt references 'custom criterion' instead of 'soft criterion'."""
+    def test_system_prompt_references_subjective_criteria(self):
+        """System prompt references 'subjective criteria' for per-criterion evaluation."""
         from app.prompts.scoring import build_system_prompt
 
         prompt = build_system_prompt("de")
-        assert "custom criterion" in prompt or "custom criteria" in prompt
+        assert "subjective criteria" in prompt
 
     def test_prompt_no_soft_criteria_line_when_dynamic_fields_exist(self, listing, prefs_with_dynamic_fields):
         """Prompt no longer contains 'Soft criteria:' line when dynamic fields exist."""

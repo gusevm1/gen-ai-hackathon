@@ -155,3 +155,170 @@ class TestSubjectiveModels:
             {"summaryBullets": ["a", "b", "c"]}
         )
         assert resp.summary_bullets == ["a", "b", "c"]
+
+
+class TestPrompts:
+    """Tests for build_system_prompt and build_bullets_system_prompt functions."""
+
+    # --- build_system_prompt: preserved rules ---
+
+    def test_system_prompt_contains_sale_rule(self):
+        """build_system_prompt contains sale/rent price evaluation rule."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        prompt_lower = prompt.lower()
+        assert "sale" in prompt_lower and "purchase price" in prompt_lower
+
+    def test_system_prompt_contains_rent_rule(self):
+        """build_system_prompt contains rent rule."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        prompt_lower = prompt.lower()
+        assert "rent" in prompt_lower and "monthly rent" in prompt_lower
+
+    def test_system_prompt_contains_language_rule(self):
+        """build_system_prompt contains language rule with German."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        assert "German (Deutsch)" in prompt or "preferred language" in prompt
+
+    def test_system_prompt_contains_image_analysis(self):
+        """build_system_prompt contains image analysis guidance."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        prompt_lower = prompt.lower()
+        assert (
+            "interior condition" in prompt_lower
+            or "natural light" in prompt_lower
+            or "photos" in prompt_lower
+        )
+
+    def test_system_prompt_contains_proximity_rule(self):
+        """build_system_prompt contains proximity evaluation rule."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        assert "Nearby Places Data (Verified)" in prompt
+
+    # --- build_system_prompt: removed content ---
+
+    def test_system_prompt_no_overall_score(self):
+        """build_system_prompt does NOT contain overall_score."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        prompt_lower = prompt.lower()
+        assert "overall_score" not in prompt_lower
+        assert "overall score" not in prompt_lower
+
+    def test_system_prompt_no_category_score(self):
+        """build_system_prompt does NOT instruct category scoring."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        prompt_lower = prompt.lower()
+        # Should not have "category" followed closely by "score" in scoring context
+        assert "category score" not in prompt_lower
+        assert "category-level score" not in prompt_lower
+
+    # --- build_system_prompt: new subjective instructions ---
+
+    def test_system_prompt_contains_fulfillment(self):
+        """build_system_prompt instructs per-criterion fulfillment."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        assert "fulfillment" in prompt.lower()
+
+    def test_system_prompt_contains_scale(self):
+        """build_system_prompt contains 0.0 and 1.0 fulfillment scale."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        assert "0.0" in prompt
+        assert "1.0" in prompt
+
+    def test_system_prompt_contains_json_instruction(self):
+        """build_system_prompt contains explicit JSON output format instruction."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        assert "JSON" in prompt
+
+    def test_system_prompt_contains_summary_bullets_field(self):
+        """build_system_prompt contains summary_bullets field name in JSON schema."""
+        from app.prompts.scoring import build_system_prompt
+
+        prompt = build_system_prompt("de")
+        assert "summary_bullets" in prompt
+
+    # --- build_bullets_system_prompt ---
+
+    def test_bullets_prompt_contains_language_rule(self):
+        """build_bullets_system_prompt contains language rule."""
+        from app.prompts.scoring import build_bullets_system_prompt
+
+        prompt = build_bullets_system_prompt("de")
+        assert "German (Deutsch)" in prompt
+
+    def test_bullets_prompt_no_fulfillment(self):
+        """build_bullets_system_prompt does NOT contain fulfillment or criteria."""
+        from app.prompts.scoring import build_bullets_system_prompt
+
+        prompt = build_bullets_system_prompt("de")
+        prompt_lower = prompt.lower()
+        assert "fulfillment" not in prompt_lower
+        assert "criteria" not in prompt_lower
+
+    def test_bullets_prompt_contains_bullet_instructions(self):
+        """build_bullets_system_prompt contains bullet generation instructions."""
+        from app.prompts.scoring import build_bullets_system_prompt
+
+        prompt = build_bullets_system_prompt("de")
+        prompt_lower = prompt.lower()
+        assert "bullet" in prompt_lower or "summary" in prompt_lower
+
+    def test_bullets_prompt_contains_json_instruction(self):
+        """build_bullets_system_prompt contains explicit JSON output format instruction."""
+        from app.prompts.scoring import build_bullets_system_prompt
+
+        prompt = build_bullets_system_prompt("de")
+        assert "JSON" in prompt
+
+    # --- build_user_prompt closing instruction ---
+
+    def test_user_prompt_no_5_categories(self):
+        """build_user_prompt closing instruction no longer mentions 5 categories."""
+        from app.models.listing import FlatfoxListing
+        from app.models.preferences import UserPreferences
+        from app.prompts.scoring import build_user_prompt
+
+        listing = FlatfoxListing(
+            pk=1,
+            slug="test",
+            url="/en/flat/test/1/",
+            short_url="https://flatfox.ch/en/flat/1/",
+            status="act",
+            offer_type="RENT",
+            object_category="APARTMENT",
+            object_type="APARTMENT",
+        )
+        prefs = UserPreferences(
+            location="Zurich",
+            offer_type="RENT",
+            object_category="APARTMENT",
+            features=[],
+            importance={
+                "location": "medium",
+                "price": "medium",
+                "size": "medium",
+                "features": "medium",
+                "condition": "medium",
+            },
+        )
+        prompt = build_user_prompt(listing, prefs)
+        assert "Score each of the 5 categories" not in prompt
