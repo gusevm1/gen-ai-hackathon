@@ -198,9 +198,9 @@ Plans:
 **Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 31-01-PLAN.md — ScoreResponse v2 model + CriterionResult, profile_adapter.py, hybrid_scorer.py (aggregation engine)
-- [ ] 31-02-PLAN.md — Scoring router rewrite + ALLOW_CLAUDE_FALLBACK gating + OpenRouter model constant update
-- [ ] 31-03-PLAN.md — Cache version gating in backend get_analysis + edge function score-proxy + deploy
+- [x] 31-01-PLAN.md — ScoreResponse v2 model + CriterionResult, profile_adapter.py, hybrid_scorer.py (aggregation engine)
+- [x] 31-02-PLAN.md — Scoring router rewrite + ALLOW_CLAUDE_FALLBACK gating + OpenRouter model constant update
+- [x] 31-03-PLAN.md — Cache version gating in backend get_analysis + edge function score-proxy + deploy
 
 ### Phase 32: Frontend Consumers
 
@@ -213,7 +213,11 @@ Plans:
   3. The Chrome extension TypeScript types include the v2 `ScoreResponse` shape; existing field names (`overall_score`, `match_tier`, `summary_bullets`) work without extension changes
   4. The analysis page branches on `schema_version`: v1 cached analyses render the legacy category breakdown, v2 responses render the new per-criterion fulfillment view
   5. The extension renders a grey "beta" badge for listings with `enrichment_status="unavailable"`, indicating scoring is not yet available for this listing's area
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 32-01-PLAN.md — Web app FulfillmentBreakdown component, fulfillment utilities, analysis page schema_version branching
+- [ ] 32-02-PLAN.md — Extension v2 ScoreResponse types, grey beta badge for unavailable enrichment
 
 ### Phase 33: Dashboard Home, Nav Polish, Profile Creation Flow, and Analyses Titles Fix
 
@@ -246,5 +250,6 @@ Plans:
 | 28. Deterministic Scorer | ✅ Complete | 2026-03-30 |
 | 29. Subjective Scorer (OpenRouter) | ✅ Complete | 2026-03-30 |
 | 30. Database & Infrastructure Prep | ✅ Complete | 2026-03-30 |
-| 31. Hybrid Scorer & Router Integration | 3/3 | Complete    | 2026-03-30 | 32. Frontend Consumers | Not started | - |
+| 31. Hybrid Scorer & Router Integration | ✅ Complete | 2026-03-30 |
+| 32. Frontend Consumers | Not started | - |
 | 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |
