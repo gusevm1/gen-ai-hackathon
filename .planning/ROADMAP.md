@@ -182,7 +182,7 @@ Plans:
 **Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 30-01-PLAN.md — Create migration 007 (fulfillment_data), apply migrations 005-007 to production, set EC2 env vars
+- [x] 30-01-PLAN.md — Create migration 007 (fulfillment_data), apply migrations 005-007 to production, set EC2 env vars
 
 ### Phase 31: Hybrid Scorer & Router Integration
 
@@ -195,7 +195,12 @@ Plans:
   3. Any CRITICAL-importance criterion with `fulfillment=0` forces `match_tier="poor"` and caps the numeric score at 39
   4. The `ScoreResponse` includes `schema_version: 2`, `criteria_results` list, no `categories` list; `overall_score`, `match_tier`, and `summary_bullets` field names are preserved; cache reads reject entries with `schema_version < 2`; edge function cache also checks `schema_version`
   5. When `ALLOW_CLAUDE_FALLBACK=false` and no ListingProfile exists, the endpoint returns `enrichment_status="unavailable"` instead of calling Claude; the OpenRouter model constant is updated to `google/gemini-2.5-flash-lite`
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 31-01-PLAN.md — ScoreResponse v2 model + CriterionResult, profile_adapter.py, hybrid_scorer.py (aggregation engine)
+- [ ] 31-02-PLAN.md — Scoring router rewrite + ALLOW_CLAUDE_FALLBACK gating + OpenRouter model constant update
+- [ ] 31-03-PLAN.md — Cache version gating in backend get_analysis + edge function score-proxy + deploy
 
 ### Phase 32: Frontend Consumers
 
@@ -240,6 +245,7 @@ Plans:
 | 27. Data Model & Criterion Classifier | ✅ Complete | 2026-03-29 |
 | 28. Deterministic Scorer | ✅ Complete | 2026-03-30 |
 | 29. Subjective Scorer (OpenRouter) | ✅ Complete | 2026-03-30 |
-| 30. Database & Infrastructure Prep | 1/1 | Complete    | 2026-03-30 | 31. Hybrid Scorer & Router Integration | Not started | - |
+| 30. Database & Infrastructure Prep | ✅ Complete | 2026-03-30 |
+| 31. Hybrid Scorer & Router Integration | Not started | - |
 | 32. Frontend Consumers | Not started | - |
 | 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |
