@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Scoring Engine
-status: completed
-stopped_at: Completed 31-02-PLAN.md (all Phase 31 plans complete)
-last_updated: "2026-03-30T15:29:20.988Z"
-last_activity: 2026-03-30 — Completed Phase 31 Plan 02 (scoring router + OpenRouter model)
+status: in-progress
+stopped_at: Completed 32-02-PLAN.md
+last_updated: "2026-03-30T15:55:00.000Z"
+last_activity: 2026-03-30 — Completed Phase 32 Plan 02 (extension v2 types + grey beta badge)
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 15
-  completed_plans: 15
+  total_plans: 17
+  completed_plans: 16
   percent: 97
 ---
 
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Phase 31 complete — Hybrid Scorer & Router Integration (all 3 plans complete)
+**Current focus:** Phase 32 in progress — Frontend Consumers (extension v2 types + grey beta badge)
 
 ## Current Position
 
-Phase: 31 of 32 (Hybrid Scorer & Router Integration)
-Plan: 3 of 3 in current phase (all complete)
-Status: Phase 31 complete
-Last activity: 2026-03-30 — Completed Phase 31 Plan 02 (scoring router + OpenRouter model)
+Phase: 32 of 32 (Frontend Consumers)
+Plan: 2 of 2 in current phase
+Status: Phase 32 plan 02 complete
+Last activity: 2026-03-30 — Completed Phase 32 Plan 02 (extension v2 types + grey beta badge)
 
-Progress: [██████████] 97% (phases 27-31 in progress, 33 complete out-of-band)
+Progress: [██████████] 97% (phases 27-32 in progress, 33 complete out-of-band)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 2 plans, 30: 1 plan, 31: 3 plans)
+- Total plans completed: 14 (27: 3 plans, 28: 2 plans, 33: 2 plans, 29: 2 plans, 30: 1 plan, 31: 3 plans, 32: 1 plan)
 - Average duration: ~5min
 - Total execution time: --
 
@@ -47,6 +47,7 @@ Progress: [██████████] 97% (phases 27-31 in progress, 33 com
 | 31    | 01   | 2min     | 3     | 3     |
 | 31    | 02   | 2min     | 2     | 2     |
 | 31    | 03   | 1min     | 2     | 2     |
+| 32    | 02   | 3min     | 2     | 4     |
 
 ## Accumulated Context
 
@@ -94,6 +95,13 @@ Progress: [██████████] 97% (phases 27-31 in progress, 33 com
 - Default schema_version to 0 when missing -- treats all legacy v1 entries as stale in both cache layers
 - Both cache layers (backend Python + edge function TypeScript) use identical gating logic
 
+### Phase 32 Plan 02 Decisions
+
+- All v2 fields optional on ScoreResponse to preserve v1 backward compatibility with cached responses
+- Grey beta badge uses early-return before tierColor assignment for enrichment_status=unavailable
+- SummaryPanel unavailable state still renders summary_bullets under "What we know" header with grey dots
+- Used snake_case field names in TypeScript matching existing extension conventions
+
 ### Phase Ordering
 
 - Phase 29 and 30 can run in parallel (no dependency between them)
@@ -115,6 +123,6 @@ Progress: [██████████] 97% (phases 27-31 in progress, 33 com
 
 ## Session Continuity
 
-Last session: 2026-03-30T15:23:18Z
-Stopped at: Completed 31-02-PLAN.md (all Phase 31 plans complete)
+Last session: 2026-03-30T15:51:06Z
+Stopped at: Completed 32-02-PLAN.md
 Resume file: None

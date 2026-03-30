@@ -213,7 +213,7 @@ Plans:
   3. The Chrome extension TypeScript types include the v2 `ScoreResponse` shape; existing field names (`overall_score`, `match_tier`, `summary_bullets`) work without extension changes
   4. The analysis page branches on `schema_version`: v1 cached analyses render the legacy category breakdown, v2 responses render the new per-criterion fulfillment view
   5. The extension renders a grey "beta" badge for listings with `enrichment_status="unavailable"`, indicating scoring is not yet available for this listing's area
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 32-01-PLAN.md — Web app FulfillmentBreakdown component, fulfillment utilities, analysis page schema_version branching
@@ -251,5 +251,4 @@ Plans:
 | 29. Subjective Scorer (OpenRouter) | ✅ Complete | 2026-03-30 |
 | 30. Database & Infrastructure Prep | ✅ Complete | 2026-03-30 |
 | 31. Hybrid Scorer & Router Integration | ✅ Complete | 2026-03-30 |
-| 32. Frontend Consumers | Not started | - |
-| 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |
+| 32. Frontend Consumers | 1/2 | In Progress|  | 33. Dashboard Home & Nav Polish | ✅ Complete | 2026-03-30 |

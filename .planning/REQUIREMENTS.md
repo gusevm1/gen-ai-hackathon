@@ -55,9 +55,9 @@
 
 - [ ] **FE-01**: New `FulfillmentBreakdown` component renders on the analysis page, showing per-criterion name, fulfillment score, weight, and reasoning for each criterion in `criteria_results`
 - [ ] **FE-02**: `ChecklistSection` updated to derive met/partial/not-met display from fulfillment float thresholds: met (≥0.7), partial (0.3–0.69), not-met (<0.3)
-- [ ] **FE-03**: Chrome extension TypeScript types updated to reflect new `ScoreResponse` v2 shape; changes are additive only — `overall_score`, `match_tier`, and `summary_bullets` field names unchanged
+- [x] **FE-03**: Chrome extension TypeScript types updated to reflect new `ScoreResponse` v2 shape; changes are additive only — `overall_score`, `match_tier`, and `summary_bullets` field names unchanged
 - [ ] **FE-04**: Frontend analysis page branches on `schema_version`: renders legacy category breakdown for v1 cached analyses and new per-criterion fulfillment breakdown for v2 responses
-- [ ] **FE-05**: Extension renders grey "beta" badge for listings with `enrichment_status="unavailable"`, indicating scoring is not yet available for this area
+- [x] **FE-05**: Extension renders grey "beta" badge for listings with `enrichment_status="unavailable"`, indicating scoring is not yet available for this area
 
 ---
 
@@ -114,9 +114,9 @@
 | HA-04 | Phase 31 | Complete |
 | FE-01 | Phase 32 | Pending |
 | FE-02 | Phase 32 | Pending |
-| FE-03 | Phase 32 | Pending |
+| FE-03 | Phase 32 | Complete |
 | FE-04 | Phase 32 | Pending |
-| FE-05 | Phase 32 | Pending |
+| FE-05 | Phase 32 | Complete |
 
 **Coverage:**
 - v5.0 requirements: 30 total
