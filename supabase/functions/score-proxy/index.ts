@@ -101,13 +101,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     if (cached && !cached.stale) {
-      return new Response(
-        JSON.stringify(cached.breakdown),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json", "X-HomeMatch-Cache": "hit" },
-        },
-      );
+      // DB-02: Reject stale v1 cache entries -- require schema_version >= 2
+      const schemaVersion = cached.breakdown?.schema_version ?? 0;
+      if (schemaVersion >= 2) {
+        return new Response(
+          JSON.stringify(cached.breakdown),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json", "X-HomeMatch-Cache": "hit" },
+          },
+        );
+      }
+      // v1 entry found but schema too old -- fall through to backend for re-scoring
     }
 
     // Track if the miss was caused by a stale row (vs no row at all)
