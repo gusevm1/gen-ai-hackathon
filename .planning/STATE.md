@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: Landing Page v2 & Hackathon Credits
 status: executing
-stopped_at: Phase 29 context gathered
-last_updated: "2026-03-30T11:07:50.537Z"
-last_activity: "2026-03-30 -- 28-02 complete: deterministic_scorer.py fully implemented, 41 tests passing"
+stopped_at: Completed 33-02-PLAN.md
+last_updated: "2026-03-30T10:27:04.298Z"
+last_activity: 2026-03-30
 progress:
-  total_phases: 9
-  completed_phases: 7
-  total_plans: 13
-  completed_plans: 13
-  percent: 95
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 8
+  completed_plans: 8
+  percent: 0
 ---
 
 # Project State
@@ -21,31 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Milestone v5.0 -- Phase 27 ready to plan
+**Current focus:** Phase 33 — dashboard-home-nav-polish-profile-creation-flow-and-analyses-titles-fix
 
 ## Current Position
 
-Phase: 28 of 32 (Deterministic Scorer)
-Plan: 02 COMPLETE (28-02: deterministic_scorer.py — all DS-01 through DS-06 implemented, 41 tests GREEN)
-Status: In Progress
-Last activity: 2026-03-30 -- 28-02 complete: deterministic_scorer.py fully implemented, 41 tests passing
+Phase: 33 (dashboard-home-nav-polish-profile-creation-flow-and-analyses-titles-fix) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-03-30
 
-Progress: [██████████] 95%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 5 minutes
-- Total execution time: ~15 minutes
 
-| Phase | Plan | Duration | Tasks | Files |
-|-------|------|----------|-------|-------|
-| 27    | 01   | 3 min    | 2     | 3     |
-| 27    | 02   | 8 min    | 2     | 4     |
-| 27    | 03   | 7 min    | 2     | 3     |
-| Phase 28 P02 | 4 min | 3 tasks | 2 files |
-| Phase 28 P01 | 5 | 1 tasks | 1 files |
+- Total plans completed: 0
+- Average duration: --
+- Total execution time: --
 
 ## Accumulated Context
 
@@ -67,38 +60,9 @@ Progress: [██████████] 95%
 - DB-01 (schema_version) must deploy BEFORE hybrid scorer ships (Phase 30 before Phase 31)
 - ScoreResponse v2: categories removed, per-criterion fulfillment added, field names preserved
 
-### Phase 27 Decisions (27-01)
+### Roadmap Evolution
 
-- CriterionType enum uses snake_case member names matching string values (BINARY_FEATURE='binary_feature') for natural Python usage
-- criterion_type is Optional[CriterionType]=None for backward compatibility with existing DynamicField JSONB records in Supabase
-- IMPORTANCE_WEIGHT_MAP confirmed at 5/3/2/1 (matches v5.0 architecture decision above)
-
-### Phase 27 Decisions (27-02)
-
-- CLASSIFIER_MODEL uses its own env var (CLASSIFIER_MODEL) separate from CLAUDE_MODEL for independent model selection
-- Unmatched criterion names default to CriterionType.SUBJECTIVE via dict.get() fallback (safe, not error)
-- New DynamicField instances returned from classify_fields (not mutated in-place)
-
-### Phase 27 Decisions (27-03)
-
-- criterionTypeSchema is .optional() for backward compat with existing Supabase JSONB records that lack criterionType
-- Classification failures are silently caught — profile save must always succeed regardless of EC2/classifier health (DM-02)
-- EC2_API_URL used without NEXT_PUBLIC_ prefix — server actions only, never exposed to client bundle
-- res.json() cast to { dynamicFields: typeof validated.dynamicFields } to satisfy TypeScript strict mode without loosening types
-
-### Phase 28 Decisions (28-01)
-
-- score_distance receives actual_km as explicit kwarg (not derived from listing coords) — keeps function pure and testable
-- FulfillmentResult validates fulfillment in [0, 1] range via Pydantic field constraint — rejects values > 1.0
-- proximity_data passed as dict keyed by field_name to score_proximity_quality (matches Phase 31 aggregator contract)
-- criterion_name field on FulfillmentResult used as lookup key for budget/rooms/living_space built-in entries
-
-### Phase 28 Decisions (28-02)
-
-- score_size(field, listing) uses field.value as target_min only; symmetric min+max handled in synthesize_builtin_results via UserPreferences
-- None-as-skip sentinel for all scorer functions: missing data returns None (never 0.0), skipped in Phase 31 weighted aggregation
-- FEATURE_ALIAS_MAP: unknown terms (not in alias map AND not a known slug) return None; known terms with no match return 0.0
-- All 6 DS requirements (DS-01 through DS-06) implemented and verified with 41 passing tests
+- Phase 33 added: Dashboard Home, Nav Polish, Profile Creation Flow, and Analyses Titles Fix
 
 ### Blockers/Concerns
 
@@ -106,6 +70,6 @@ Progress: [██████████] 95%
 
 ## Session Continuity
 
-Last session: 2026-03-30T11:07:50.524Z
-Stopped at: Phase 29 context gathered
-Resume file: .planning/phases/29-subjective-scorer-claude-enhancement/29-CONTEXT.md
+Last session: 2026-03-30T10:27:04.295Z
+Stopped at: Completed 33-02-PLAN.md
+Resume file: None
