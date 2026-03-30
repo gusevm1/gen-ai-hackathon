@@ -19,15 +19,37 @@ interface ScoreBadgeProps {
  * - preferences-changed: greyed-out with warning icon
  */
 export function ScoreBadge({ score, listingId, isPanelOpen, isStale, staleReason }: ScoreBadgeProps) {
-  const tierColor = TIER_COLORS[score.match_tier];
-  const isPrefStale = isStale && staleReason === 'preferences-changed';
-  const isProfileStale = isStale && staleReason === 'profile-switch';
-
   const handleClick = () => {
     document.dispatchEvent(
       new CustomEvent('homematch:panel-toggle', { detail: { id: listingId } }),
     );
   };
+
+  // Grey beta badge for listings without enrichment data
+  if (score.enrichment_status === 'unavailable') {
+    return (
+      <button
+        onClick={handleClick}
+        className="relative inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 shadow-md cursor-pointer transition-all duration-200 bg-gray-50 backdrop-blur-sm border border-gray-300 opacity-70 hover:opacity-90"
+        aria-expanded={isPanelOpen}
+        aria-label="Scoring not yet available for this area"
+      >
+        <span
+          className="inline-flex items-center justify-center rounded-full bg-gray-400 text-white text-sm font-bold"
+          style={{ width: 40, height: 40 }}
+        >
+          --
+        </span>
+        <span className="text-xs font-semibold text-gray-500 pr-1">
+          Beta
+        </span>
+      </button>
+    );
+  }
+
+  const tierColor = TIER_COLORS[score.match_tier];
+  const isPrefStale = isStale && staleReason === 'preferences-changed';
+  const isProfileStale = isStale && staleReason === 'profile-switch';
 
   return (
     <button

@@ -23,6 +23,42 @@ const WEBSITE_URL = 'https://homematch-web.vercel.app';
 export function SummaryPanel({ score, listingId, isOpen, isStale, staleReason, profileName }: SummaryPanelProps) {
   if (!isOpen) return null;
 
+  // Informational panel for listings without enrichment data
+  if (score.enrichment_status === 'unavailable') {
+    return (
+      <div className="mt-2 bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-200 p-4 max-w-sm">
+        <h4 className="text-sm font-semibold text-gray-900 mb-2">Scoring Coming Soon</h4>
+        <p className="text-xs text-gray-600 mb-3">
+          This listing is in an area we haven't fully analyzed yet. Detailed scoring with personalized criteria matching will be available once we process this neighborhood.
+        </p>
+        {score.summary_bullets && score.summary_bullets.length > 0 && (
+          <>
+            <p className="text-xs font-medium text-gray-500 mb-1.5">What we know:</p>
+            <ul className="space-y-1 mb-3">
+              {score.summary_bullets.map((bullet, i) => (
+                <li key={i} className="flex items-start gap-1.5 text-[13px] text-gray-600">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0" />
+                  <span>{bullet}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        <div className="border-t border-gray-100 pt-2">
+          <button
+            onClick={() => window.open(`${WEBSITE_URL}/analysis/${listingId}`, '_blank')}
+            className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 font-medium cursor-pointer transition-colors duration-150"
+          >
+            View details
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-2 bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-100 p-4 max-w-sm">
       {/* Preference-stale warning banner */}
