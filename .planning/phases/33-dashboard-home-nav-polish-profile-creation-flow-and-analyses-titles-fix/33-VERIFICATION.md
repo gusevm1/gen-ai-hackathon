@@ -1,173 +1,146 @@
-# Phase 33 — Plan Verification
+---
+phase: 33-dashboard-home-nav-polish-profile-creation-flow-and-analyses-titles-fix
+verified: 2026-03-30T10:45:00Z
+status: passed
+score: 8/8 must-haves verified
+human_verification:
+  - test: "Visit /dashboard and confirm two cards appear side-by-side with correct icons and copy"
+    expected: "Left card shows ClipboardList icon + 'Manual profile creation'. Right card shows Sparkles icon + 'AI-guided profile creation'. Hover states visible."
+    why_human: "CSS rendering and visual polish cannot be verified by static analysis"
+  - test: "Click Manual card on /dashboard, enter a name, click Create"
+    expected: "Dialog closes, browser navigates to /profiles/[new-id] edit page directly — no extra redirect to /profiles list"
+    why_human: "Live Supabase connection required to confirm createProfile returns ID and router.push fires correctly"
+  - test: "Navigate to /download while logged in"
+    expected: "Full TopNavbar visible with 6 items (Home, AI-Powered Search, Profiles, Analyses, Download, Settings); Download item highlighted active"
+    why_human: "Layout application is a Next.js runtime behavior; visual confirmation requires running browser"
+  - test: "Score a Flatfox listing with a German description_title but English short_title via the extension"
+    expected: "Analysis card in /analyses shows the English short_title, not the German description_title"
+    why_human: "Requires deployed backend and real Flatfox listing data with both title fields populated"
+---
 
+# Phase 33: Dashboard Home, Nav Polish, Profile Creation Flow, and Analyses Titles Fix — Verification Report
+
+**Phase Goal:** Dashboard home page, nav polish, profile creation flow, and analyses titles fix — make the product feel polished and production-ready for the hackathon demo.
 **Verified:** 2026-03-30
-**Plans checked:** 33-01-PLAN.md, 33-02-PLAN.md
-**Overall result:** FAIL — 1 blocker, 2 warnings
+**Status:** PASSED
+**Note:** The previous `33-VERIFICATION.md` in this directory was a pre-execution plan-validation document (FAIL status on plan quality). This document is the post-execution goal-achievement verification.
 
 ---
 
-## Requirement Coverage
+## Goal Achievement
 
-| Req ID | Description | Plan | Task | Status |
-|--------|-------------|------|------|--------|
-| HOME-01 | Dashboard home page with welcome text + two cards | 33-01 | Task 1 + 2 | Covered |
-| HOME-02 | ProfileCreationChooser reusable component | 33-01 | Task 1 | Covered |
-| NAV-01 | Home nav item in TopNavbar | 33-01 | Task 2 | Covered |
-| PROF-01 | + New Profile shows two-card chooser | 33-02 | Task 1 | Covered |
-| DOWN-01 | Download page renders inside dashboard layout | 33-02 | Task 2 | Covered |
-| ANA-01 | English title priority in scoring.py | 33-02 | Task 2 | Covered |
+### Observable Truths
 
-All 6 requirements have covering tasks. Requirement coverage: PASS.
+| # | Truth | Status | Evidence |
+|---|-------|--------|----------|
+| 1 | User sees "Welcome to HomeMatch" heading and "Let's create your profile" subheading on /dashboard | VERIFIED | `dashboard/page.tsx` line 31-36: `<h1>` renders `t(language, 'dashboard_welcome')`, `<p>` renders `t(language, 'dashboard_subtitle')`; translations.ts confirms EN values exactly match expected strings |
+| 2 | User sees two side-by-side cards: Manual and AI-guided profile creation | VERIFIED | `profile-creation-chooser.tsx` (66 lines): two `<Card>` elements in `grid grid-cols-1 md:grid-cols-2 gap-6` layout; ClipboardList icon on Manual, Sparkles on AI |
+| 3 | Clicking Manual card opens CreateProfileDialog; on confirm navigates to /profiles/[id] | VERIFIED | `dashboard/page.tsx`: `onManualClick={openCreateDialog}` → `setCreateOpen(true)` → `<CreateProfileDialog>`; `handleCreate` calls `createProfile(name)`, captures `id`, calls `router.push('/profiles/' + id)` |
+| 4 | Clicking AI-guided card navigates to /ai-search | VERIFIED | `dashboard/page.tsx` line 25-27: `goToAiSearch` calls `router.push('/ai-search')`; wired to `onAiClick` on ProfileCreationChooser |
+| 5 | TopNavbar shows Home as first nav item linking to /dashboard with exact-match active state | VERIFIED | `top-navbar.tsx` line 15: Home is first in navItems array with `url: "/dashboard"`; line 26 applies exact match: `item.url === "/dashboard" ? pathname === item.url : pathname.startsWith(item.url)` — blocker from plan-validation was resolved in execution |
+| 6 | "+ New Profile" on profiles page shows two-card chooser instead of name-only dialog | VERIFIED | `profile-list.tsx`: `chooserOpen` state added; both the empty-state button (line 105) and the "+ New Profile" button (line 135) call `setChooserOpen(true)`; `ProfileCreationChooser` rendered inside `Dialog` in both branches |
+| 7 | Download page renders inside dashboard layout with full TopNavbar visible | VERIFIED | `web/src/app/(dashboard)/download/page.tsx` exists (90 lines, no standalone header/wrapper); old `web/src/app/download/page.tsx` deleted; route group membership in `(dashboard)/` applies `layout.tsx` automatically |
+| 8 | New analyses display English listing titles (short_title preferred) | VERIFIED | `backend/app/routers/scoring.py` line 155-156: `listing.short_title or listing.pitch_title or listing.public_title or listing.description_title or None` |
 
----
-
-## Issues
-
-### BLOCKER — `pathname.startsWith("/dashboard")` will permanently highlight the Home nav item on all dashboard sub-routes
-
-**Dimension:** key_links_planned / task_completeness
-**Plan:** 33-01, Task 2
-
-**The problem:**
-The current TopNavbar uses `pathname.startsWith(item.url)` for active-state detection (line 25 of `top-navbar.tsx`). Adding Home with `url: "/dashboard"` means **every route inside the `(dashboard)` layout** will have Home highlighted as active, because `/profiles`, `/analyses`, `/ai-search` etc. all start with the path prefix `/` but the route group name `(dashboard)` is not part of the URL — all routes under it are still root-level paths like `/profiles`, `/analyses`. The path for the dashboard home specifically is `/dashboard`.
-
-Actually the concrete collision is narrower: `pathname.startsWith("/dashboard")` only matches `/dashboard` itself and hypothetical `/dashboard/...` sub-routes. The other nav items (`/profiles`, `/analyses` etc.) will NOT match `/dashboard`. So the active-state logic is not universally broken — Home will only show as active when on `/dashboard` or a sub-route of it.
-
-**However**, a real secondary collision exists: the existing nav items already use `pathname.startsWith`. If a user is on `/dashboard`, none of the current 5 nav items (`/ai-search`, `/profiles`, `/analyses`, `/download`, `/settings`) will match — the topbar will show no active item. After adding Home with `/dashboard`, it will correctly activate on `/dashboard`. This part is fine.
-
-**The actual blocker:** The plan states "The existing active-state logic (`pathname.startsWith(item.url)`) will work automatically." This claim needs explicit verification because the check is `pathname.startsWith("/dashboard")` — if any future sub-routes like `/dashboard/settings` or `/dashboard/profile-setup` are ever added, they will spuriously activate Home. More immediately relevant: the plan must specify whether to use `pathname === "/dashboard"` (exact match, future-proof) or `pathname.startsWith("/dashboard")` (prefix match, current behavior). The plan does not address this and leaves it ambiguous, which means the executor may ship the prefix version.
-
-**Severity:** BLOCKER — the plan says "will work automatically" without specifying the exact match approach. The executor must use `pathname === item.url` for the `/dashboard` item or apply a special `exact` flag. If left to `startsWith`, any future `/dashboard/*` sub-route will show Home as active when it should not.
-
-**Fix:** In Task 2 of 33-01, add an explicit instruction:
-- Either use `pathname === "/dashboard"` for the Home item (add an `exact?: boolean` field to navItems and gate the `isActive` check accordingly), or
-- Confirm the `startsWith` check is intentional and acceptable for the `/dashboard` URL with no sub-routes planned.
-
-The plan must not leave this as implicit.
+**Score:** 8/8 truths verified
 
 ---
 
-### WARNING — `createProfile` returns the new profile ID but the plan gives a conditional fallback that is less clear
+## Required Artifacts
 
-**Dimension:** task_completeness
-**Plan:** 33-01, Task 2
+### Plan 33-01
 
-**The situation:**
-The plan says: "Note: `createProfile` returns the new profile ID — check the server action return type. If it just creates without returning ID, call `createProfile(name)` then `router.push('/profiles')` and `router.refresh()`."
+| Artifact | Status | Details |
+|----------|--------|---------|
+| `web/src/app/(dashboard)/dashboard/page.tsx` | VERIFIED | 48 lines, `'use client'`, substantive implementation — welcome heading, subtitle, ProfileCreationChooser, CreateProfileDialog with navigation handler; no redirect to /profiles |
+| `web/src/components/profile-creation-chooser.tsx` | VERIFIED | 66 lines, named export `ProfileCreationChooser`, two cards with click handlers — not a stub |
+| `web/src/components/top-navbar.tsx` | VERIFIED | Contains `nav_home` key, Home icon import, 6-item navItems array, exact-match active state logic |
+| `web/src/lib/translations.ts` | VERIFIED | Contains all 7 new keys (`nav_home`, `dashboard_welcome`, `dashboard_subtitle`, `dashboard_manual_title`, `dashboard_manual_desc`, `dashboard_ai_title`, `dashboard_ai_desc`) in both `en` and `de` |
 
-The codebase confirms `createProfile` at line 42 of actions.ts returns `data.id as string`. So the conditional is dead code — the ID is always returned. Leaving the conditional note in the plan risks the executor implementing the weaker fallback path (`router.push('/profiles')`) instead of the direct `router.push('/profiles/${id}')`.
+### Plan 33-02
 
-**Fix:** Remove the conditional from the plan. State definitively: "Call `createProfile(name)`, receive the returned `id: string`, then call `router.push(\`/profiles/${id}\`)`. The server action always returns the new profile ID."
-
----
-
-### WARNING — 33-02 wave assignment and dependency inconsistency
-
-**Dimension:** dependency_correctness
-**Plan:** 33-02
-
-**The situation:**
-33-02 is assigned `wave: 1` and `depends_on: []`. However, 33-02 Task 1 explicitly depends on `ProfileCreationChooser` created in 33-01:
-- 33-02 `interfaces` block documents the component as "created in plan 33-01"
-- 33-02 `key_links` states `via: "import ProfileCreationChooser from plan 33-01"`
-- The `files_modified` for 33-02 include `profile-list.tsx` which imports from `profile-creation-chooser.tsx`
-
-If both plans run in wave 1 in parallel, the executor of 33-02 may start before `profile-creation-chooser.tsx` exists. The `depends_on: []` combined with `wave: 1` implies parallel execution. The plan context instructs 33-02 to read `33-01-SUMMARY.md` (which only exists after 33-01 completes), suggesting sequential intent — but the frontmatter does not enforce this.
-
-**Fix:** Change 33-02 frontmatter to:
-```
-wave: 2
-depends_on: ["01"]
-```
-
-This makes the dependency explicit and prevents parallel execution.
+| Artifact | Status | Details |
+|----------|--------|---------|
+| `web/src/components/profiles/profile-list.tsx` | VERIFIED | 200 lines, imports ProfileCreationChooser, adds `chooserOpen` state, both profile-creation entry points now open chooser first — wired in both empty-state and populated-list render branches |
+| `web/src/app/(dashboard)/download/page.tsx` | VERIFIED | 90 lines, no standalone header, uses translations and layout from (dashboard) route group; old standalone page deleted |
+| `backend/app/routers/scoring.py` | VERIFIED | Line 156 confirmed: `short_title or pitch_title or public_title or description_title` — English title first |
 
 ---
 
-## Task Completeness Check
+## Key Link Verification
 
-| Plan | Task | Files | Action | Verify | Done | Status |
-|------|------|-------|--------|--------|------|--------|
-| 33-01 | Task 1 | Yes | Specific | Yes (tsc) | Yes | PASS |
-| 33-01 | Task 2 | Yes | Specific (with ambiguity — see blocker) | Yes (tsc) | Yes | WARN |
-| 33-02 | Task 1 | Yes | Specific | Yes (tsc) | Yes | PASS |
-| 33-02 | Task 2 | Yes | Specific | Yes (tsc + python) | Yes | PASS |
+| From | To | Via | Status | Details |
+|------|----|-----|--------|---------|
+| `dashboard/page.tsx` | `profile-creation-chooser.tsx` | import + render | WIRED | Line 5: import; line 37: `<ProfileCreationChooser onManualClick=... onAiClick=.../>` |
+| `top-navbar.tsx` | `/dashboard` | Home nav item | WIRED | `url: "/dashboard"` in navItems; exact-match active state for this URL |
+| `profile-list.tsx` | `profile-creation-chooser.tsx` | import + render in Dialog | WIRED | Line 12: import; lines 111 and 158: rendered inside `<Dialog>` for both render paths |
+| `(dashboard)/download/page.tsx` | `(dashboard)/layout.tsx` | Next.js route group | WIRED | Directory placement in `(dashboard)/` is the wiring mechanism — no code import expected; `layout.tsx` confirmed present at `web/src/app/(dashboard)/layout.tsx` |
 
----
-
-## Key Links Check
-
-| Link | From | To | Via | Planned? |
-|------|------|----|-----|----------|
-| Dashboard page -> Chooser | dashboard/page.tsx | profile-creation-chooser.tsx | import + render | Yes (33-01 Task 2 action step 3) |
-| TopNavbar -> /dashboard | top-navbar.tsx | /dashboard | nav item url | Yes (33-01 Task 2 action step 2) |
-| profile-list.tsx -> ProfileCreationChooser | profile-list.tsx | profile-creation-chooser.tsx | import | Yes (33-02 Task 1 step 1) |
-| scoring.py title priority | scoring.py line 155-156 | short_title field | field order change | Yes (33-02 Task 2 step 3) |
-| download page -> dashboard layout | (dashboard)/download/page.tsx | layout.tsx | route group membership | Yes (implicit via move) |
-
-All key links are planned. However the active-state wiring for Home nav item has the blocker noted above.
+Note: `gsd-tools` key-link scan reported the download→layout link as "not verified" because it searched for a literal code pattern. This is a false negative — route group layout inheritance is a Next.js framework convention that requires no import statement.
 
 ---
 
-## Scope Check
+## Requirements Coverage
 
-| Plan | Tasks | Files | Status |
-|------|-------|-------|--------|
-| 33-01 | 2 | 4 | PASS (within 2-3 target) |
-| 33-02 | 2 | 4 | PASS (within 2-3 target) |
+| Requirement | Source Plan | Description | Status | Evidence |
+|-------------|-------------|-------------|--------|----------|
+| HOME-01 | 33-01 | Dashboard home page with welcome text + two cards | SATISFIED | `dashboard/page.tsx` renders welcome h1, subtitle p, and two-card ProfileCreationChooser |
+| HOME-02 | 33-01 | ProfileCreationChooser reusable component | SATISFIED | `profile-creation-chooser.tsx` is a named export; reused in both dashboard/page.tsx and profile-list.tsx |
+| NAV-01 | 33-01 | Home nav item in TopNavbar | SATISFIED | Home is first in navItems with exact-match active state; `nav_home` key in en + de |
+| PROF-01 | 33-02 | "+ New Profile" shows two-card chooser | SATISFIED | `profile-list.tsx`: both creation entry points open chooser dialog with ProfileCreationChooser |
+| DOWN-01 | 33-02 | Download page renders inside dashboard layout | SATISFIED | `(dashboard)/download/page.tsx` exists inside route group; standalone version deleted |
+| ANA-01 | 33-02 | English title priority in scoring.py | SATISFIED | `short_title` is first in OR chain at line 155-156 |
 
----
-
-## Context Compliance Check
-
-Locked decisions from CONTEXT.md vs plan implementation:
-
-| Decision | Plan | Task | Status |
-|----------|------|------|--------|
-| Welcome header: "Welcome to HomeMatch" | 33-01 | Task 1 (translation key `dashboard_welcome`) | Compliant |
-| Subheader: "Let's create your profile" | 33-01 | Task 1 (translation key `dashboard_subtitle`) | Compliant |
-| AI card description: exact copy | 33-01 | Task 1 action item 1 | Compliant |
-| Manual card description: exact copy | 33-01 | Task 1 action item 1 | Compliant |
-| Two side-by-side cards | 33-01 | Task 1 (grid layout specified) | Compliant |
-| Home nav item | 33-01 | Task 2 | Compliant |
-| Logo -> landing page unchanged | Neither plan | N/A | Not needed (no change planned) |
-| "+ New Profile" shows two-card chooser | 33-02 | Task 1 | Compliant |
-| Download page: all nav items visible | 33-02 | Task 2 | Compliant |
-| Analyses: English titles | 33-02 | Task 2 (scoring.py fix) | Compliant |
-
-CONTEXT.md note: "No backend change expected; this is likely a frontend field selection fix" was listed as a user belief, not a locked decision. The plan correctly identifies the root cause is in `scoring.py` (backend) after research confirmed it. This is appropriate use of Claude's discretion.
-
-Deferred ideas check: No onboarding flows, no animations beyond basic hover transitions, no multi-step wizard improvements found in plans. Compliant.
+Note: These requirement IDs are phase-local (defined in PLAN frontmatter and CONTEXT.md). They do not appear in a global REQUIREMENTS.md registry — no orphaned requirements.
 
 ---
 
-## Backend Fix Correctness Check
+## Anti-Patterns Found
 
-The plan changes `scoring.py` line 155-156 from:
-```python
-listing.description_title or listing.public_title or listing.short_title or None
-```
-to:
-```python
-listing.short_title or listing.pitch_title or listing.public_title or listing.description_title or None
-```
-
-Verification of model fields: `FlatfoxListing` in `backend/app/models/listing.py` has both `short_title` (line 65) and `pitch_title` (line 67) already defined as `Optional[str]`. The plan's concern in the RESEARCH.md open question 3 ("pitch_title is not in current model") is resolved — it IS in the model. The backend fix will work without any model changes.
+No anti-patterns detected across all 7 modified files. No TODOs, FIXMEs, placeholder returns, empty click handlers, or stub implementations found.
 
 ---
 
-## Summary
+## Human Verification Required
 
-**Result: FAIL**
+### 1. Visual layout — two-card chooser on /dashboard
 
-**Must fix before execution:**
+**Test:** Log in and visit /dashboard.
+**Expected:** Two cards side-by-side (stacked on mobile): left card shows ClipboardList icon + "Manual profile creation" title + description; right card shows Sparkles icon + "AI-guided profile creation" title + description. Both cards have visible hover states (border + shadow).
+**Why human:** CSS layout, icon rendering, and card sizing require a running browser.
 
-1. **[BLOCKER] 33-01 Task 2 — active-state nav logic for Home item.** The plan says `startsWith` "will work automatically" but does not specify whether to use exact match (`pathname === "/dashboard"`) or prefix match. The executor needs an explicit instruction. Specify exact match (`pathname === item.url`) for the Home entry, or add an `exact` flag to the navItem type and gate `isActive` accordingly.
+### 2. Manual card creation end-to-end on /dashboard
 
-**Should fix before execution:**
+**Test:** Click the Manual card, enter a profile name, click Create.
+**Expected:** Dialog closes; browser navigates directly to `/profiles/[new-id]` edit page — not to the /profiles list.
+**Why human:** Requires live Supabase connection to confirm `createProfile` returns an ID and `router.push('/profiles/' + id)` fires correctly.
 
-2. **[WARNING] 33-01 Task 2 — remove the conditional createProfile note.** The server action provably returns an ID. Replace the conditional with a direct: "call `createProfile(name)`, get back `id`, push to `/profiles/${id}`."
+### 3. Download page TopNavbar visibility
 
-3. **[WARNING] 33-02 frontmatter — wave/depends_on mismatch.** Change `wave: 1, depends_on: []` to `wave: 2, depends_on: ["01"]` to reflect that 33-02 Task 1 requires `profile-creation-chooser.tsx` from 33-01.
+**Test:** Navigate to /download while logged in.
+**Expected:** Full TopNavbar visible with all 6 nav items (Home, AI-Powered Search, Profiles, Analyses, Download, Settings). "Download" item should be highlighted as active.
+**Why human:** Layout application is a Next.js server-side behavior; visual confirmation requires a running browser.
 
-Once the blocker is addressed, the plans are otherwise well-structured, atomic, and executable.
+### 4. Analyses titles showing English after backend fix
+
+**Test:** Score a Flatfox listing that has a German `description_title` but an English `short_title` via the Chrome extension. View the result in /analyses.
+**Expected:** Analysis card shows the English `short_title` value, not the German `description_title`.
+**Why human:** Requires the updated backend to be deployed and a real Flatfox listing with both title fields populated.
+
+---
+
+## Commit Verification
+
+All 4 task commits confirmed in git log:
+
+| Commit | Description |
+|--------|-------------|
+| `df78d42` | feat(33-01): add translation keys and ProfileCreationChooser component |
+| `ba6c80f` | feat(33-01): dashboard welcome page and Home nav item |
+| `756797c` | feat(33-02): wire ProfileCreationChooser into profile list '+ New Profile' flow |
+| `4e8ce0f` | feat(33-02): move download page into dashboard layout and fix English title priority |
+
+---
+
+_Verified: 2026-03-30T10:45:00Z_
+_Verifier: Claude (gsd-verifier)_
