@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Hybrid Scoring Engine
 status: completed
-stopped_at: Completed 34-01-PLAN.md
-last_updated: "2026-03-30T18:48:24.164Z"
-last_activity: 2026-03-30 — Completed Phase 32 Plan 01 (fulfillment breakdown + schema branching)
+stopped_at: Completed 34-02-PLAN.md
+last_updated: "2026-03-30T19:04:57.675Z"
+last_activity: 2026-03-30 — Completed Phase 34 Plan 01 (web onboarding system with driver.js, checklist, Supabase state)
 progress:
   total_phases: 9
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 19
-  completed_plans: 18
-  percent: 100
+  completed_plans: 19
+  percent: 97
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 ## Current Position
 
 Phase: 34 of 34 (Onboarding Tutorial System)
-Plan: 1 of 2 in current phase (plan 01 complete)
-Status: Phase 34 Plan 01 complete
-Last activity: 2026-03-30 — Completed Phase 34 Plan 01 (web onboarding system with driver.js, checklist, Supabase state)
+Plan: 2 of 2 in current phase (plan 02 complete)
+Status: Phase 34 complete — all plans done
+Last activity: 2026-03-30 — Completed Phase 34 Plan 02 (extension onboarding overlay steps 4-7 with spotlight UI)
 
 Progress: [██████████] 97% (phases 27-33 complete, 34 in progress)
 
@@ -50,6 +50,7 @@ Progress: [██████████] 97% (phases 27-33 complete, 34 in pro
 | 32    | 01   | 3min     | 2     | 5     |
 | 32    | 02   | 3min     | 2     | 4     |
 | 34    | 01   | 9min     | 2     | 11    |
+| Phase 34 P02 | 8min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,15 @@ Progress: [██████████] 97% (phases 27-33 complete, 34 in pro
 - driver.js onDestroyStarted calls skip() so ESC/overlay click properly deactivates onboarding
 - Onboarding DOM target IDs: install-extension-cta (download), create-profile-section (dashboard), open-flatfox-cta (dashboard step 3), profile-switcher (layout header)
 
+### Phase 34 Plan 02 Decisions
+
+- SVG mask cutout overlay for extension onboarding; avoids driver.js Shadow DOM conflicts
+- OnboardingOverlay renders inside FAB shadow root; fixed positioning is viewport-relative so it covers full screen correctly
+- Step 5 auto-advance implemented via setOnboardingState callback in handleScore (avoids stale closure)
+- Step 4 verifies auth via existing getSession message before advancing
+- Supabase writes in onboarding helpers are fire-and-forget (no await blocking UI transitions)
+- nextLabel: null for step 5 falls back to 'Next' button as manual fallback if auto-advance fails
+
 ### Phase Ordering
 
 - Phase 29 and 30 can run in parallel (no dependency between them)
@@ -141,6 +151,6 @@ Progress: [██████████] 97% (phases 27-33 complete, 34 in pro
 
 ## Session Continuity
 
-Last session: 2026-03-30T18:48:24.160Z
-Stopped at: Completed 34-01-PLAN.md
+Last session: 2026-03-30T19:04:57.670Z
+Stopped at: Completed 34-02-PLAN.md
 Resume file: None
