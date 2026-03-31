@@ -71,6 +71,43 @@ Help users instantly see how well each property listing matches their specific n
 
 ### Active
 
+<!-- Navigation & IA -->
+- [ ] NAV-01: "AI-Powered Search" renamed to "New Profile" in top navbar
+- [ ] NAV-02: "Download" removed from primary nav, moved to Settings
+- [ ] NAV-03: Extension install banner shown only for users without confirmed install
+
+<!-- Dashboard -->
+- [ ] DASH-01: Dashboard home detects user state (new vs returning) server-side
+- [ ] DASH-02: New user state — 3-step explainer + recommended AI path + secondary manual path
+- [ ] DASH-03: Returning user state — active profile card + recent analyses strip + Open Flatfox CTA
+- [ ] DASH-04: Profile creation cards use brand primary token (not hardcoded rose-500)
+- [ ] DASH-05: AI card visually recommended (badge + primary style); manual card secondary
+
+<!-- Onboarding -->
+- [ ] ONB-01: WelcomeModal rebuilt with Shadcn components — no hardcoded inline styles, dark-mode aware
+- [ ] ONB-02: Checklist groups steps 5–8 under "In the extension" label
+- [ ] ONB-03: Checklist completion state: morphs to "You're all set" with Flatfox link instead of disappearing
+- [ ] ONB-04: "Resume tour" option accessible from Settings after dismissal
+
+<!-- Critical handoffs -->
+- [ ] HND-01: Profile edit — sticky bottom CTA: "Save & Open in Flatfox →" (full-width, primary button)
+- [ ] HND-02: Profile edit — section progress indicator ("2 of 5 — Budget")
+- [ ] HND-03: Analyses empty state — "Open Flatfox →" primary CTA + filter bar hidden when empty
+- [ ] HND-04: Post-save redirect behavior: saving preferences navigates to confirmation step, not silent
+
+<!-- Design system -->
+- [ ] DS-01: All hardcoded rose-500 references replaced with primary token
+- [ ] DS-02: Dashboard pages get Framer Motion entrance animations (FadeIn on mount, stagger on lists)
+- [ ] DS-03: Tier colors unified: teal/green/amber/red across web + extension (not emerald/blue/amber/gray)
+
+<!-- Page redesigns -->
+- [ ] PG-01: Profiles list cards show active indicator, analysis count, last-used date
+- [ ] PG-02: AI chat page — context panel explaining what the chat is doing
+- [ ] PG-03: AI chat — summary card transition is smooth, not abrupt
+- [ ] PG-04: Analyses cards — left-edge tier color bar, larger score display
+- [ ] PG-05: Settings page — Download Extension section added
+
+<!-- Deferred LP polish (v4.1 carry-overs) -->
 - [ ] HERO-01: Stats row removed from SectionHero
 - [ ] HERO-02: CTA button centered on its own row
 - [ ] HERO-03: Poor tier color updated to red across landing + extension
@@ -96,22 +133,21 @@ Help users instantly see how well each property listing matches their specific n
 - HIST-01/02: Analysis history across profiles — deferred
 - SEC-01/02: Edge function JWT verification — deferred (auth handled at function level)
 
-## Current Milestone: v5.0 Hybrid Scoring Engine
+## Current Milestone: v6.0 UX & Design System Overhaul
 
-**Goal:** Replace the LLM-driven scoring system with a hybrid deterministic + AI architecture where Claude handles only subjective evaluation and never generates numeric scores.
+**Goal:** Redesign the user experience end-to-end — state-aware dashboard, aligned design system, and fixed user journeys for both first-time and returning users so the product is foolproof, intuitive, and visually consistent with the landing page.
 
 **Target features:**
-- Deterministic fulfillment formulas for price, distance, size, and binary_feature criteria
-- Proximity quality hybrid formula (distance decay + rating bonus)
-- Claude-only subjective evaluation returning fulfillment ∈ {0.0…1.0} + reasoning
-- Criterion type classification stored on DynamicField at profile save time
-- Weighted aggregation formula (CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1) replacing Claude's overall_score
-- CRITICAL f=0 → force match_tier="poor" (dealbreaker semantics)
-- Missing data → skip criterion in weighted aggregation
-- Binary features normalized mapping layer (deterministic; Claude fallback for fuzzy match)
-- Updated ScoreResponse schema (fulfillment-based, category scores removed)
-- Frontend consumers updated: analysis page, score badge, checklist
-- Score cache version bump for schema migration
+- State-aware dashboard home: new user onboarding state vs returning user workspace
+- Navigation restructure: rename "AI-Powered Search" → "New Profile", remove "Download" from primary nav
+- Design system propagation: replace hardcoded rose-500 with brand tokens, Framer Motion entrance animations
+- WelcomeModal rebuilt with Shadcn components (dark-mode aware, brand-aligned)
+- Critical handoff fix: full-width "Save & Open in Flatfox →" CTA on profile edit
+- Profile edit section progress indicator
+- Onboarding checklist completion state (not silent disappearance)
+- Analyses empty state with actionable CTAs
+- Tier colors unified across web and extension
+- Page-level redesigns: profiles list, AI chat, analyses cards, settings
 
 ## Context
 
@@ -177,4 +213,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-29 — Milestone v5.0 Hybrid Scoring Engine started*
+*Last updated: 2026-03-31 — Milestone v6.0 UX & Design System Overhaul started*

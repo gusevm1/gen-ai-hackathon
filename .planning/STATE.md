@@ -1,34 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.0
-milestone_name: Hybrid Scoring Engine
-status: completed
-stopped_at: Completed 34-02-PLAN.md
-last_updated: "2026-03-30T19:11:33.949Z"
-last_activity: 2026-03-30 — Completed Phase 34 Plan 02 (extension onboarding overlay steps 4-7 with spotlight UI)
+milestone: v6.0
+milestone_name: UX & Design System Overhaul
+status: defining_requirements
+stopped_at: ~
+last_updated: "2026-03-31T00:00:00.000Z"
+last_activity: 2026-03-31 — Milestone v6.0 started
 progress:
-  total_phases: 9
-  completed_phases: 9
-  total_plans: 19
-  completed_plans: 19
-  percent: 97
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-29)
+See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Phase 34 Plan 01 complete — Onboarding Tutorial System (web side)
+**Current focus:** Defining requirements for v6.0 UX & Design System Overhaul
 
 ## Current Position
 
-Phase: 34 of 34 (Onboarding Tutorial System)
-Plan: 2 of 2 in current phase (plan 02 complete)
-Status: Phase 34 complete — all plans done
-Last activity: 2026-03-30 — Completed Phase 34 Plan 02 (extension onboarding overlay steps 4-7 with spotlight UI)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-31 — Milestone v6.0 started
 
 Progress: [██████████] 97% (phases 27-33 complete, 34 in progress)
 
