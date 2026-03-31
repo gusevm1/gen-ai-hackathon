@@ -154,6 +154,11 @@ export default function App({ ctx }: AppProps) {
   /**
    * Load onboarding state on mount (once per page load).
    * Only activates if step is in extension range (5-8) and onboarding is active.
+   *
+   * Fallback: if the user is not yet logged into the extension (step 5 scenario),
+   * `getOnboardingState()` returns null because the background script gate-checks auth.
+   * In that case, read `homematch_onboarding` from the URL query string — this param
+   * is injected by the web app's OpenInFlatfoxButton when transitioning from step 4→5.
    */
   useEffect(() => {
     getOnboardingState().then((state) => {
@@ -164,6 +169,21 @@ export default function App({ ctx }: AppProps) {
         state.onboarding_step <= 8
       ) {
         setOnboardingState(state);
+        return;
+      }
+
+      // Fallback: read step from URL for the pre-auth case (step 5 / step 6)
+      const params = new URLSearchParams(window.location.search);
+      const urlStep = params.get('homematch_onboarding');
+      if (urlStep) {
+        const step = parseInt(urlStep, 10);
+        if (step >= 5 && step <= 6) {
+          setOnboardingState({
+            onboarding_step: step,
+            onboarding_active: true,
+            onboarding_completed: false,
+          });
+        }
       }
     });
   }, []);

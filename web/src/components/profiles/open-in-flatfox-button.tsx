@@ -18,10 +18,25 @@ interface OpenInFlatfoxButtonProps {
    * Used by onboarding to write step=5 to Supabase before the user leaves the page.
    */
   onBeforeOpen?: () => Promise<void>
+  /**
+   * Optional extra query parameters appended to the final Flatfox URL.
+   * Used by onboarding to pass `homematch_onboarding=5` so the extension
+   * content script can bootstrap the overlay even before the user is logged in.
+   */
+  appendParams?: Record<string, string>
 }
 
-export function OpenInFlatfoxButton({ preferences, className, variant = 'card', id, language, onBeforeOpen }: OpenInFlatfoxButtonProps) {
+export function OpenInFlatfoxButton({ preferences, className, variant = 'card', id, language, onBeforeOpen, appendParams }: OpenInFlatfoxButtonProps) {
   const [loading, setLoading] = useState(false)
+
+  function applyAppendParams(url: string): string {
+    if (!appendParams || Object.keys(appendParams).length === 0) return url
+    const parsed = new URL(url)
+    for (const [key, value] of Object.entries(appendParams)) {
+      parsed.searchParams.set(key, value)
+    }
+    return parsed.toString()
+  }
 
   async function handleClick() {
     setLoading(true)
@@ -30,11 +45,11 @@ export function OpenInFlatfoxButton({ preferences, className, variant = 'card', 
       if (onBeforeOpen) {
         await onBeforeOpen()
       }
-      const url = await buildFlatfoxUrlWithGeocode(preferences, language)
+      const url = applyAppendParams(await buildFlatfoxUrlWithGeocode(preferences, language))
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch {
       // Fallback to non-geocoded URL
-      const url = buildFlatfoxUrl(preferences, language)
+      const url = applyAppendParams(buildFlatfoxUrl(preferences, language))
       window.open(url, '_blank', 'noopener,noreferrer')
     } finally {
       setLoading(false)

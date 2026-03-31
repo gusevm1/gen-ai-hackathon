@@ -152,10 +152,15 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
             onBeforeOpen={
               onboardingActive && onboardingState?.onboarding_step === 4
                 ? async () => {
-                    // Issue 8: Write step=5, active=true to Supabase BEFORE opening Flatfox
+                    // Write step=5, active=true to Supabase BEFORE opening Flatfox
                     // so the extension content script reads the correct step on load.
                     await updateOnboardingState(5, true, onboardingState.onboarding_completed)
                   }
+                : undefined
+            }
+            appendParams={
+              onboardingActive && onboardingState?.onboarding_step === 4
+                ? { homematch_onboarding: '5' }
                 : undefined
             }
           />
