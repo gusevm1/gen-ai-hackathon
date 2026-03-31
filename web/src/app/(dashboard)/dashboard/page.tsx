@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/language-context'
 import { t } from '@/lib/translations'
 import { useOnboardingContext } from '@/components/onboarding/OnboardingProvider'
 import { TakeATourButton } from '@/components/onboarding/TakeATourButton'
+import { ExtensionInstallBanner } from '@/components/ExtensionInstallBanner'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -40,6 +41,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
+      <ExtensionInstallBanner />
       <h1 className="text-3xl font-bold mb-2">
         {t(language, 'dashboard_welcome')}
       </h1>
