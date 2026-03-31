@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useLanguage } from "@/lib/language-context"
 import { t, type Language } from "@/lib/translations"
 import { Label } from "@/components/ui/label"
@@ -10,6 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { buttonVariants } from "@/components/ui/button"
+import { Download } from "lucide-react"
 import { updateProfilesLanguage } from "@/app/(dashboard)/profiles/actions"
 
 export default function SettingsPage() {
@@ -39,6 +42,18 @@ export default function SettingsPage() {
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      {/* Download Extension section */}
+      <div className="mt-10">
+        <h2 className="text-lg font-semibold mb-1">{t(language, "download_title")}</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          {t(language, "download_subtitle")}
+        </p>
+        <Link href="/download" className={buttonVariants()}>
+          <Download className="size-4 mr-2" />
+          {t(language, "download_btn")}
+        </Link>
       </div>
     </div>
   )
