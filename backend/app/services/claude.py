@@ -322,50 +322,102 @@ class ClaudeScorer:
 
         try:
             system_prompt = (
-                "You review apartment match scores. For each criterion, you may adjust "
-                "the fulfillment (0.0-1.0) by up to ±0.15 based on context a formula "
-                "might miss. Add a short reasoning sentence. Return JSON:\n"
-                '{"criteria":[{"criterion_name":"...","fulfillment":0.85,'
-                '"reasoning":"..."}]}'
+                "You are a Swiss apartment matching expert. You review formula-based "
+                "match scores and rescore them with human judgement.\n\n"
+                "The formula gives 1.0 for anything within range and decays for anything outside. "
+                "This is too coarse — two apartments both 'within budget' could be very different:\n"
+                "- CHF 1200 vs CHF 2000 max → excellent value (0.95-1.0)\n"
+                "- CHF 1950 vs CHF 2000 max → barely fits, leaves no buffer (0.7-0.8)\n\n"
+                "SCORING GUIDELINES per criterion type:\n"
+                "BUDGET: Don't just check pass/fail. Score how comfortably it fits:\n"
+                "  <50% of max → 1.0 (exceptional value)\n"
+                "  50-70% → 0.9-0.95 (good value)\n"
+                "  70-85% → 0.8-0.9 (reasonable)\n"
+                "  85-95% → 0.65-0.8 (tight but ok)\n"
+                "  95-100% → 0.5-0.65 (barely fits)\n"
+                "  >100% → 0.0-0.5 (over budget, scale by how much)\n"
+                "  Also consider: are utilities included? Is the area expensive/cheap for the price?\n\n"
+                "ROOMS: Consider actual vs desired, but also:\n"
+                "  Exact match → 0.85-0.95 (not 1.0 unless layout info confirms good use)\n"
+                "  +0.5 room → 0.9-1.0 (bonus space)\n"
+                "  -0.5 room → 0.5-0.7 (workable but compromised)\n\n"
+                "SIZE (sqm): Similar gradient — don't give 1.0 just for meeting minimum.\n"
+                "  20%+ above min → 1.0 | At min → 0.75-0.85 | Below min → scale down\n\n"
+                "BINARY FEATURES (balcony, parking, etc.): Keep 0.0/1.0 but add reasoning "
+                "from description context (e.g. 'has balcony' → check if it's a real balcony or tiny Juliet).\n\n"
+                "DISTANCE/PROXIMITY: Consider Swiss context — 0.5km in Zürich center is different "
+                "from 0.5km in a rural area. Public transport access matters.\n\n"
+                "GENERAL RULES:\n"
+                "- You MUST rescore every criterion, not just echo the formula score\n"
+                "- Use the FULL 0.0-1.0 range. Spread scores out — avoid clustering around 0.8-1.0\n"
+                "- Each reasoning must be 1 specific sentence about THIS listing, not generic\n"
+                "- If data is missing (fulfillment=null), keep it null\n"
+                "- Consider cross-criterion context (cheap price + bad area = sus)\n\n"
+                "Return ONLY JSON:\n"
+                '{"criteria":[{"criterion_name":"...","fulfillment":0.85,"reasoning":"..."}]}'
             )
 
             # Build compact listing summary
             title = listing.description_title or listing.short_title or listing.public_title
             address = listing.public_address or listing.street
-            listing_summary_parts = [
-                f"Title: {title}" if title else "",
-                f"Price: {listing.price_display}" if listing.price_display else "",
-                f"Rooms: {listing.number_of_rooms}" if listing.number_of_rooms else "",
-                f"Area: {listing.surface_living}m²" if listing.surface_living else "",
-                f"Address: {address}" if address else "",
-            ]
-            listing_summary = "\n".join(p for p in listing_summary_parts if p)
+            listing_parts = []
+            if title:
+                listing_parts.append(f"Title: {title}")
+            if listing.price_display:
+                listing_parts.append(f"Price: CHF {listing.price_display}/month")
+            if listing.rent_net and listing.rent_charges:
+                listing_parts.append(
+                    f"  (net: {listing.rent_net}, charges: {listing.rent_charges})"
+                )
+            if listing.number_of_rooms:
+                listing_parts.append(f"Rooms: {listing.number_of_rooms}")
+            if listing.surface_living:
+                listing_parts.append(f"Living area: {listing.surface_living}m²")
+            if address:
+                listing_parts.append(f"Address: {address}")
+            if listing.city:
+                listing_parts.append(f"City: {listing.city}")
+            if listing.floor is not None:
+                listing_parts.append(f"Floor: {listing.floor}")
+            if listing.year_built:
+                listing_parts.append(f"Built: {listing.year_built}")
+            if listing.year_renovated:
+                listing_parts.append(f"Renovated: {listing.year_renovated}")
+            if listing.object_type:
+                listing_parts.append(f"Type: {listing.object_type}")
+            listing_summary = "\n".join(listing_parts)
 
             if listing.attributes:
-                attr_names = [a.name for a in listing.attributes[:20]]
-                listing_summary += f"\nAttributes: {', '.join(attr_names)}"
+                attr_names = [a.name for a in listing.attributes[:25]]
+                listing_summary += f"\nFeatures: {', '.join(attr_names)}"
             if listing.description:
-                listing_summary += f"\nDescription: {listing.description[:500]}"
+                listing_summary += f"\nDescription: {listing.description[:600]}"
 
-            # Build deterministic results JSON
-            det_json = json.dumps(
-                [
-                    {
-                        "criterion_name": r.criterion_name,
-                        "fulfillment": r.fulfillment,
-                        "importance": r.importance.value if r.importance else "medium",
-                    }
-                    for r in deterministic_results
-                ],
-                indent=2,
-            )
+            # Build deterministic results JSON with raw values for context
+            det_entries = []
+            for r in deterministic_results:
+                entry: dict = {
+                    "criterion_name": r.criterion_name,
+                    "formula_score": r.fulfillment,
+                    "importance": r.importance.value if r.importance else "medium",
+                }
+                det_entries.append(entry)
+            det_json = json.dumps(det_entries, indent=2)
 
-            # Build preferences summary
+            # Build preferences summary with actual values
             pref_parts = []
             if preferences.budget_max:
-                pref_parts.append(f"Budget: {preferences.budget_min or 0}-{preferences.budget_max}")
-            if preferences.rooms_min or preferences.rooms_max:
-                pref_parts.append(f"Rooms: {preferences.rooms_min or '?'}-{preferences.rooms_max or '?'}")
+                pref_parts.append(f"Budget max: CHF {preferences.budget_max}/month")
+            if preferences.budget_min:
+                pref_parts.append(f"Budget min: CHF {preferences.budget_min}/month")
+            if preferences.rooms_min:
+                pref_parts.append(f"Rooms min: {preferences.rooms_min}")
+            if preferences.rooms_max:
+                pref_parts.append(f"Rooms max: {preferences.rooms_max}")
+            if preferences.living_space_min:
+                pref_parts.append(f"Min living space: {preferences.living_space_min}m²")
+            if preferences.living_space_max:
+                pref_parts.append(f"Max living space: {preferences.living_space_max}m²")
             dealbreakers = []
             if preferences.budget_dealbreaker:
                 dealbreakers.append("budget")
@@ -374,14 +426,19 @@ class ClaudeScorer:
             if preferences.living_space_dealbreaker:
                 dealbreakers.append("living_space")
             if dealbreakers:
-                pref_parts.append(f"Dealbreakers: {', '.join(dealbreakers)}")
+                pref_parts.append(f"HARD dealbreakers: {', '.join(dealbreakers)}")
+            for df in preferences.dynamic_fields:
+                if df.value:
+                    pref_parts.append(
+                        f"  {df.name}: {df.value} ({df.importance.value})"
+                    )
             pref_summary = "\n".join(pref_parts) if pref_parts else "No specific preferences"
 
             user_content = (
                 f"## Listing\n{listing_summary}\n\n"
-                f"## Deterministic Scores\n{det_json}\n\n"
+                f"## Formula Scores (to review)\n{det_json}\n\n"
                 f"## User Preferences\n{pref_summary}\n\n"
-                "Review each score and return adjusted values with reasoning."
+                "Rescore each criterion using the guidelines. Use the full 0.0-1.0 range."
             )
 
             raw = await self._call_openrouter(
