@@ -22,21 +22,23 @@ export function useOnboarding() {
   const isActive = state?.onboarding_active ?? false;
 
   /**
-   * Advance to the next step. If step > 8, mark completed and deactivate.
-   * Steps 4-7 are extension-side; advancing past step 3 sets step=4/active=true
-   * so the extension can read the state and take over.
+   * Advance to the next step. If step > 9, mark completed and deactivate.
+   *
+   * Web steps 1-4, extension steps 5-8, post-analysis step 9.
+   * Advancing past step 4 sets step=5/active=true so the extension can read the state
+   * and take over (handled by OnboardingProvider's onNextClick for step 4).
    */
   async function advance() {
     if (!state) return;
     const nextStep = state.onboarding_step + 1;
-    if (nextStep > 8) {
+    if (nextStep > 9) {
       const newState: OnboardingState = {
-        onboarding_step: 8,
+        onboarding_step: 9,
         onboarding_active: false,
         onboarding_completed: true,
       };
       setState(newState);
-      await updateOnboardingState(8, false, true);
+      await updateOnboardingState(9, false, true);
     } else {
       const newState: OnboardingState = {
         ...state,

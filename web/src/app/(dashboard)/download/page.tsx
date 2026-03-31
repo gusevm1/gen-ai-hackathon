@@ -64,8 +64,8 @@ export default function DownloadPage() {
         </a>
         <span className="text-xs text-muted-foreground mt-2">v0.4.0</span>
 
-        {/* Onboarding Step 1 confirmation button */}
-        {isActive && step === 1 && (
+        {/* Onboarding Step 2 confirmation button (step 1 is the welcome, step 2 is install) */}
+        {isActive && step === 2 && (
           <Button
             size="lg"
             variant="outline"

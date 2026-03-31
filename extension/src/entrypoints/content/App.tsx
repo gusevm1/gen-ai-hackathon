@@ -25,7 +25,7 @@ interface ExtensionStepConfig {
 
 const EXTENSION_STEPS: ExtensionStepConfig[] = [
   {
-    step: 4,
+    step: 5,
     title: 'Log In',
     instruction: 'Click the HomeMatch icon in your browser toolbar and log in with your account.',
     targetSelector: null,
@@ -33,7 +33,7 @@ const EXTENSION_STEPS: ExtensionStepConfig[] = [
     nextLabel: "I'm logged in",
   },
   {
-    step: 5,
+    step: 6,
     title: 'Analyze Listings',
     instruction: 'Click the HomeMatch button to score the listings on this page.',
     targetSelector: null,
@@ -41,7 +41,7 @@ const EXTENSION_STEPS: ExtensionStepConfig[] = [
     nextLabel: null, // Auto-advances when scoring completes
   },
   {
-    step: 6,
+    step: 7,
     title: 'Your Results',
     instruction: 'See how each listing matches your preferences. Click a badge for details.',
     targetSelector: null, // Dynamically set to first badge shadow host
@@ -49,7 +49,7 @@ const EXTENSION_STEPS: ExtensionStepConfig[] = [
     nextLabel: 'Got it',
   },
   {
-    step: 7,
+    step: 8,
     title: 'View Full Analysis',
     instruction: 'Click "Show full analysis" on any listing to see the detailed breakdown in the web app.',
     targetSelector: null,
@@ -153,15 +153,15 @@ export default function App({ ctx }: AppProps) {
 
   /**
    * Load onboarding state on mount (once per page load).
-   * Only activates if step is in extension range (4-7) and onboarding is active.
+   * Only activates if step is in extension range (5-8) and onboarding is active.
    */
   useEffect(() => {
     getOnboardingState().then((state) => {
       if (
         state &&
         state.onboarding_active &&
-        state.onboarding_step >= 4 &&
-        state.onboarding_step <= 7
+        state.onboarding_step >= 5 &&
+        state.onboarding_step <= 8
       ) {
         setOnboardingState(state);
       }
@@ -175,9 +175,11 @@ export default function App({ ctx }: AppProps) {
     setOnboardingState((prev) => {
       if (!prev) return null;
       const next = prev.onboarding_step + 1;
-      const completed = next > 8;
+      // Extension handles steps 5-8; step 9 is post-analysis on the web app.
+      // After step 8 ("View Full Analysis"), redirect to the web app analyses page.
+      const completed = next > 9;
       const newState: OnboardingState = {
-        onboarding_step: completed ? 8 : next,
+        onboarding_step: completed ? 9 : next,
         onboarding_active: !completed,
         onboarding_completed: prev.onboarding_completed || completed,
       };
@@ -187,8 +189,8 @@ export default function App({ ctx }: AppProps) {
         newState.onboarding_active,
         newState.onboarding_completed,
       );
-      // On step 7 -> 8, redirect to web app
-      if (prev.onboarding_step === 7) {
+      // On step 8 -> 9, redirect to web app (step 9 = post-analysis tooltips)
+      if (prev.onboarding_step === 8) {
         window.open('https://homematch.ch/analyses', '_blank');
         return null; // Hide overlay
       }
@@ -210,7 +212,7 @@ export default function App({ ctx }: AppProps) {
   }, []);
 
   /**
-   * Handle "Next" for step 4 (login verification).
+   * Handle "Next" for step 5 (login verification).
    * Verifies auth before advancing; shows error if not logged in.
    */
   const handleStep4Next = useCallback(async () => {
@@ -411,14 +413,14 @@ export default function App({ ctx }: AppProps) {
     rerenderAllBadges(openPanelRef.current);
     setIsScoring(false);
 
-    // Onboarding step 5: auto-advance to step 6 when scoring finishes with results
+    // Onboarding step 6: auto-advance to step 7 when scoring finishes with results
     setOnboardingState((prev) => {
-      if (prev && prev.onboarding_step === 5 && scoresRef.current.size > 0) {
+      if (prev && prev.onboarding_step === 6 && scoresRef.current.size > 0) {
         const newState: OnboardingState = {
           ...prev,
-          onboarding_step: 6,
+          onboarding_step: 7,
         };
-        updateOnboardingState(6, newState.onboarding_active, newState.onboarding_completed);
+        updateOnboardingState(7, newState.onboarding_active, newState.onboarding_completed);
         return newState;
       }
       return prev;
@@ -434,9 +436,9 @@ export default function App({ ctx }: AppProps) {
     ? EXTENSION_STEPS.find((s) => s.step === onboardingState.onboarding_step) ?? null
     : null;
 
-  // For step 6, dynamically target the first scored badge shadow host
-  const step6TargetShadowHost =
-    onboardingState?.onboarding_step === 6 && scoresRef.current.size > 0
+  // For step 7, dynamically target the first scored badge shadow host
+  const step7TargetShadowHost =
+    onboardingState?.onboarding_step === 7 && scoresRef.current.size > 0
       ? `homematch-badge-${[...scoresRef.current.keys()][0]}`
       : null;
 
@@ -452,16 +454,16 @@ export default function App({ ctx }: AppProps) {
       {activeStepConfig && onboardingState && (
         <OnboardingOverlay
           step={onboardingState.onboarding_step}
-          totalSteps={7}
+          totalSteps={9}
           title={activeStepConfig.title}
           instruction={activeStepConfig.instruction}
           targetSelector={activeStepConfig.targetSelector}
           targetShadowHost={
-            activeStepConfig.step === 6
-              ? step6TargetShadowHost
+            activeStepConfig.step === 7
+              ? step7TargetShadowHost
               : activeStepConfig.targetShadowHost
           }
-          onNext={activeStepConfig.step === 4 ? handleStep4Next : advanceOnboarding}
+          onNext={activeStepConfig.step === 5 ? handleStep4Next : advanceOnboarding}
           onSkip={skipOnboarding}
           nextLabel={activeStepConfig.nextLabel ?? 'Next'}
           statusMessage={onboardingStatusMsg}

@@ -16,10 +16,15 @@ export default function DashboardPage() {
   const router = useRouter()
   const { language } = useLanguage()
   const [createOpen, setCreateOpen] = useState(false)
-  const { state, isActive } = useOnboardingContext()
+  const { state, isActive, advance } = useOnboardingContext()
 
   async function handleCreate(name: string) {
     const id = await createProfile(name)
+    // If onboarding is active and we're on the "create profile" step (3), advance to
+    // step 4 (Open Flatfox) so the CTA appears when the user returns to the dashboard.
+    if (isActive && state?.onboarding_step === 3) {
+      await advance()
+    }
     router.push('/profiles/' + id)
   }
 
@@ -28,6 +33,10 @@ export default function DashboardPage() {
   }
 
   function goToAiSearch() {
+    // If onboarding is active on step 3, advance before going to AI search
+    if (isActive && state?.onboarding_step === 3) {
+      advance()
+    }
     router.push('/ai-search')
   }
 
@@ -49,8 +58,8 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Step 3: Show "Open Flatfox" CTA when onboarding is active and on step 3 */}
-      {isActive && step >= 3 && (
+      {/* Step 4: Show "Open Flatfox" CTA when onboarding is active and on step 4+ */}
+      {isActive && step >= 4 && (
         <div className="mt-8">
           <a
             id="open-flatfox-cta"
