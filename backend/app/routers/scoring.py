@@ -233,18 +233,23 @@ async def _score_with_profile(profile, preferences: UserPreferences) -> ScoreRes
             )
         )
 
-    # c. Subjective scoring via OpenRouter
+    # c. LLM review of deterministic scores
+    deterministic_results = await claude_scorer.review_deterministic_scores(
+        deterministic_results, listing, preferences
+    )
+
+    # d. Subjective scoring via OpenRouter
     subjective_results, summary_bullets = await claude_scorer.score_listing(
         listing, preferences, nearby_places=proximity_data or None
     )
 
-    # d. Merge results
+    # e. Merge results
     all_results = deterministic_results + subjective_results
 
-    # e. Aggregate
+    # f. Aggregate
     overall_score, match_tier = compute_weighted_score(all_results)
 
-    # f. Build ScoreResponse v2
+    # g. Build ScoreResponse v2
     return ScoreResponse(
         overall_score=overall_score,
         match_tier=match_tier,

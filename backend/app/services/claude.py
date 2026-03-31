@@ -130,6 +130,7 @@ class ClaudeScorer:
         system_prompt: str,
         user_content: str,
         max_tokens: int = 4096,
+        temperature: float = 0.1,
     ) -> str:
         """Make a chat completion request to OpenRouter.
 
@@ -138,6 +139,7 @@ class ClaudeScorer:
             user_content: The user message content (text only -- images not
                           supported via OpenRouter for this use case).
             max_tokens: Maximum tokens in the response.
+            temperature: Sampling temperature.
 
         Returns:
             The assistant's response text.
@@ -160,7 +162,7 @@ class ClaudeScorer:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ],
-                "temperature": 0.1,
+                "temperature": temperature,
                 "max_tokens": max_tokens,
             },
         )
@@ -241,6 +243,127 @@ class ClaudeScorer:
             parsed_json = _parse_json_response(raw)
             parsed = BulletsOnlyResponse.model_validate(parsed_json)
             return [], list(parsed.summary_bullets)
+
+    async def review_deterministic_scores(
+        self,
+        deterministic_results: list[FulfillmentResult],
+        listing: FlatfoxListing,
+        preferences: UserPreferences,
+    ) -> list[FulfillmentResult]:
+        """LLM review of deterministic scores to add variance and reasoning.
+
+        Sends the deterministic results + listing context to OpenRouter and
+        returns adjusted FulfillmentResults. On any failure, returns originals.
+        """
+        if not deterministic_results:
+            return deterministic_results
+
+        try:
+            system_prompt = (
+                "You review apartment match scores. For each criterion, you may adjust "
+                "the fulfillment (0.0-1.0) by up to ±0.15 based on context a formula "
+                "might miss. Add a short reasoning sentence. Return JSON:\n"
+                '{"criteria":[{"criterion_name":"...","fulfillment":0.85,'
+                '"reasoning":"..."}]}'
+            )
+
+            # Build compact listing summary
+            title = listing.description_title or listing.short_title or listing.public_title
+            address = listing.public_address or listing.street
+            listing_summary_parts = [
+                f"Title: {title}" if title else "",
+                f"Price: {listing.price_display}" if listing.price_display else "",
+                f"Rooms: {listing.number_of_rooms}" if listing.number_of_rooms else "",
+                f"Area: {listing.surface_living}m²" if listing.surface_living else "",
+                f"Address: {address}" if address else "",
+            ]
+            listing_summary = "\n".join(p for p in listing_summary_parts if p)
+
+            if listing.attributes:
+                attr_names = [a.name for a in listing.attributes[:20]]
+                listing_summary += f"\nAttributes: {', '.join(attr_names)}"
+            if listing.description:
+                listing_summary += f"\nDescription: {listing.description[:500]}"
+
+            # Build deterministic results JSON
+            det_json = json.dumps(
+                [
+                    {
+                        "criterion_name": r.criterion_name,
+                        "fulfillment": r.fulfillment,
+                        "importance": r.importance.value if r.importance else "medium",
+                    }
+                    for r in deterministic_results
+                ],
+                indent=2,
+            )
+
+            # Build preferences summary
+            pref_parts = []
+            if preferences.budget_max:
+                pref_parts.append(f"Budget: {preferences.budget_min or 0}-{preferences.budget_max}")
+            if preferences.rooms_min or preferences.rooms_max:
+                pref_parts.append(f"Rooms: {preferences.rooms_min or '?'}-{preferences.rooms_max or '?'}")
+            dealbreakers = []
+            if preferences.budget_dealbreaker:
+                dealbreakers.append("budget")
+            if preferences.rooms_dealbreaker:
+                dealbreakers.append("rooms")
+            if preferences.living_space_dealbreaker:
+                dealbreakers.append("living_space")
+            if dealbreakers:
+                pref_parts.append(f"Dealbreakers: {', '.join(dealbreakers)}")
+            pref_summary = "\n".join(pref_parts) if pref_parts else "No specific preferences"
+
+            user_content = (
+                f"## Listing\n{listing_summary}\n\n"
+                f"## Deterministic Scores\n{det_json}\n\n"
+                f"## User Preferences\n{pref_summary}\n\n"
+                "Review each score and return adjusted values with reasoning."
+            )
+
+            raw = await self._call_openrouter(
+                system_prompt=system_prompt,
+                user_content=user_content,
+                max_tokens=1024,
+                temperature=0.3,
+            )
+
+            parsed = _parse_json_response(raw)
+            reviewed = parsed.get("criteria", [])
+
+            # Build lookup from LLM response
+            review_map: dict[str, dict] = {}
+            for item in reviewed:
+                name = item.get("criterion_name", "")
+                if name:
+                    review_map[name.lower()] = item
+
+            # Map back to FulfillmentResults, preserving originals on mismatch
+            updated: list[FulfillmentResult] = []
+            for orig in deterministic_results:
+                match = review_map.get(orig.criterion_name.lower())
+                if match and match.get("fulfillment") is not None:
+                    new_f = max(0.0, min(1.0, float(match["fulfillment"])))
+                    updated.append(
+                        FulfillmentResult(
+                            criterion_name=orig.criterion_name,
+                            fulfillment=round(new_f, 2),
+                            importance=orig.importance,
+                            reasoning=match.get("reasoning"),
+                        )
+                    )
+                else:
+                    updated.append(orig)
+
+            return updated
+
+        except Exception:
+            logger.warning(
+                "LLM review of deterministic scores failed, returning originals",
+                exc_info=True,
+            )
+            return deterministic_results
 
     async def close(self) -> None:
         """Close the underlying HTTP client."""
