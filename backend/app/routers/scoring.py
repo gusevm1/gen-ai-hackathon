@@ -630,21 +630,20 @@ async def top_matches(request: TopMatchesRequest) -> TopMatchesResponse:
         if p.offer_type.upper() == preferences.offer_type.value.upper()
     ]
 
-    # Filter: match object_category (skip parking, storage, etc.)
-    # "ANY" means apartment or house (still exclude parking/commercial)
-    RESIDENTIAL_TYPES = {"APARTMENT", "HOUSE", "VILLA", "STUDIO", "LOFT", "MAISONETTE", "TERRACE_HOUSE", "CHALET"}
+    # Filter: match object_category (skip parking, storage, commercial)
+    # object_category is the reliable field from Flatfox API
+    EXCLUDED_CATEGORIES = {"PARK", "INDUSTRY", "SECONDARY"}
+    RESIDENTIAL_CATEGORIES = {"APARTMENT", "HOUSE", "SHARED"}
     pref_cat = preferences.object_category.value.upper()
     if pref_cat == "ANY":
         all_profiles = [
             p for p in all_profiles
-            if p.object_category.upper() in RESIDENTIAL_TYPES
-            or p.object_type.upper() in RESIDENTIAL_TYPES
+            if p.object_category.upper() in RESIDENTIAL_CATEGORIES
         ]
     else:
         all_profiles = [
             p for p in all_profiles
             if p.object_category.upper() == pref_cat
-            or p.object_type.upper() == pref_cat
         ]
 
     if not all_profiles:
