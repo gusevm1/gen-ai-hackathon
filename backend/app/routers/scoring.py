@@ -551,16 +551,19 @@ def _get_cached_top_matches(
 ) -> Optional[TopMatchesResponse]:
     """Return cached top matches if fresh (not stale, within TTL)."""
     client = supabase_service.get_client()
-    result = (
-        client.table("top_matches_cache")
-        .select("*")
-        .eq("user_id", user_id)
-        .eq("profile_id", profile_id)
-        .eq("stale", False)
-        .maybe_single()
-        .execute()
-    )
-    if not result.data:
+    try:
+        result = (
+            client.table("top_matches_cache")
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("profile_id", profile_id)
+            .eq("stale", False)
+            .maybe_single()
+            .execute()
+        )
+    except Exception:
+        return None
+    if not result or not result.data:
         return None
 
     computed_at = datetime.fromisoformat(result.data["computed_at"])
