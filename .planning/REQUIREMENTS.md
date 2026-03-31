@@ -29,7 +29,7 @@
 - [x] **DS-01**: No hardcoded `rose-500` color remains in the codebase — all replaced with `primary` CSS token
 - [x] **DS-02**: Dashboard home, profiles list, and analyses list pages have Framer Motion entrance animations (FadeIn on mount, stagger on list items)
 - [x] **DS-03**: Tier colors are unified across web: excellent=teal, good=green, fair=amber, poor=red
-- [ ] **DS-04**: All card hover states use a consistent lift effect matching the landing page style
+- [x] **DS-04**: All card hover states use a consistent lift effect matching the landing page style
 
 ### Onboarding — WelcomeModal Rebuild
 
@@ -128,7 +128,7 @@
 | DS-01 | Phase 37 | Complete |
 | DS-02 | Phase 37 | Complete |
 | DS-03 | Phase 37 | Complete |
-| DS-04 | Phase 37 | Pending |
+| DS-04 | Phase 37 | Complete |
 | ONB-01 | Phase 38 | Pending |
 | ONB-02 | Phase 38 | Pending |
 | ONB-03 | Phase 38 | Pending |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
 status: executing
-stopped_at: Phase 37 Plan 03 complete — dual-mode FadeIn/StaggerGroup + dashboard/profile on-mount animations
-last_updated: "2026-03-31T20:44:13.917Z"
-last_activity: "2026-03-31 — 37-02 executed: rose→primary cleanup (DS-01) and tier color unification to teal/green/amber/red (DS-03), tier-colors tests GREEN"
+stopped_at: Phase 37 Plan 04 complete — DS-02 analyses animation + DS-04 hover lift on all 5 card types
+last_updated: "2026-03-31T20:50:51.765Z"
+last_activity: "2026-03-31 — 37-03 executed: dual-mode FadeIn/StaggerGroup (animate prop) + dashboard home and profiles list on-mount animations"
 progress:
   total_phases: 14
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 25
-  completed_plans: 24
-  percent: 95
+  completed_plans: 25
+  percent: 98
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 37 of 40 (Design System Propagation)
-Plan: 03 completed
+Plan: 04 completed — Phase 37 fully complete
 Status: In progress
-Last activity: 2026-03-31 — 37-03 executed: dual-mode FadeIn/StaggerGroup (animate prop) + dashboard home and profiles list on-mount animations
+Last activity: 2026-03-31 — 37-04 executed: AnalysesGrid client component with StaggerGroup animation (DS-02) + hover:-translate-y-1 lift on all 5 card types (DS-04)
 
-Progress: [██████████] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Progress: [██████████] 98%
 | Phase 37-design-system-propagation P01 | 11 | 2 tasks | 2 files |
 | Phase 37-design-system-propagation P02 | 2 | 2 tasks | 7 files |
 | Phase 37-design-system-propagation P03 | 3 | 2 tasks | 4 files |
+| Phase 37-design-system-propagation P04 | 4 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -105,12 +106,19 @@ Progress: [██████████] 98%
 - Dashboard FadeIn delays: 0s / 0.1s / 0.2s per section per CONTEXT.md 0.05–0.15s step guidance
 - Profile card key placed on StaggerItem — StaggerItem is the motion container and owns the key for React reconciliation
 
+### Phase 37 Decisions (37-04)
+
+- Map<string,string> converted to Record<string,string> before passing to AnalysesGrid — Map is not serializable across Next.js server/client boundary
+- Server component extraction pattern: analyses/page.tsx stays server for data fetching, AnalysesGrid.tsx is client animation wrapper
+- TIER_STYLES, getTierFromScore, formatDate helpers moved to AnalysesGrid.tsx — co-located with rendering logic that uses them
+- analyses/page.tsx empty state check kept in server component — AnalysesGrid only rendered when data exists
+
 ### Blockers/Concerns
 
 - None at roadmap creation
 
 ## Session Continuity
 
-Last session: 2026-03-31T20:44:13.912Z
-Stopped at: Phase 37 Plan 03 complete — dual-mode FadeIn/StaggerGroup + dashboard/profile on-mount animations
+Last session: 2026-03-31T20:50:51.760Z
+Stopped at: Phase 37 Plan 04 complete — DS-02 analyses animation + DS-04 hover lift on all 5 card types
 Resume file: None
