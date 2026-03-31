@@ -55,7 +55,7 @@ export function TopMatchCard({ match, rank, defaultExpanded = false }: TopMatchC
   const tierKey = `tier_${tier}` as 'tier_excellent' | 'tier_good' | 'tier_fair' | 'tier_poor'
 
   const displayTitle = match.title || match.address || `Listing ${match.listing_id}`
-  const flatfoxUrl = match.slug ? `https://flatfox.ch/en/flat/${match.slug}/` : null
+  const flatfoxUrl = match.slug ? `https://flatfox.ch/en/flat/${match.slug}/${match.listing_id}/` : null
 
   return (
     <Card className={`ring-1 ${colors.ring} transition-all`}>
