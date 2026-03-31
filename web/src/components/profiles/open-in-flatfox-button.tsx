@@ -75,7 +75,7 @@ export function OpenInFlatfoxButton({ preferences, className, variant = 'card', 
       id={id}
       onClick={handleClick}
       disabled={loading}
-      className={className ?? "inline-flex items-center gap-1 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 transition-colors disabled:opacity-50 cursor-pointer"}
+      className={className ?? "inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer"}
     >
       {loading ? <Loader2 className="size-3 animate-spin" /> : <ExternalLink className="size-3" />}
       {loading ? 'Opening...' : 'Open in Flatfox'}
