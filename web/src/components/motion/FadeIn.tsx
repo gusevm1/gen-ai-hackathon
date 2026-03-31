@@ -8,6 +8,7 @@ interface FadeInProps {
   className?: string
   delay?: number
   variants?: typeof fadeUpVariants
+  animate?: string
 }
 
 export function FadeIn({
@@ -15,8 +16,25 @@ export function FadeIn({
   className,
   delay = 0,
   variants = fadeUpVariants,
+  animate,
 }: FadeInProps) {
   const shouldReduceMotion = useReducedMotion()
+
+  const mountMode = animate !== undefined
+
+  if (mountMode) {
+    return (
+      <motion.div
+        className={className}
+        initial="hidden"
+        animate={animate}
+        variants={shouldReduceMotion ? {} : variants}
+        transition={delay ? { delay } : undefined}
+      >
+        {children}
+      </motion.div>
+    )
+  }
 
   return (
     <motion.div
