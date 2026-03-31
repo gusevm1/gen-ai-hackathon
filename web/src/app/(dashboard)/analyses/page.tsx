@@ -1,34 +1,10 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { Card, CardContent } from '@/components/ui/card'
-import Link from 'next/link'
 import { FileSearch } from 'lucide-react'
 import { AnalysesFilterBar } from '@/components/analyses/analyses-filter-bar'
+import { AnalysesGrid } from '@/components/analyses/AnalysesGrid'
 import { t, type Language, LANG_COOKIE } from '@/lib/translations'
-
-function getTierFromScore(score: number): string {
-  if (score >= 80) return 'excellent'
-  if (score >= 60) return 'good'
-  if (score >= 40) return 'fair'
-  return 'poor'
-}
-
-const TIER_STYLES: Record<string, { bg: string; text: string }> = {
-  excellent: { bg: 'bg-teal-500', text: 'text-white' },
-  good: { bg: 'bg-green-500', text: 'text-white' },
-  fair: { bg: 'bg-amber-500', text: 'text-gray-900' },
-  poor: { bg: 'bg-red-500', text: 'text-white' },
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
 
 export default async function AnalysesPage({
   searchParams,
@@ -65,10 +41,10 @@ export default async function AnalysesPage({
     .from('profiles')
     .select('id, name')
 
-  const profileMap = new Map<string, string>()
+  const profileRecord: Record<string, string> = {}
   if (profiles) {
     for (const p of profiles) {
-      profileMap.set(p.id, p.name)
+      profileRecord[p.id] = p.name
     }
   }
 
@@ -97,70 +73,7 @@ export default async function AnalysesPage({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {analyses.map((analysis) => {
-            const breakdown = analysis.breakdown as {
-              match_tier?: string
-              listing_title?: string
-              listing_address?: string
-              listing_rooms?: string
-              listing_object_type?: string
-            } | null
-            const tier = breakdown?.match_tier ?? getTierFromScore(analysis.score)
-            const tierStyle = TIER_STYLES[tier] ?? TIER_STYLES.poor
-            const profileName = analysis.profile_id ? profileMap.get(analysis.profile_id) : null
-            const tierKey = `tier_${tier}` as 'tier_excellent' | 'tier_good' | 'tier_fair' | 'tier_poor'
-
-            const rawTitle = breakdown?.listing_title
-            const constructedTitle = breakdown?.listing_rooms && breakdown?.listing_object_type && breakdown?.listing_address
-              ? `${breakdown.listing_rooms} rooms - ${breakdown.listing_object_type.replace(/_/g, ' ').toLowerCase()} - ${breakdown.listing_address.split(' ').pop()}`
-              : null
-            const primaryTitle = rawTitle || constructedTitle || breakdown?.listing_address || `${t(lang, 'analyses_listing')} ${analysis.listing_id}`
-
-            const secondaryAddress = breakdown?.listing_address && breakdown.listing_address !== primaryTitle
-              ? breakdown.listing_address
-              : null
-
-            return (
-              <Link key={analysis.id} href={`/analysis/${analysis.listing_id}`}>
-                <Card className="cursor-pointer transition-all hover:ring-2 hover:ring-primary/20 hover:shadow-md h-full">
-                  <CardContent className="flex flex-col gap-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0 mr-2">
-                        <span className="text-sm font-medium text-foreground block truncate">
-                          {primaryTitle}
-                        </span>
-                        {secondaryAddress && (
-                          <span className="text-xs text-muted-foreground block truncate">
-                            {secondaryAddress}
-                          </span>
-                        )}
-                      </div>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold shrink-0 ${tierStyle.bg} ${tierStyle.text}`}
-                      >
-                        {analysis.score}
-                      </span>
-                    </div>
-
-                    <span className="text-xs text-muted-foreground capitalize">
-                      {t(lang, tierKey)}
-                    </span>
-
-                    <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-1 border-t border-border">
-                      {profileName ? (
-                        <span className="truncate max-w-[60%]">{profileName}</span>
-                      ) : (
-                        <span className="text-muted-foreground/50">{t(lang, 'no_profile')}</span>
-                      )}
-                      <span>{formatDate(analysis.created_at)}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            )
-          })}
-        </div>
+        <AnalysesGrid analyses={analyses ?? []} profileMap={profileRecord} lang={lang} />
       )}
     </div>
   )
