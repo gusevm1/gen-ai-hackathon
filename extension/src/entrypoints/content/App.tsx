@@ -1,6 +1,23 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createPortal } from 'react-dom';
+
+console.log('[HM] content script loaded');
+
+// Intercept URL mutations to detect Flatfox rewriting query params
+const _origPush = history.pushState.bind(history);
+history.pushState = function(...args: Parameters<typeof history.pushState>) {
+  console.log('[HM] pushState:', args[2]);
+  return _origPush(...args);
+};
+const _origReplace = history.replaceState.bind(history);
+history.replaceState = function(...args: Parameters<typeof history.replaceState>) {
+  console.log('[HM] replaceState:', args[2]);
+  return _origReplace(...args);
+};
+window.addEventListener('popstate', () => {
+  console.log('[HM] popstate URL:', window.location.href);
+});
 import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import type { ScoreResponse } from '@/types/scoring';
 import { extractVisibleListingPKs, findListingCardElement } from '@/lib/flatfox';
@@ -162,13 +179,19 @@ export default function App({ ctx }: AppProps) {
    * is injected by the web app's OpenInFlatfoxButton when transitioning from step 4→5.
    */
   useEffect(() => {
+    console.log('[HM] search at effect:', window.location.search);
+    console.log('[HM] full URL:', window.location.href);
+
     getOnboardingState().then((state) => {
+      console.log('[HM] getOnboardingState result:', state);
+
       if (
         state &&
         state.onboarding_active &&
         state.onboarding_step >= 5 &&
         state.onboarding_step <= 8
       ) {
+        console.log('[HM] setting onboarding from Supabase, step:', state.onboarding_step);
         setOnboardingState(state);
         return;
       }
@@ -176,9 +199,11 @@ export default function App({ ctx }: AppProps) {
       // Fallback: read step from URL for the pre-auth case (step 5 / step 6)
       const params = new URLSearchParams(window.location.search);
       const urlStep = params.get('homematch_onboarding');
+      console.log('[HM] URL param homematch_onboarding:', urlStep);
       if (urlStep) {
         const step = parseInt(urlStep, 10);
         if (step >= 5 && step <= 6) {
+          console.log('[HM] setting onboarding from URL, step:', step);
           setOnboardingState({
             onboarding_step: step,
             onboarding_active: true,
@@ -456,6 +481,8 @@ export default function App({ ctx }: AppProps) {
   const activeStepConfig = onboardingState
     ? EXTENSION_STEPS.find((s) => s.step === onboardingState.onboarding_step) ?? null
     : null;
+
+  console.log('[HM] render — onboardingState:', onboardingState, '| activeStepConfig:', activeStepConfig);
 
   // For step 8 ("View Full Analysis"), dynamically target the first scored badge shadow host
   const step8TargetShadowHost =

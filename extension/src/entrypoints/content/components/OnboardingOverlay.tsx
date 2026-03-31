@@ -61,6 +61,7 @@ export function OnboardingOverlay({
   nextLabel,
   statusMessage,
 }: OnboardingOverlayProps) {
+  console.log('[HM] overlay mounted, step:', step);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const rafRef = useRef<number | null>(null);
 
