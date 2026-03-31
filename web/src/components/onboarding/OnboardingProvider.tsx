@@ -1,119 +1,11 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useCallback, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { driver, Driver, type PopoverDOM, type Config } from 'driver.js';
+import { driver, Driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useOnboarding } from '@/hooks/use-onboarding';
-
-// ─── Issue 3 fix: Move close button into footer ───────────────────────────────
-//
-// The driver.js close button is `position:absolute; top:0; right:0` inside the
-// popover — it renders over the title text and appears to overflow the box.
-// Fix: relabel it "Exit Tutorial" and physically move it into the footer element
-// so it renders alongside the other footer buttons inside the padded container.
-
-function patchCloseButton(popover: PopoverDOM) {
-  const btn = popover.closeButton;
-
-  // Relabel
-  btn.innerHTML = 'Exit Tutorial';
-
-  // Move from absolute-positioned top-right into the footer (left side)
-  // Only move if not already in footer (guard against double calls)
-  if (btn.parentElement !== popover.footer) {
-    btn.style.cssText = [
-      'all:unset',
-      'display:inline-block',
-      'box-sizing:border-box',
-      'font-size:12px',
-      'font-weight:500',
-      'color:#888',
-      'cursor:pointer',
-      'padding:3px 7px',
-      'border:1px solid #ccc',
-      'border-radius:3px',
-      'line-height:1.3',
-    ].join(';');
-    // Insert before progress text / navigation buttons so it sits on the left
-    popover.footer.insertBefore(btn, popover.footer.firstChild);
-  }
-}
-
-// ─── Issue 1 fix: overlay click hides popover without destroying driver ────────
-//
-// driver.js `overlayClickBehavior` can be a DriverHook. We use it to toggle
-// the popover's visibility. The driver instance stays alive — state is preserved
-// and the user can resume exactly where they left off via a floating button.
-
-function handleOverlayClick(): void {
-  const popover = document.querySelector<HTMLElement>('.driver-popover');
-  const existing = document.getElementById('driver-resume-btn');
-
-  if (!popover) return;
-
-  const isHidden = popover.style.opacity === '0';
-
-  if (isHidden) {
-    // Re-show popover
-    popover.style.opacity = '';
-    popover.style.pointerEvents = '';
-    existing?.remove();
-  } else {
-    // Hide popover without destroying driver
-    popover.style.opacity = '0';
-    popover.style.pointerEvents = 'none';
-
-    if (!existing) {
-      const btn = document.createElement('button');
-      btn.id = 'driver-resume-btn';
-      btn.textContent = 'Resume Tutorial';
-      btn.style.cssText = [
-        'position:fixed',
-        'bottom:24px',
-        'right:24px',
-        'z-index:100001',
-        'background:#fff',
-        'border:1px solid #e2e8f0',
-        'border-radius:8px',
-        'padding:8px 16px',
-        'font-size:13px',
-        'font-weight:500',
-        'color:#374151',
-        'cursor:pointer',
-        'box-shadow:0 2px 8px rgba(0,0,0,0.15)',
-      ].join(';');
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const pop = document.querySelector<HTMLElement>('.driver-popover');
-        if (pop) {
-          pop.style.opacity = '';
-          pop.style.pointerEvents = '';
-        }
-        btn.remove();
-      });
-      document.body.appendChild(btn);
-    }
-  }
-}
-
-// ─── Shared driver config factory ─────────────────────────────────────────────
-//
-// Builds the common config options used by every driver instance so they don't
-// have to be repeated. Per-instance overrides (steps, onCloseClick) are merged in.
-
-function makeDriverConfig(overrides: Partial<Config>): Config {
-  return {
-    showProgress: false,
-    overlayColor: 'black',
-    overlayOpacity: 0.5,
-    // Issue 1 fix: overlayClickBehavior hides/shows popover instead of destroying driver
-    overlayClickBehavior: handleOverlayClick,
-    // Issue 3 fix: move close button into footer and relabel it
-    onPopoverRender: patchCloseButton,
-    ...overrides,
-  };
-}
+import { createClient } from '@/lib/supabase/client';
 
 // ─── Context types ────────────────────────────────────────────────────────────
 
@@ -131,6 +23,84 @@ export function useOnboardingContext(): OnboardingContextValue {
   return ctx;
 }
 
+// ─── Welcome modal (Step 1) ───────────────────────────────────────────────────
+//
+// A simple React modal replaces driver.js for step 1 to avoid the white-square
+// artifact that appears when driver.js tries to highlight a null/body element.
+
+interface WelcomeModalProps {
+  onStart: () => void;
+  onExit: () => void;
+}
+
+function WelcomeModal({ onStart, onExit }: WelcomeModalProps) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        // No dark backdrop — non-blocking
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          background: '#fff',
+          borderRadius: '12px',
+          padding: '28px 32px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+          maxWidth: '400px',
+          width: '90vw',
+          pointerEvents: 'auto',
+          fontFamily: 'inherit',
+        }}
+      >
+        <h2 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700, color: '#111' }}>
+          Welcome to HomeMatch!
+        </h2>
+        <p style={{ margin: '0 0 20px', fontSize: '14px', color: '#555', lineHeight: 1.5 }}>
+          Let&apos;s take a quick tour to show you how to find your perfect home. This will only take a minute.
+        </p>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            onClick={onStart}
+            style={{
+              background: '#111',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '8px 18px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Start Tour
+          </button>
+          <button
+            onClick={onExit}
+            style={{
+              background: 'transparent',
+              color: '#888',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              padding: '8px 14px',
+              fontSize: '13px',
+              cursor: 'pointer',
+            }}
+          >
+            Exit Tutorial
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Provider ────────────────────────────────────────────────────────────────
 
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
@@ -139,143 +109,63 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router = useRouter();
   const driverRef = useRef<Driver | null>(null);
-  // Tracks whether the user saved preferences during onboarding step 4.
-  // Used to skip the "Save Preferences" sub-step and jump to "Open in Flatfox" directly.
   const step4SavedRef = useRef(false);
 
-  /**
-   * Issue 2 fix: MutationObserver watches for Radix/shadcn Dialog portals.
-   *
-   * When a [role=dialog] appears in the DOM (e.g. the "Create Profile" dialog on
-   * the dashboard), we push the driver.js overlay behind the dialog so the user
-   * can interact with the dialog unobstructed. When the dialog closes we restore
-   * the driver overlay z-index.
-   *
-   * We also hide the popover while the dialog is open so it doesn't render at a
-   * lower z-index awkwardly on top of the dialog background.
-   */
-  useEffect(() => {
-    let dialogWasOpen = false;
+  // Controls visibility of the Step 1 welcome modal
+  const [showWelcome, setShowWelcome] = useState(false);
 
-    const observer = new MutationObserver(() => {
-      const dialogOpen = !!document.querySelector('[role="dialog"]');
-      const overlay = document.querySelector<HTMLElement>('.driver-overlay');
-      const popover = document.querySelector<HTMLElement>('.driver-popover');
-      const resumeBtn = document.getElementById('driver-resume-btn');
+  // ─── Helper: destroy any active driver instance ──────────────────────────
 
-      if (dialogOpen && !dialogWasOpen) {
-        dialogWasOpen = true;
-        // Push driver UI behind the dialog (Radix Dialog uses z-index 50)
-        if (overlay) overlay.style.zIndex = '40';
-        if (popover) {
-          popover.style.zIndex = '41';
-          popover.style.opacity = '0';
-          popover.style.pointerEvents = 'none';
-        }
-        if (resumeBtn) resumeBtn.style.display = 'none';
-      } else if (!dialogOpen && dialogWasOpen) {
-        dialogWasOpen = false;
-        // Restore driver UI — remove inline z-index overrides
-        if (overlay) overlay.style.zIndex = '';
-        if (popover) {
-          popover.style.zIndex = '';
-          // Only restore visibility if the user hadn't already hidden it manually
-          // (indicated by the resume button being absent)
-          if (!document.getElementById('driver-resume-btn')) {
-            popover.style.opacity = '';
-            popover.style.pointerEvents = '';
-          }
-        }
-        if (resumeBtn) resumeBtn.style.display = '';
-      }
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
+  const destroyDriver = useCallback(() => {
+    if (driverRef.current) {
+      driverRef.current.destroy();
+      driverRef.current = null;
+    }
   }, []);
 
-  /**
-   * Launch driver.js tour steps appropriate for the current page + onboarding step.
-   *
-   * Step mapping:
-   *   Step 1 — Welcome intro (any page, no DOM target)
-   *   Step 2 — Install extension (/download, #install-extension-cta)
-   *   Step 3 — Create profile (/dashboard, #create-profile-section)
-   *   Step 4 — Save Preferences then Open Flatfox (/profiles/*, #save-preferences-btn then #open-flatfox-profile-btn)
-   *   Steps 5-8 — Extension side (handled in content script)
-   *   Step 9 — Post-analysis tooltips (/analyses or /analysis, step===9)
-   *
-   * Global UX rules:
-   *   - No allowClose:false — overlay clicks are handled by overlayClickBehavior
-   *   - overlayClickBehavior hides the popover without destroying driver state
-   *   - onCloseClick is the ONLY way to fully exit — labelled "Exit Tutorial" and
-   *     placed inside the footer (via patchCloseButton in onPopoverRender)
-   */
+  // ─── Exit handler — called by "Exit Tutorial" buttons on all steps ───────
+
+  const exitTutorial = useCallback(() => {
+    destroyDriver();
+    setShowWelcome(false);
+    skip();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [destroyDriver, skip]);
+
+  // ─── launchTourForCurrentPage ─────────────────────────────────────────────
+  //
+  // Shows the appropriate step for the current page + onboarding step.
+  //
+  // Step 1: Welcome modal (React, no driver.js)
+  // Step 2: /download — highlight install CTA
+  // Step 3: /dashboard — highlight create profile section
+  // Step 4: /profiles/* — save preferences then open Flatfox
+  // Step 9: /analyses or /analysis — post-analysis tooltips
+
   const launchTourForCurrentPage = useCallback(() => {
     if (!state) return;
 
     const step = state.onboarding_step;
 
-    // Destroy any running tour first
-    if (driverRef.current) {
-      driverRef.current.destroy();
-      driverRef.current = null;
-    }
-
-    // Remove any stale resume button from a previous driver instance
-    document.getElementById('driver-resume-btn')?.remove();
+    // Destroy any running driver first
+    destroyDriver();
 
     if (step === 1) {
-      // Step 1: Welcome — no DOM target, centered popover on any page
-      const driverInstance = driver(makeDriverConfig({
-        onCloseClick: () => {
-          skip();
-          driverInstance.destroy();
-          driverRef.current = null;
-          document.getElementById('driver-resume-btn')?.remove();
-        },
-        steps: [
-          {
-            popover: {
-              title: 'Welcome to HomeMatch!',
-              description:
-                "Let's take a quick tour to show you how to find your perfect home. This will only take a minute.",
-              align: 'center',
-              showButtons: ['next', 'close'],
-              disableButtons: ['previous'],
-              progressText: 'Step 1 of 9',
-              nextBtnText: 'Start Tour',
-
-              onNextClick: async () => {
-                driverInstance.destroy();
-                driverRef.current = null;
-                document.getElementById('driver-resume-btn')?.remove();
-                await advance();
-                router.push('/download');
-              },
-            },
-          },
-        ],
-      }));
-      driverRef.current = driverInstance;
-      driverInstance.drive();
+      // Step 1: Use React welcome modal — no driver.js to avoid white-square artifact
+      setShowWelcome(true);
     } else if (pathname === '/download' && step === 2) {
-      // Step 2: Highlight install CTA on download page
-      // overlayClickBehavior hides the popover so user can interact with install steps
-      const driverInstance = driver(makeDriverConfig({
-        onCloseClick: () => {
-          skip();
-          driverInstance.destroy();
-          driverRef.current = null;
-          document.getElementById('driver-resume-btn')?.remove();
-        },
+      // Step 2: Highlight install CTA
+      const inst = driver({
+        showProgress: false,
+        overlayOpacity: 0,
+        onCloseClick: exitTutorial,
         steps: [
           {
             element: '#install-extension-cta',
             popover: {
               title: 'Install the HomeMatch Extension',
               description:
-                'Follow the installation instructions shown on this screen. Once you\'ve completed all steps, click "I\'ve installed it!" below.\n\nClick outside to temporarily hide this tip.',
+                'Follow the installation instructions shown on this screen. Once you\'ve completed all steps, click "I\'ve installed it!" below.',
               side: 'bottom',
               align: 'center',
               showButtons: ['close'],
@@ -284,19 +174,15 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             },
           },
         ],
-      }));
-      driverRef.current = driverInstance;
-      driverInstance.drive();
+      });
+      driverRef.current = inst;
+      inst.drive();
     } else if (pathname === '/dashboard' && step === 3) {
-      // Step 3: Highlight the profile creation section on dashboard
-      // Popover placed below the selection cards (side: 'bottom')
-      const driverInstance = driver(makeDriverConfig({
-        onCloseClick: () => {
-          skip();
-          driverInstance.destroy();
-          driverRef.current = null;
-          document.getElementById('driver-resume-btn')?.remove();
-        },
+      // Step 3: Highlight create profile section
+      const inst = driver({
+        showProgress: false,
+        overlayOpacity: 0,
+        onCloseClick: exitTutorial,
         steps: [
           {
             element: '#create-profile-section',
@@ -312,20 +198,15 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             },
           },
         ],
-      }));
-      driverRef.current = driverInstance;
-      driverInstance.drive();
+      });
+      driverRef.current = inst;
+      inst.drive();
     } else if (pathname.startsWith('/profiles/') && step === 4) {
-      // Step 4: On the profile edit page
-      // Sub-step 1: Save Preferences — delayed 3s so user has time to fill the form first
-      // Sub-step 2: Open Flatfox — appears after save is confirmed (via advanceToOpenFlatfox)
-      const driverInstance = driver(makeDriverConfig({
-        onCloseClick: () => {
-          skip();
-          driverInstance.destroy();
-          driverRef.current = null;
-          document.getElementById('driver-resume-btn')?.remove();
-        },
+      // Step 4: Save preferences then open Flatfox
+      const inst = driver({
+        showProgress: false,
+        overlayOpacity: 0,
+        onCloseClick: exitTutorial,
         steps: [
           {
             element: '#save-preferences-btn',
@@ -354,24 +235,21 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             },
           },
         ],
-      }));
-      driverRef.current = driverInstance;
-      // If user already saved, skip to "Open in Flatfox" sub-step immediately.
-      // Otherwise delay 3s so the user has time to fill the form before the popover appears.
+      });
+      driverRef.current = inst;
       if (step4SavedRef.current) {
-        driverInstance.drive(1);
+        inst.drive(1);
       } else {
         setTimeout(() => {
-          // Check again in case user saved during the delay
           if (step4SavedRef.current) {
-            driverInstance.drive(1);
+            inst.drive(1);
           } else {
-            driverInstance.drive();
+            inst.drive();
           }
         }, 3000);
       }
     } else if ((pathname.startsWith('/analyses') || pathname.startsWith('/analysis')) && step === 9) {
-      // Step 9: Light non-blocking tooltips for post-analysis feature awareness
+      // Step 9: Post-analysis feature awareness tooltips
       const step9Targets = [
         {
           selector: '#analyses-list',
@@ -386,7 +264,6 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         },
       ];
 
-      // Filter to targets that exist in the DOM
       const existingSteps = step9Targets
         .filter(({ selector }) => document.querySelector(selector) !== null)
         .map(({ selector, title, description }) => ({
@@ -400,36 +277,61 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         }));
 
       if (existingSteps.length > 0) {
-        const driverInstance = driver(makeDriverConfig({
-          overlayOpacity: 0.3,
-          onCloseClick: () => {
-            skip();
-            driverInstance.destroy();
-            driverRef.current = null;
-            document.getElementById('driver-resume-btn')?.remove();
-          },
+        const inst = driver({
+          showProgress: false,
+          overlayOpacity: 0,
+          onCloseClick: exitTutorial,
           onDestroyStarted: () => {
-            // Only called when driver naturally ends (last step "Done")
+            // Natural end (last step "Done") — mark completed
             skip();
-            driverInstance.destroy();
             driverRef.current = null;
-            document.getElementById('driver-resume-btn')?.remove();
           },
           steps: existingSteps,
-        }));
-        driverRef.current = driverInstance;
-        driverInstance.drive();
+        });
+        driverRef.current = inst;
+        inst.drive();
       }
     }
-  }, [state, pathname, skip, advance, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, pathname, exitTutorial, destroyDriver]);
 
-  // Resume an in-progress active tour after page load, state change, or manual start.
-  // Does NOT auto-start for users who have never started the tour (only fires when active=true).
+  // ─── Auto-trigger for new users (no profiles) ────────────────────────────
+  //
+  // Only fires when the user has never created a profile — this avoids showing
+  // the tour to existing users who have profiles but happen to have
+  // onboarding_active:true stuck in their DB from a previous partial tour.
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!state) return;
+    // Only auto-start for first-time users: step=1, not active, not completed
+    if (state.onboarding_active) return;
+    if (state.onboarding_completed) return;
+    if (state.onboarding_step !== 1) return;
+
+    // Check if user has any profiles — if so, they're not a new user
+    const supabase = createClient();
+    supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .then(({ count }) => {
+        if ((count ?? 0) === 0) {
+          // Truly new user — auto-start after a short delay
+          const timer = setTimeout(() => {
+            onboarding.startTour();
+          }, 800);
+          return () => clearTimeout(timer);
+        }
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading]);
+
+  // ─── Resume active tour after state change or navigation ─────────────────
+
   useEffect(() => {
     if (isLoading) return;
     if (!state?.onboarding_active) return;
 
-    // Small delay to allow DOM to settle after navigation
     const timer = setTimeout(() => {
       launchTourForCurrentPage();
     }, 500);
@@ -437,10 +339,10 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, state?.onboarding_active, state?.onboarding_step]);
 
-  // Re-launch tour when pathname changes (navigation to new page mid-tour)
+  // ─── Re-launch tour on page navigation ───────────────────────────────────
+
   useEffect(() => {
     if (!state?.onboarding_active) return;
-    // Reset step 4 save flag when navigating to a different page
     if (!pathname.startsWith('/profiles/')) {
       step4SavedRef.current = false;
     }
@@ -451,42 +353,49 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  /**
-   * Advance from the "Save Preferences" sub-step to the "Open in Flatfox" sub-step.
-   * Called by PreferencesForm after a successful save when onboarding step === 4.
-   *
-   * If the driver hasn't started yet (user saved before the 3-second delay elapsed),
-   * we move directly to the second sub-step by driving from index 1.
-   */
+  // ─── Advance step 4 from "Save" to "Open Flatfox" sub-step ───────────────
+
   const advanceToOpenFlatfox = useCallback(() => {
-    // Mark that save has happened so subsequent driver launches skip to Open Flatfox
     step4SavedRef.current = true;
     if (driverRef.current) {
       try {
         driverRef.current.moveNext();
       } catch {
-        // Driver finished or errored — re-launch which will now jump to index 1
         launchTourForCurrentPage();
       }
     } else {
-      // Driver not started yet (user saved before the 3-second delay elapsed)
-      // launchTourForCurrentPage will see step4SavedRef=true and drive(1) directly
       launchTourForCurrentPage();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [launchTourForCurrentPage]);
 
-  /**
-   * Start the tour from step 1, then navigate to the current page to show the welcome step.
-   * Called by TakeATourButton and NavUser "Take a quick tour" menu item.
-   */
-  const startTourAndNavigate = useCallback(async () => {
-    await onboarding.startTour();
-    // Step 1 (welcome) can show on any page — no navigation needed; launchTourForCurrentPage
-    // will fire via the onboarding_active effect above.
-  }, [onboarding]);
+  // ─── Manual start (TakeATourButton, NavUser menu) ────────────────────────
 
-  // Expose helpers via context
+  const startTourAndNavigate = useCallback(async () => {
+    destroyDriver();
+    setShowWelcome(false);
+    await onboarding.startTour();
+    // State change triggers the onboarding_active effect which calls launchTourForCurrentPage
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboarding, destroyDriver]);
+
+  // ─── Welcome modal handlers ───────────────────────────────────────────────
+
+  const handleWelcomeStart = useCallback(async () => {
+    setShowWelcome(false);
+    await advance();
+    router.push('/download');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [advance, router]);
+
+  const handleWelcomeExit = useCallback(() => {
+    setShowWelcome(false);
+    skip();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skip]);
+
+  // ─── Context value ────────────────────────────────────────────────────────
+
   const contextValue = {
     ...onboarding,
     startTour: startTourAndNavigate,
@@ -497,6 +406,9 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   return (
     <OnboardingContext.Provider value={contextValue}>
       {children}
+      {showWelcome && (
+        <WelcomeModal onStart={handleWelcomeStart} onExit={handleWelcomeExit} />
+      )}
     </OnboardingContext.Provider>
   );
 }
