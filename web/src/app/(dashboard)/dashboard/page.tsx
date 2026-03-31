@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { NewUserDashboard } from '@/components/dashboard/NewUserDashboard'
+import { ReturningUserDashboard } from '@/components/dashboard/ReturningUserDashboard'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -23,15 +24,22 @@ export default async function DashboardPage() {
   const activeProfile =
     allProfiles.find((p) => p.is_default) ?? allProfiles[0] ?? null
 
-  if (allProfiles.length === 0) {
+  if (allProfiles.length === 0 || !activeProfile) {
     return <NewUserDashboard />
   }
 
-  // Plan 02 will replace this with the returning user dashboard
+  const { data: recentAnalyses } = await supabase
+    .from('analyses')
+    .select('id, listing_id, score, breakdown, created_at')
+    .eq('profile_id', activeProfile.id)
+    .order('created_at', { ascending: false })
+    .limit(3)
+
   return (
-    <div>
-      {/* Returning user dashboard (Plan 02) */}
-      <div>Returning user dashboard (Plan 02)</div>
-    </div>
+    <ReturningUserDashboard
+      profiles={allProfiles}
+      activeProfile={activeProfile}
+      recentAnalyses={recentAnalyses ?? []}
+    />
   )
 }
