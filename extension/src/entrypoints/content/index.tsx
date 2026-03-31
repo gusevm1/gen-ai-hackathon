@@ -12,6 +12,8 @@ export default defineContentScript({
   cssInjectionMode: 'ui',
 
   async main(ctx) {
+    console.log('[HM] index.tsx main() called — content script running');
+    console.log('[HM] index.tsx URL:', window.location.href);
     // Create a Shadow DOM overlay for the FAB (fixed position, always visible)
     const fab = await createShadowRootUi(ctx, {
       name: 'homematch-fab',
