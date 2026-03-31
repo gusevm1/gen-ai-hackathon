@@ -267,6 +267,19 @@ export const translations = {
     onboarding_skip: 'Skip tour',
     onboarding_installed_confirm: "I've installed the extension",
 
+    // Dashboard returning user
+    dashboard_active_profile: 'Active Profile',
+    dashboard_last_used: 'Last used',
+    dashboard_open_flatfox: 'Open Flatfox',
+    dashboard_switch_profile: 'Switch profile',
+    dashboard_new_profile: 'New',
+    dashboard_create_new_profile: 'Create a new profile',
+    dashboard_top_matches: 'Top Matches',
+    dashboard_top_matches_empty: 'No top matches yet -- Score properties on Flatfox to see your best matches here',
+    dashboard_view_all: 'View all',
+    dashboard_recent_analyses: 'Recent Analyses',
+    dashboard_top_matches_updated: 'Last updated',
+
     // Top Matches page
     top_matches_title: 'Top Matches',
     top_matches_subtitle: 'Your best-matching listings, scored automatically.',
@@ -541,6 +554,19 @@ export const translations = {
     onboarding_take_tour: 'Kurze Tour starten',
     onboarding_skip: 'Tour überspringen',
     onboarding_installed_confirm: 'Ich habe die Erweiterung installiert',
+
+    // Dashboard returning user
+    dashboard_active_profile: 'Aktives Profil',
+    dashboard_last_used: 'Zuletzt verwendet',
+    dashboard_open_flatfox: 'Flatfox oeffnen',
+    dashboard_switch_profile: 'Profil wechseln',
+    dashboard_new_profile: 'Neu',
+    dashboard_create_new_profile: 'Neues Profil erstellen',
+    dashboard_top_matches: 'Top-Treffer',
+    dashboard_top_matches_empty: 'Noch keine Top-Treffer -- Bewerten Sie Immobilien auf Flatfox, um Ihre besten Treffer hier zu sehen',
+    dashboard_view_all: 'Alle anzeigen',
+    dashboard_recent_analyses: 'Letzte Analysen',
+    dashboard_top_matches_updated: 'Zuletzt aktualisiert',
 
     // Top Matches page
     top_matches_title: 'Top Treffer',
