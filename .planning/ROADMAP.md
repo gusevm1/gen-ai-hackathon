@@ -92,7 +92,7 @@
 **Milestone Goal:** Redesign the user experience end-to-end — state-aware dashboard, aligned design system, and fixed user journeys for both first-time and returning users so the product is foolproof, intuitive, and visually consistent with the landing page.
 
 - [x] **Phase 35: Navigation & IA** — Rename nav item, remove Download from primary nav, install banner, Settings link (completed 2026-03-31)
-- [ ] **Phase 36: State-Aware Dashboard** — New user explainer state, returning user workspace with active profile + top matches + recent analyses
+- [x] **Phase 36: State-Aware Dashboard** — New user explainer state, returning user workspace with active profile + top matches + recent analyses (completed 2026-03-31)
 - [ ] **Phase 37: Design System Propagation** — Token cleanup, Framer Motion entrance animations, tier colors, hover states
 - [ ] **Phase 38: Onboarding Rebuild** — WelcomeModal with Shadcn, checklist completion state, Settings re-entry
 - [ ] **Phase 39: Critical Handoffs** — Profile edit CTA + progress indicator, analyses empty state
@@ -272,7 +272,7 @@ Plans:
 **Goal:** The dashboard home page responds to user state — first-time users see a guided 3-step explainer with two profile creation paths, returning users see their active profile, top matches, recent analyses, and a direct path to Flatfox.
 **Depends on:** Phase 35
 **Requirements:** DASH-01, DASH-02, DASH-03, DASH-04, DASH-05, DASH-06, DASH-07
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 36-01-PLAN.md — Server component conversion + new user explainer + ProfileCreationChooser visual differentiation
@@ -353,7 +353,7 @@ Plans:
 | 33. Dashboard Home & Nav Polish | 2/2 | Complete | 2026-03-30 |
 | 34. Onboarding & Tutorial System | 2/2 | Complete | 2026-03-31 |
 | 35. Navigation & IA | 2/2 | Complete   | 2026-03-31 |
-| 36. State-Aware Dashboard | 1/2 | In Progress|  |
+| 36. State-Aware Dashboard | 2/2 | Complete   | 2026-03-31 |
 | 37. Design System Propagation | 0/TBD | Not started | - |
 | 38. Onboarding Rebuild | 0/TBD | Not started | - |
 | 39. Critical Handoffs | 0/TBD | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
 status: executing
-stopped_at: Completed 36-01-PLAN.md
-last_updated: "2026-03-31T18:09:15.986Z"
-last_activity: "2026-03-31 — 35-01 executed: nav cleanup + ExtensionInstallBanner"
+stopped_at: Completed 36-02-PLAN.md
+last_updated: "2026-03-31T18:15:33.097Z"
+last_activity: "2026-03-31 — 36-02 executed: returning user dashboard with ActiveProfileCard, TopMatchesSummary, RecentAnalysesSummary, NewProfileModal"
 progress:
   total_phases: 14
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 21
-  completed_plans: 20
+  completed_plans: 21
   percent: 17
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 36 of 40 (State-Aware Dashboard)
-Plan: 01 completed
+Plan: 02 completed
 Status: In progress
-Last activity: 2026-03-31 — 36-01 executed: server component dashboard + new user explainer + ProfileCreationChooser visual differentiation
+Last activity: 2026-03-31 — 36-02 executed: returning user dashboard with ActiveProfileCard, TopMatchesSummary, RecentAnalysesSummary, NewProfileModal
 
-Progress: [█░░░░░░░░░] ~17% (v6.0 milestone, 1/6 phases started)
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -44,6 +44,7 @@ Progress: [█░░░░░░░░░] ~17% (v6.0 milestone, 1/6 phases star
 |------|----------|-------|-------|
 | 35-01 | 3 min | 2 | 4 |
 | Phase 36-state-aware-dashboard P01 | 525659 | 2 tasks | 4 files |
+| Phase 36 P02 | 18 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -76,12 +77,19 @@ Progress: [█░░░░░░░░░] ~17% (v6.0 milestone, 1/6 phases star
 - AI card uses `border-primary` design token, not rose-500 — aligns with v6.0 design system
 - "Recommended" badge copy is hardcoded English string — not translated (branding copy, not UI text)
 
+### Phase 36 Decisions (36-02)
+
+- Use `buttonVariants()` for anchor-as-button pattern — base-ui Button does not support `asChild` prop
+- TopMatchesSummary silently fails on API error so dashboard remains functional regardless of top-matches availability
+- RecentAnalysesSummary returns null when empty per CONTEXT.md (Phase 39 handles empty states)
+- TopMatchesSummary re-fetches on activeProfileId change via useEffect dependency array
+
 ### Blockers/Concerns
 
 - None at roadmap creation
 
 ## Session Continuity
 
-Last session: 2026-03-31T18:09:15.982Z
-Stopped at: Completed 36-01-PLAN.md
+Last session: 2026-03-31T18:15:33.093Z
+Stopped at: Completed 36-02-PLAN.md
 Resume file: None

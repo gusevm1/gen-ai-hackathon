@@ -19,10 +19,10 @@
 - [x] **DASH-01**: New user (0 profiles) sees an onboarding-oriented home: 3-step product explainer + two profile creation paths
 - [x] **DASH-02**: New user sees AI profile creation as the visually recommended primary path (badge + primary styling)
 - [x] **DASH-03**: New user sees manual profile creation as a secondary option (outline style, lower visual weight)
-- [ ] **DASH-04**: Returning user (1+ profiles) sees their active profile name, last-used date, and an "Open Flatfox" CTA on the home page
-- [ ] **DASH-05**: Returning user sees their 3 most recent analyses (score + tier + address) on the home page
-- [ ] **DASH-06**: Returning user can switch active profile or create a new one from the home page
-- [ ] **DASH-07**: Returning user sees top matches for active profile on the home page (summary cards linking to /top-matches)
+- [x] **DASH-04**: Returning user (1+ profiles) sees their active profile name, last-used date, and an "Open Flatfox" CTA on the home page
+- [x] **DASH-05**: Returning user sees their 3 most recent analyses (score + tier + address) on the home page
+- [x] **DASH-06**: Returning user can switch active profile or create a new one from the home page
+- [x] **DASH-07**: Returning user sees top matches for active profile on the home page (summary cards linking to /top-matches)
 
 ### Design System — Tokens & Motion
 
@@ -121,10 +121,10 @@
 | DASH-01 | Phase 36 | Complete |
 | DASH-02 | Phase 36 | Complete |
 | DASH-03 | Phase 36 | Complete |
-| DASH-04 | Phase 36 | Pending |
-| DASH-05 | Phase 36 | Pending |
-| DASH-06 | Phase 36 | Pending |
-| DASH-07 | Phase 36 | Pending |
+| DASH-04 | Phase 36 | Complete |
+| DASH-05 | Phase 36 | Complete |
+| DASH-06 | Phase 36 | Complete |
+| DASH-07 | Phase 36 | Complete |
 | DS-01 | Phase 37 | Pending |
 | DS-02 | Phase 37 | Pending |
 | DS-03 | Phase 37 | Pending |
