@@ -91,7 +91,7 @@
 
 **Milestone Goal:** Redesign the user experience end-to-end — state-aware dashboard, aligned design system, and fixed user journeys for both first-time and returning users so the product is foolproof, intuitive, and visually consistent with the landing page.
 
-- [ ] **Phase 35: Navigation & IA** — Rename nav item, remove Download from primary nav, install banner, Settings link
+- [x] **Phase 35: Navigation & IA** — Rename nav item, remove Download from primary nav, install banner, Settings link (completed 2026-03-31)
 - [ ] **Phase 36: State-Aware Dashboard** — New user explainer state, returning user workspace with active profile + recent analyses
 - [ ] **Phase 37: Design System Propagation** — Token cleanup, Framer Motion entrance animations, tier colors, hover states
 - [ ] **Phase 38: Onboarding Rebuild** — WelcomeModal with Shadcn, checklist completion state, Settings re-entry
@@ -255,7 +255,7 @@ Plans:
 **Goal:** Users navigate a cleaner information architecture — "New Profile" replaces the ambiguous "AI-Powered Search" label, Download is demoted from primary nav to Settings, and users without confirmed extension installs see a contextual install prompt.
 **Depends on:** Phase 34
 **Requirements:** NAV-01, NAV-02, NAV-03, NAV-04
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 35-01-PLAN.md — Nav rename (New Profile) + remove Download item + extension install banner on dashboard
@@ -347,7 +347,7 @@ Plans:
 | 32. Frontend Consumers | 2/2 | Complete | 2026-03-30 |
 | 33. Dashboard Home & Nav Polish | 2/2 | Complete | 2026-03-30 |
 | 34. Onboarding & Tutorial System | 2/2 | Complete | 2026-03-31 |
-| 35. Navigation & IA | 1/2 | In Progress|  |
+| 35. Navigation & IA | 2/2 | Complete   | 2026-03-31 |
 | 36. State-Aware Dashboard | 0/TBD | Not started | - |
 | 37. Design System Propagation | 0/TBD | Not started | - |
 | 38. Onboarding Rebuild | 0/TBD | Not started | - |

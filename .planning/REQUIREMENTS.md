@@ -9,9 +9,9 @@
 
 ### Navigation & Information Architecture
 
-- [ ] **NAV-01**: User sees "New Profile" (not "AI-Powered Search") in the top navbar
-- [ ] **NAV-02**: User does not see "Download" as a primary nav item after initial setup
-- [ ] **NAV-03**: User who has not confirmed extension install sees a contextual install banner on the dashboard
+- [x] **NAV-01**: User sees "New Profile" (not "AI-Powered Search") in the top navbar
+- [x] **NAV-02**: User does not see "Download" as a primary nav item after initial setup
+- [x] **NAV-03**: User who has not confirmed extension install sees a contextual install banner on the dashboard
 - [x] **NAV-04**: User can access the Download Extension page from Settings
 
 ### Dashboard — State-Aware Home
@@ -113,9 +113,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NAV-01 | Phase 35 | Pending |
-| NAV-02 | Phase 35 | Pending |
-| NAV-03 | Phase 35 | Pending |
+| NAV-01 | Phase 35 | Complete |
+| NAV-02 | Phase 35 | Complete |
+| NAV-03 | Phase 35 | Complete |
 | NAV-04 | Phase 35 | Complete |
 | DASH-01 | Phase 36 | Pending |
 | DASH-02 | Phase 36 | Pending |

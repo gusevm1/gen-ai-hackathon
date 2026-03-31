@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
 status: planning
-stopped_at: Completed 35-02-PLAN.md
-last_updated: "2026-03-31T16:27:06.155Z"
+stopped_at: Completed 35-01-PLAN.md
+last_updated: "2026-03-31T16:28:22.890Z"
 last_activity: 2026-03-31 — v6.0 roadmap created (phases 35-40, 32 requirements mapped)
 progress:
   total_phases: 14
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 19
-  completed_plans: 18
+  completed_plans: 19
   percent: 0
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 35 of 40 (Navigation & IA)
-Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-03-31 — v6.0 roadmap created (phases 35-40, 32 requirements mapped)
+Plan: 01 completed
+Status: In progress
+Last activity: 2026-03-31 — 35-01 executed: nav cleanup + ExtensionInstallBanner
 
-Progress: [░░░░░░░░░░] 0% (v6.0 milestone)
+Progress: [█░░░░░░░░░] ~17% (v6.0 milestone, 1/6 phases started)
 
 ## Performance Metrics
 
@@ -38,6 +38,11 @@ Progress: [░░░░░░░░░░] 0% (v6.0 milestone)
 - Total plans completed: 17 (phases 27-34)
 - Average duration: ~5 min/plan
 - Total execution time: ~85 min
+
+**v6.0 execution:**
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| 35-01 | 3 min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -57,12 +62,18 @@ Progress: [░░░░░░░░░░] 0% (v6.0 milestone)
 - Phase 39 (Handoffs) depends on Phase 36 (dashboard state patterns established)
 - Phase 40 (Page Redesigns) depends on Phase 37 + 38 + 39 (design system and patterns in place)
 
+### Phase 35 Decisions (35-01)
+
+- Kept `nav_ai_search` and `nav_download` translation keys to avoid breaking EN/DE key parity TypeScript check — only removed navItems array entries
+- URL for New Profile nav item stays `/ai-search`; only the display label key changes to `nav_new_profile`
+- ExtensionInstallBanner is self-contained: reads onboarding state via `useOnboardingContext`, no prop drilling
+
 ### Blockers/Concerns
 
 - None at roadmap creation
 
 ## Session Continuity
 
-Last session: 2026-03-31T16:27:06.151Z
-Stopped at: Completed 35-02-PLAN.md
+Last session: 2026-03-31T16:28:22.886Z
+Stopped at: Completed 35-01-PLAN.md
 Resume file: None
