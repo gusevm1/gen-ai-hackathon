@@ -2,30 +2,120 @@
 
 import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { driver, Driver, type PopoverDOM } from 'driver.js';
+import { driver, Driver, type PopoverDOM, type Config } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useOnboarding } from '@/hooks/use-onboarding';
 
-/**
- * Replace the driver.js "X" close icon with a text "Exit Tutorial" button.
- * Called via onPopoverRender on every step.
- */
+// ─── Issue 3 fix: Move close button into footer ───────────────────────────────
+//
+// The driver.js close button is `position:absolute; top:0; right:0` inside the
+// popover — it renders over the title text and appears to overflow the box.
+// Fix: relabel it "Exit Tutorial" and physically move it into the footer element
+// so it renders alongside the other footer buttons inside the padded container.
+
 function patchCloseButton(popover: PopoverDOM) {
   const btn = popover.closeButton;
-  // Clear the SVG icon and replace with text
-  btn.textContent = 'Exit Tutorial';
-  btn.style.cssText = [
-    'font-size:12px',
-    'font-weight:500',
-    'color:#888',
-    'background:transparent',
-    'border:none',
-    'cursor:pointer',
-    'padding:4px 8px',
-    'border-radius:4px',
-    'white-space:nowrap',
-  ].join(';');
+
+  // Relabel
+  btn.innerHTML = 'Exit Tutorial';
+
+  // Move from absolute-positioned top-right into the footer (left side)
+  // Only move if not already in footer (guard against double calls)
+  if (btn.parentElement !== popover.footer) {
+    btn.style.cssText = [
+      'all:unset',
+      'display:inline-block',
+      'box-sizing:border-box',
+      'font-size:12px',
+      'font-weight:500',
+      'color:#888',
+      'cursor:pointer',
+      'padding:3px 7px',
+      'border:1px solid #ccc',
+      'border-radius:3px',
+      'line-height:1.3',
+    ].join(';');
+    // Insert before progress text / navigation buttons so it sits on the left
+    popover.footer.insertBefore(btn, popover.footer.firstChild);
+  }
 }
+
+// ─── Issue 1 fix: overlay click hides popover without destroying driver ────────
+//
+// driver.js `overlayClickBehavior` can be a DriverHook. We use it to toggle
+// the popover's visibility. The driver instance stays alive — state is preserved
+// and the user can resume exactly where they left off via a floating button.
+
+function handleOverlayClick(): void {
+  const popover = document.querySelector<HTMLElement>('.driver-popover');
+  const existing = document.getElementById('driver-resume-btn');
+
+  if (!popover) return;
+
+  const isHidden = popover.style.opacity === '0';
+
+  if (isHidden) {
+    // Re-show popover
+    popover.style.opacity = '';
+    popover.style.pointerEvents = '';
+    existing?.remove();
+  } else {
+    // Hide popover without destroying driver
+    popover.style.opacity = '0';
+    popover.style.pointerEvents = 'none';
+
+    if (!existing) {
+      const btn = document.createElement('button');
+      btn.id = 'driver-resume-btn';
+      btn.textContent = 'Resume Tutorial';
+      btn.style.cssText = [
+        'position:fixed',
+        'bottom:24px',
+        'right:24px',
+        'z-index:100001',
+        'background:#fff',
+        'border:1px solid #e2e8f0',
+        'border-radius:8px',
+        'padding:8px 16px',
+        'font-size:13px',
+        'font-weight:500',
+        'color:#374151',
+        'cursor:pointer',
+        'box-shadow:0 2px 8px rgba(0,0,0,0.15)',
+      ].join(';');
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const pop = document.querySelector<HTMLElement>('.driver-popover');
+        if (pop) {
+          pop.style.opacity = '';
+          pop.style.pointerEvents = '';
+        }
+        btn.remove();
+      });
+      document.body.appendChild(btn);
+    }
+  }
+}
+
+// ─── Shared driver config factory ─────────────────────────────────────────────
+//
+// Builds the common config options used by every driver instance so they don't
+// have to be repeated. Per-instance overrides (steps, onCloseClick) are merged in.
+
+function makeDriverConfig(overrides: Partial<Config>): Config {
+  return {
+    showProgress: false,
+    overlayColor: 'black',
+    overlayOpacity: 0.5,
+    // Issue 1 fix: overlayClickBehavior hides/shows popover instead of destroying driver
+    overlayClickBehavior: handleOverlayClick,
+    // Issue 3 fix: move close button into footer and relabel it
+    onPopoverRender: patchCloseButton,
+    ...overrides,
+  };
+}
+
+// ─── Context types ────────────────────────────────────────────────────────────
 
 type OnboardingContextValue = ReturnType<typeof useOnboarding> & {
   startTour: () => Promise<void>;
@@ -41,6 +131,8 @@ export function useOnboardingContext(): OnboardingContextValue {
   return ctx;
 }
 
+// ─── Provider ────────────────────────────────────────────────────────────────
+
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
   const onboarding = useOnboarding();
   const { state, isLoading, skip, advance } = onboarding;
@@ -50,6 +142,57 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   // Tracks whether the user saved preferences during onboarding step 4.
   // Used to skip the "Save Preferences" sub-step and jump to "Open in Flatfox" directly.
   const step4SavedRef = useRef(false);
+
+  /**
+   * Issue 2 fix: MutationObserver watches for Radix/shadcn Dialog portals.
+   *
+   * When a [role=dialog] appears in the DOM (e.g. the "Create Profile" dialog on
+   * the dashboard), we push the driver.js overlay behind the dialog so the user
+   * can interact with the dialog unobstructed. When the dialog closes we restore
+   * the driver overlay z-index.
+   *
+   * We also hide the popover while the dialog is open so it doesn't render at a
+   * lower z-index awkwardly on top of the dialog background.
+   */
+  useEffect(() => {
+    let dialogWasOpen = false;
+
+    const observer = new MutationObserver(() => {
+      const dialogOpen = !!document.querySelector('[role="dialog"]');
+      const overlay = document.querySelector<HTMLElement>('.driver-overlay');
+      const popover = document.querySelector<HTMLElement>('.driver-popover');
+      const resumeBtn = document.getElementById('driver-resume-btn');
+
+      if (dialogOpen && !dialogWasOpen) {
+        dialogWasOpen = true;
+        // Push driver UI behind the dialog (Radix Dialog uses z-index 50)
+        if (overlay) overlay.style.zIndex = '40';
+        if (popover) {
+          popover.style.zIndex = '41';
+          popover.style.opacity = '0';
+          popover.style.pointerEvents = 'none';
+        }
+        if (resumeBtn) resumeBtn.style.display = 'none';
+      } else if (!dialogOpen && dialogWasOpen) {
+        dialogWasOpen = false;
+        // Restore driver UI — remove inline z-index overrides
+        if (overlay) overlay.style.zIndex = '';
+        if (popover) {
+          popover.style.zIndex = '';
+          // Only restore visibility if the user hadn't already hidden it manually
+          // (indicated by the resume button being absent)
+          if (!document.getElementById('driver-resume-btn')) {
+            popover.style.opacity = '';
+            popover.style.pointerEvents = '';
+          }
+        }
+        if (resumeBtn) resumeBtn.style.display = '';
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
 
   /**
    * Launch driver.js tour steps appropriate for the current page + onboarding step.
@@ -63,9 +206,10 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
    *   Step 9 — Post-analysis tooltips (/analyses or /analysis, step===9)
    *
    * Global UX rules:
-   *   - allowClose: false on ALL steps (clicking outside NEVER exits the tour)
-   *   - onCloseClick is the ONLY way to exit — labelled "Exit Tutorial"
-   *   - A hint "Click outside to temporarily hide this tip" is shown on step 2
+   *   - No allowClose:false — overlay clicks are handled by overlayClickBehavior
+   *   - overlayClickBehavior hides the popover without destroying driver state
+   *   - onCloseClick is the ONLY way to fully exit — labelled "Exit Tutorial" and
+   *     placed inside the footer (via patchCloseButton in onPopoverRender)
    */
   const launchTourForCurrentPage = useCallback(() => {
     if (!state) return;
@@ -78,18 +222,17 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       driverRef.current = null;
     }
 
+    // Remove any stale resume button from a previous driver instance
+    document.getElementById('driver-resume-btn')?.remove();
+
     if (step === 1) {
       // Step 1: Welcome — no DOM target, centered popover on any page
-      const driverInstance = driver({
-        showProgress: false,
-        allowClose: false,
-        overlayColor: 'black',
-        overlayOpacity: 0.5,
-        onPopoverRender: patchCloseButton,
+      const driverInstance = driver(makeDriverConfig({
         onCloseClick: () => {
           skip();
           driverInstance.destroy();
           driverRef.current = null;
+          document.getElementById('driver-resume-btn')?.remove();
         },
         steps: [
           {
@@ -106,28 +249,25 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
               onNextClick: async () => {
                 driverInstance.destroy();
                 driverRef.current = null;
+                document.getElementById('driver-resume-btn')?.remove();
                 await advance();
                 router.push('/download');
               },
             },
           },
         ],
-      });
+      }));
       driverRef.current = driverInstance;
       driverInstance.drive();
     } else if (pathname === '/download' && step === 2) {
       // Step 2: Highlight install CTA on download page
-      // allowClose: false — clicking outside temporarily hides the popover without exiting
-      const driverInstance = driver({
-        showProgress: false,
-        allowClose: false,
-        overlayColor: 'black',
-        overlayOpacity: 0.5,
-        onPopoverRender: patchCloseButton,
+      // overlayClickBehavior hides the popover so user can interact with install steps
+      const driverInstance = driver(makeDriverConfig({
         onCloseClick: () => {
           skip();
           driverInstance.destroy();
           driverRef.current = null;
+          document.getElementById('driver-resume-btn')?.remove();
         },
         steps: [
           {
@@ -141,26 +281,21 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
               showButtons: ['close'],
               disableButtons: ['previous'],
               progressText: 'Step 2 of 9',
-
             },
           },
         ],
-      });
+      }));
       driverRef.current = driverInstance;
       driverInstance.drive();
     } else if (pathname === '/dashboard' && step === 3) {
       // Step 3: Highlight the profile creation section on dashboard
       // Popover placed below the selection cards (side: 'bottom')
-      const driverInstance = driver({
-        showProgress: false,
-        allowClose: false,
-        overlayColor: 'black',
-        overlayOpacity: 0.5,
-        onPopoverRender: patchCloseButton,
+      const driverInstance = driver(makeDriverConfig({
         onCloseClick: () => {
           skip();
           driverInstance.destroy();
           driverRef.current = null;
+          document.getElementById('driver-resume-btn')?.remove();
         },
         steps: [
           {
@@ -174,28 +309,22 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
               showButtons: ['close'],
               disableButtons: ['previous'],
               progressText: 'Step 3 of 9',
-
             },
           },
         ],
-      });
+      }));
       driverRef.current = driverInstance;
       driverInstance.drive();
     } else if (pathname.startsWith('/profiles/') && step === 4) {
       // Step 4: On the profile edit page
       // Sub-step 1: Save Preferences — delayed 3s so user has time to fill the form first
       // Sub-step 2: Open Flatfox — appears after save is confirmed (via advanceToOpenFlatfox)
-      // The "Open in Flatfox" popover has NO "next" button — user must click the actual button
-      const driverInstance = driver({
-        showProgress: false,
-        allowClose: false,
-        overlayColor: 'black',
-        overlayOpacity: 0.5,
-        onPopoverRender: patchCloseButton,
+      const driverInstance = driver(makeDriverConfig({
         onCloseClick: () => {
           skip();
           driverInstance.destroy();
           driverRef.current = null;
+          document.getElementById('driver-resume-btn')?.remove();
         },
         steps: [
           {
@@ -209,7 +338,6 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
               showButtons: ['close'],
               disableButtons: ['previous'],
               progressText: 'Step 4 of 9',
-
             },
           },
           {
@@ -223,11 +351,10 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
               showButtons: ['close'],
               disableButtons: ['previous'],
               progressText: 'Step 4 of 9',
-
             },
           },
         ],
-      });
+      }));
       driverRef.current = driverInstance;
       // If user already saved, skip to "Open in Flatfox" sub-step immediately.
       // Otherwise delay 3s so the user has time to fill the form before the popover appears.
@@ -269,30 +396,27 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             description,
             side: 'bottom' as const,
             align: 'center' as const,
-            closeBtnText: 'Exit Tutorial',
           },
         }));
 
       if (existingSteps.length > 0) {
-        const driverInstance = driver({
-          showProgress: false,
-          allowClose: false,
-          overlayColor: 'black',
+        const driverInstance = driver(makeDriverConfig({
           overlayOpacity: 0.3,
-          onPopoverRender: patchCloseButton,
           onCloseClick: () => {
             skip();
             driverInstance.destroy();
             driverRef.current = null;
+            document.getElementById('driver-resume-btn')?.remove();
           },
           onDestroyStarted: () => {
             // Only called when driver naturally ends (last step "Done")
             skip();
             driverInstance.destroy();
             driverRef.current = null;
+            document.getElementById('driver-resume-btn')?.remove();
           },
           steps: existingSteps,
-        });
+        }));
         driverRef.current = driverInstance;
         driverInstance.drive();
       }

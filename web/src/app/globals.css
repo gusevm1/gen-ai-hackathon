@@ -236,3 +236,22 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ─── Driver.js onboarding overrides ───────────────────────────────────────── */
+
+/*
+ * Issue 3 fix: The driver.js close button (.driver-popover-close-btn) is normally
+ * `position:absolute; top:0; right:0` which renders it over the title text and
+ * makes it look like it overflows the popover. We move it into the footer via
+ * patchCloseButton (onPopoverRender) and relabel it "Exit Tutorial".
+ *
+ * After moving it into the footer, strip the absolute positioning so it flows
+ * naturally alongside the other footer buttons.
+ */
+.driver-popover-footer .driver-popover-close-btn {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  font-size: 12px !important;
+  color: #888 !important;
+}
