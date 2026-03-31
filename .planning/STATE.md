@@ -4,8 +4,8 @@ milestone: v6.0
 milestone_name: UX & Design System Overhaul
 status: executing
 stopped_at: Phase 37 Plan 05 complete — DS-03 tier-color test assertions fixed (analysis-page.test.ts green)
-last_updated: "2026-03-31T21:17:15.560Z"
-last_activity: "2026-03-31 — 37-04 executed: AnalysesGrid client component with StaggerGroup animation (DS-02) + hover:-translate-y-1 lift on all 5 card types (DS-04)"
+last_updated: "2026-03-31T21:55:11.297Z"
+last_activity: "2026-03-31 — 37-05 executed: gap closure — stale tier-color assertions in analysis-page.test.ts updated to DS-03 palette (teal/green/red), test suite fully green"
 progress:
   total_phases: 14
   completed_phases: 11

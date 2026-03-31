@@ -360,7 +360,7 @@ Plans:
 | 34. Onboarding & Tutorial System | 2/2 | Complete | 2026-03-31 |
 | 35. Navigation & IA | 2/2 | Complete   | 2026-03-31 |
 | 36. State-Aware Dashboard | 2/2 | Complete    | 2026-03-31 |
-| 37. Design System Propagation | 5/5 | Complete   | 2026-03-31 |
+| 37. Design System Propagation | 5/5 | Complete    | 2026-03-31 |
 | 38. Onboarding Rebuild | 0/TBD | Not started | - |
 | 39. Critical Handoffs | 0/TBD | Not started | - |
 | 40. Page Redesigns | 0/TBD | Not started | - |
