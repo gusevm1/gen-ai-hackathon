@@ -27,8 +27,8 @@
 ### Design System — Tokens & Motion
 
 - [ ] **DS-01**: No hardcoded `rose-500` color remains in the codebase — all replaced with `primary` CSS token
-- [ ] **DS-02**: Dashboard home, profiles list, and analyses list pages have Framer Motion entrance animations (FadeIn on mount, stagger on list items)
-- [ ] **DS-03**: Tier colors are unified across web: excellent=teal, good=green, fair=amber, poor=red
+- [x] **DS-02**: Dashboard home, profiles list, and analyses list pages have Framer Motion entrance animations (FadeIn on mount, stagger on list items)
+- [x] **DS-03**: Tier colors are unified across web: excellent=teal, good=green, fair=amber, poor=red
 - [ ] **DS-04**: All card hover states use a consistent lift effect matching the landing page style
 
 ### Onboarding — WelcomeModal Rebuild
@@ -126,8 +126,8 @@
 | DASH-06 | Phase 36 | Complete |
 | DASH-07 | Phase 36 | Complete |
 | DS-01 | Phase 37 | Pending |
-| DS-02 | Phase 37 | Pending |
-| DS-03 | Phase 37 | Pending |
+| DS-02 | Phase 37 | Complete |
+| DS-03 | Phase 37 | Complete |
 | DS-04 | Phase 37 | Pending |
 | ONB-01 | Phase 38 | Pending |
 | ONB-02 | Phase 38 | Pending |
