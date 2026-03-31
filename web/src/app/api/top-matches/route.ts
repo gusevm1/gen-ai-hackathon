@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     .from("profiles")
     .select("id")
     .eq("user_id", user.id)
-    .eq("is_active", true)
+    .eq("is_default", true)
     .limit(1)
 
   const profileId = profiles?.[0]?.id
