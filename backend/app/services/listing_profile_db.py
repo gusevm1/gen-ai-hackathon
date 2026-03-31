@@ -87,6 +87,15 @@ def get_unanalyzed_listing_ids(known_ids: list[int]) -> list[int]:
     return [lid for lid in known_ids if lid not in existing_ids]
 
 
+def get_all_listing_profiles() -> list[ListingProfile]:
+    """Fetch all listing profiles. Used by top-matches batch scoring."""
+    client = supabase_service.get_client()
+    result = client.table("listing_profiles").select("*").execute()
+    if not result.data:
+        return []
+    return [ListingProfile.model_validate(row) for row in result.data]
+
+
 def get_stale_profiles(max_age_days: int = 7) -> list[int]:
     """Return listing_ids of profiles older than max_age_days.
 

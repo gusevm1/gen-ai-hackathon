@@ -137,3 +137,39 @@ class BulletsOnlyResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
     summary_bullets: list[str] = Field(min_length=3, max_length=5)
+
+
+# ---------------------------------------------------------------------------
+# Top Matches models
+# ---------------------------------------------------------------------------
+
+
+class TopMatchesRequest(BaseModel):
+    """Request body for the top-matches endpoint."""
+
+    user_id: str = Field(description="Supabase user UUID")
+    profile_id: str = Field(description="Active profile UUID")
+    force_refresh: bool = Field(default=False, description="If True, bypass cache")
+
+
+class TopMatchResult(BaseModel):
+    """A single top match with listing metadata and full score response."""
+
+    listing_id: int
+    slug: str
+    title: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    rooms: Optional[float] = None
+    sqm: Optional[int] = None
+    price: Optional[int] = None
+    image_url: Optional[str] = None
+    score_response: ScoreResponse
+
+
+class TopMatchesResponse(BaseModel):
+    """Response from the top-matches endpoint."""
+
+    matches: list[TopMatchResult]
+    total_scored: int
+    computed_at: str

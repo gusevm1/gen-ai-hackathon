@@ -20,13 +20,21 @@ Error handling returns appropriate HTTP status codes for each failure mode.
 import asyncio
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
 from fastapi import APIRouter, HTTPException
 
 from app.models.preferences import CriterionType, UserPreferences
-from app.models.scoring import ScoreRequest, ScoreResponse
+from app.models.scoring import (
+    ScoreRequest,
+    ScoreResponse,
+    TopMatchesRequest,
+    TopMatchesResponse,
+    TopMatchResult,
+)
 from app.services.claude import claude_scorer
 from app.services.deterministic_scorer import (
     FulfillmentResult,
@@ -38,7 +46,7 @@ from app.services.deterministic_scorer import (
     synthesize_builtin_results,
 )
 from app.services.hybrid_scorer import compute_weighted_score, to_criterion_result
-from app.services.listing_profile_db import get_listing_profile
+from app.services.listing_profile_db import get_all_listing_profiles, get_listing_profile
 from app.services.profile_adapter import adapt_profile_to_listing, adapt_profile_amenities
 from app.services.supabase import supabase_service
 
@@ -469,3 +477,231 @@ def _save_analysis_fire_and_forget(
             )
 
     asyncio.create_task(_save())
+
+
+# ---------------------------------------------------------------------------
+# Top Matches endpoint
+# ---------------------------------------------------------------------------
+
+TOP_MATCHES_COUNT = 5
+CACHE_TTL_SECONDS = 3600  # 1 hour
+
+
+def _load_preferences(user_id: str, profile_id: str) -> Optional[dict]:
+    """Load preferences JSONB from Supabase profiles table."""
+    client = supabase_service.get_client()
+    result = (
+        client.table("profiles")
+        .select("preferences")
+        .eq("id", profile_id)
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    if result.data and result.data.get("preferences"):
+        return result.data["preferences"]
+    return None
+
+
+def _score_deterministic_only(
+    profile, preferences: UserPreferences
+) -> tuple[int, str, list[FulfillmentResult]]:
+    """Run deterministic-only scoring (no LLM). Returns (score, tier, results)."""
+    listing = adapt_profile_to_listing(profile)
+    proximity_data = adapt_profile_amenities(profile)
+
+    deterministic_results: list[FulfillmentResult] = []
+    builtin = synthesize_builtin_results(preferences, listing)
+    deterministic_results.extend(builtin)
+
+    for field in preferences.dynamic_fields:
+        ct = field.criterion_type
+        result_value: Optional[float] = None
+
+        if ct == CriterionType.PRICE:
+            result_value = score_price(field, listing)
+        elif ct == CriterionType.DISTANCE:
+            actual_km = _resolve_distance_km(field.name, proximity_data)
+            result_value = score_distance(field, listing, actual_km)
+        elif ct == CriterionType.SIZE:
+            result_value = score_size(field, listing)
+        elif ct == CriterionType.BINARY_FEATURE:
+            result_value = score_binary_feature(field, listing)
+        elif ct == CriterionType.PROXIMITY_QUALITY:
+            result_value = score_proximity_quality(field, listing, proximity_data)
+        elif ct == CriterionType.SUBJECTIVE or ct is None:
+            continue
+        else:
+            continue
+
+        deterministic_results.append(
+            FulfillmentResult(
+                criterion_name=field.name,
+                fulfillment=result_value,
+                importance=field.importance,
+            )
+        )
+
+    overall_score, match_tier = compute_weighted_score(deterministic_results)
+    return overall_score, match_tier, deterministic_results
+
+
+def _get_cached_top_matches(
+    user_id: str, profile_id: str
+) -> Optional[TopMatchesResponse]:
+    """Return cached top matches if fresh (not stale, within TTL)."""
+    client = supabase_service.get_client()
+    result = (
+        client.table("top_matches_cache")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("profile_id", profile_id)
+        .eq("stale", False)
+        .maybe_single()
+        .execute()
+    )
+    if not result.data:
+        return None
+
+    computed_at = datetime.fromisoformat(result.data["computed_at"])
+    age = (datetime.now(timezone.utc) - computed_at).total_seconds()
+    if age > CACHE_TTL_SECONDS:
+        return None
+
+    return TopMatchesResponse(
+        matches=[TopMatchResult.model_validate(m) for m in result.data["matches"]],
+        total_scored=result.data["total_scored"],
+        computed_at=result.data["computed_at"],
+    )
+
+
+def _save_top_matches_cache(
+    user_id: str, profile_id: str, response: TopMatchesResponse
+) -> None:
+    """Upsert top matches into the cache table."""
+    client = supabase_service.get_client()
+    client.table("top_matches_cache").upsert(
+        {
+            "user_id": user_id,
+            "profile_id": profile_id,
+            "matches": [m.model_dump(mode="json") for m in response.matches],
+            "total_scored": response.total_scored,
+            "computed_at": response.computed_at,
+            "stale": False,
+        },
+        on_conflict="user_id,profile_id",
+    ).execute()
+
+
+@router.post("/top-matches", response_model=TopMatchesResponse)
+async def top_matches(request: TopMatchesRequest) -> TopMatchesResponse:
+    """Return top 5 matches from all pre-analyzed listings.
+
+    Phase A: Deterministic-only batch scoring (~200 listings, <1s)
+    Phase B: Full hybrid scoring of top 5 (asyncio.gather, ~3-4s)
+    """
+    # 1. Load preferences
+    raw_prefs = await asyncio.to_thread(
+        _load_preferences, request.user_id, request.profile_id
+    )
+    if not raw_prefs:
+        raise HTTPException(status_code=404, detail="Profile or preferences not found")
+
+    preferences = UserPreferences.model_validate(raw_prefs)
+
+    # 2. Cache check
+    if not request.force_refresh:
+        cached = await asyncio.to_thread(
+            _get_cached_top_matches, request.user_id, request.profile_id
+        )
+        if cached:
+            logger.info("Returning cached top matches for profile=%s", request.profile_id)
+            return cached
+
+    # 3. Fetch all listing profiles
+    all_profiles = await asyncio.to_thread(get_all_listing_profiles)
+    if not all_profiles:
+        return TopMatchesResponse(
+            matches=[],
+            total_scored=0,
+            computed_at=datetime.now(timezone.utc).isoformat(),
+        )
+
+    # 4. Phase A: Deterministic batch scoring
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        scored = list(executor.map(
+            lambda p: (p, _score_deterministic_only(p, preferences)),
+            all_profiles,
+        ))
+
+    # Sort by score descending, take top N
+    scored.sort(key=lambda x: x[1][0], reverse=True)
+    top_candidates = scored[:TOP_MATCHES_COUNT]
+
+    # 5. Phase B: Full hybrid scoring of top candidates
+    async def _full_score(profile):
+        return await _score_with_profile(profile, preferences)
+
+    full_results = await asyncio.gather(
+        *[_full_score(candidate[0]) for candidate in top_candidates],
+        return_exceptions=True,
+    )
+
+    # 6. Build response
+    matches: list[TopMatchResult] = []
+    for (profile, (det_score, _, _)), full_result in zip(top_candidates, full_results):
+        if isinstance(full_result, Exception):
+            logger.warning(
+                "Full scoring failed for listing=%d, using deterministic: %s",
+                profile.listing_id, full_result,
+            )
+            # Fall back to deterministic-only score
+            det_score_val, det_tier, det_results = _score_deterministic_only(profile, preferences)
+            score_resp = ScoreResponse(
+                overall_score=det_score_val,
+                match_tier=det_tier,
+                summary_bullets=["Detailed analysis unavailable.", "Score based on objective criteria only.", "Try refreshing later."],
+                criteria_results=[to_criterion_result(r) for r in det_results],
+                schema_version=2,
+                enrichment_status="partial",
+                categories=[],
+                checklist=[],
+                language=preferences.language,
+            )
+        else:
+            score_resp = full_result
+
+        matches.append(TopMatchResult(
+            listing_id=profile.listing_id,
+            slug=profile.slug,
+            title=profile.title,
+            address=profile.address,
+            city=profile.city,
+            rooms=profile.rooms,
+            sqm=profile.sqm,
+            price=profile.price,
+            image_url=profile.image_urls[0] if profile.image_urls else None,
+            score_response=score_resp,
+        ))
+
+    # Sort matches by final score descending
+    matches.sort(key=lambda m: m.score_response.overall_score, reverse=True)
+
+    response = TopMatchesResponse(
+        matches=matches,
+        total_scored=len(all_profiles),
+        computed_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+    # 7. Fire-and-forget cache save
+    async def _cache_save():
+        try:
+            await asyncio.to_thread(
+                _save_top_matches_cache, request.user_id, request.profile_id, response
+            )
+        except Exception:
+            logger.exception("Failed to save top matches cache")
+
+    asyncio.create_task(_cache_save())
+
+    return response

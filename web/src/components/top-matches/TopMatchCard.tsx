@@ -1,0 +1,140 @@
+'use client'
+
+import { useState } from 'react'
+import { ChevronDown, ChevronUp, ExternalLink, MapPin, Ruler, DoorOpen, Banknote } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { BulletSummary } from '@/components/analysis/BulletSummary'
+import { FulfillmentBreakdown } from '@/components/analysis/FulfillmentBreakdown'
+import type { CriterionResult } from '@/lib/fulfillment-utils'
+import { useLanguage } from '@/lib/language-context'
+import { t } from '@/lib/translations'
+
+const TIER_COLORS: Record<string, { bg: string; text: string; ring: string; scoreBg: string }> = {
+  excellent: { bg: 'bg-emerald-50 dark:bg-emerald-950/30', text: 'text-emerald-700 dark:text-emerald-400', ring: 'ring-emerald-200 dark:ring-emerald-800', scoreBg: 'bg-emerald-500' },
+  good: { bg: 'bg-blue-50 dark:bg-blue-950/30', text: 'text-blue-700 dark:text-blue-400', ring: 'ring-blue-200 dark:ring-blue-800', scoreBg: 'bg-blue-500' },
+  fair: { bg: 'bg-amber-50 dark:bg-amber-950/30', text: 'text-amber-700 dark:text-amber-400', ring: 'ring-amber-200 dark:ring-amber-800', scoreBg: 'bg-amber-500' },
+  poor: { bg: 'bg-gray-50 dark:bg-gray-950/30', text: 'text-gray-700 dark:text-gray-400', ring: 'ring-gray-200 dark:ring-gray-800', scoreBg: 'bg-gray-500' },
+}
+
+const RANK_COLORS = [
+  'bg-yellow-500 text-white',    // #1
+  'bg-gray-400 text-white',      // #2
+  'bg-amber-700 text-white',     // #3
+  'bg-slate-500 text-white',     // #4
+  'bg-slate-500 text-white',     // #5
+]
+
+interface TopMatchCardProps {
+  match: {
+    listing_id: number
+    slug: string
+    title: string | null
+    address: string | null
+    city: string | null
+    rooms: number | null
+    sqm: number | null
+    price: number | null
+    image_url: string | null
+    score_response: {
+      overall_score: number
+      match_tier: string
+      summary_bullets: string[]
+      criteria_results: CriterionResult[]
+    }
+  }
+  rank: number
+  defaultExpanded?: boolean
+}
+
+export function TopMatchCard({ match, rank, defaultExpanded = false }: TopMatchCardProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
+  const { language } = useLanguage()
+  const tier = match.score_response.match_tier
+  const colors = TIER_COLORS[tier] ?? TIER_COLORS.poor
+  const tierKey = `tier_${tier}` as 'tier_excellent' | 'tier_good' | 'tier_fair' | 'tier_poor'
+
+  const displayTitle = match.title || match.address || `Listing ${match.listing_id}`
+  const flatfoxUrl = match.slug ? `https://flatfox.ch/en/flat/${match.slug}/` : null
+
+  return (
+    <Card className={`ring-1 ${colors.ring} transition-all`}>
+      <CardContent className="space-y-3">
+        {/* Header row: rank + title + score */}
+        <div className="flex items-start gap-3">
+          <div className={`flex items-center justify-center h-10 w-10 rounded-full text-sm font-bold shrink-0 ${RANK_COLORS[rank] ?? RANK_COLORS[4]}`}>
+            #{rank + 1}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-semibold truncate">{displayTitle}</h3>
+            {match.address && match.address !== match.title && (
+              <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
+                <MapPin className="h-3 w-3 shrink-0" />
+                {match.address}{match.city ? `, ${match.city}` : ''}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col items-center shrink-0">
+            <div className={`flex items-center justify-center h-12 w-12 rounded-full text-white font-bold text-lg ${colors.scoreBg}`}>
+              {match.score_response.overall_score}
+            </div>
+            <span className={`text-[10px] font-medium capitalize mt-1 ${colors.text}`}>
+              {t(language, tierKey)}
+            </span>
+          </div>
+        </div>
+
+        {/* Metadata pills */}
+        <div className="flex flex-wrap gap-2">
+          {match.price != null && (
+            <Badge variant="secondary" className="text-xs gap-1">
+              <Banknote className="h-3 w-3" />
+              CHF {match.price.toLocaleString()}
+            </Badge>
+          )}
+          {match.rooms != null && (
+            <Badge variant="secondary" className="text-xs gap-1">
+              <DoorOpen className="h-3 w-3" />
+              {match.rooms} {t(language, 'profile_rooms')}
+            </Badge>
+          )}
+          {match.sqm != null && (
+            <Badge variant="secondary" className="text-xs gap-1">
+              <Ruler className="h-3 w-3" />
+              {match.sqm} m²
+            </Badge>
+          )}
+        </div>
+
+        {/* Expand/collapse + Flatfox link */}
+        <div className="flex items-center justify-between pt-1 border-t border-border">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            {expanded ? t(language, 'top_matches_hide_details') : t(language, 'top_matches_show_details')}
+          </button>
+          {flatfoxUrl && (
+            <a
+              href={flatfoxUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              Flatfox <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+        </div>
+
+        {/* Expanded details */}
+        {expanded && (
+          <div className="space-y-4 pt-2">
+            <BulletSummary bullets={match.score_response.summary_bullets} />
+            <FulfillmentBreakdown criteriaResults={match.score_response.criteria_results} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

@@ -245,6 +245,12 @@ export async function updateProfilesLanguage(language: 'en' | 'de') {
       .from('analyses')
       .update({ stale: true })
       .eq('profile_id', profile.id)
+
+    // Invalidate top matches cache
+    await supabase
+      .from('top_matches_cache')
+      .update({ stale: true })
+      .eq('profile_id', profile.id)
   }
 
   revalidatePath('/profiles')
@@ -285,6 +291,12 @@ export async function saveProfilePreferences(profileId: string, data: Preference
   // Mark all cached analyses for this profile as stale (CACHE-02)
   await supabase
     .from('analyses')
+    .update({ stale: true })
+    .eq('profile_id', profileId)
+
+  // Invalidate top matches cache
+  await supabase
+    .from('top_matches_cache')
     .update({ stale: true })
     .eq('profile_id', profileId)
 

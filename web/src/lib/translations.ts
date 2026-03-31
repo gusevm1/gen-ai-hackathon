@@ -6,6 +6,7 @@ export const translations = {
   en: {
     // Navigation
     nav_home: 'Home',
+    nav_top_matches: 'Top Matches',
     nav_new_profile: 'New Profile',
     nav_ai_search: 'AI-Powered Search',
     nav_profiles: 'Profiles',
@@ -258,10 +259,23 @@ export const translations = {
     onboarding_take_tour: 'Take a quick tour',
     onboarding_skip: 'Skip tour',
     onboarding_installed_confirm: "I've installed the extension",
+
+    // Top Matches page
+    top_matches_title: 'Top Matches',
+    top_matches_subtitle: 'Your best-matching listings, scored automatically.',
+    top_matches_refresh: 'Refresh',
+    top_matches_error_title: 'Could not load matches',
+    top_matches_try_again: 'Try again',
+    top_matches_empty_title: 'No matches yet',
+    top_matches_empty_desc: 'We need pre-analyzed listings to find your top matches. Check back soon.',
+    top_matches_scored_count: 'Scored {n} listings',
+    top_matches_show_details: 'Show details',
+    top_matches_hide_details: 'Hide details',
   },
   de: {
     // Navigation
     nav_home: 'Startseite',
+    nav_top_matches: 'Top Treffer',
     nav_new_profile: 'Neues Profil',
     nav_ai_search: 'KI-gestützte Suche',
     nav_profiles: 'Profile',
@@ -513,6 +527,18 @@ export const translations = {
     onboarding_take_tour: 'Kurze Tour starten',
     onboarding_skip: 'Tour überspringen',
     onboarding_installed_confirm: 'Ich habe die Erweiterung installiert',
+
+    // Top Matches page
+    top_matches_title: 'Top Treffer',
+    top_matches_subtitle: 'Deine am besten passenden Inserate, automatisch bewertet.',
+    top_matches_refresh: 'Aktualisieren',
+    top_matches_error_title: 'Treffer konnten nicht geladen werden',
+    top_matches_try_again: 'Erneut versuchen',
+    top_matches_empty_title: 'Noch keine Treffer',
+    top_matches_empty_desc: 'Wir brauchen voranalysierte Inserate, um deine Top-Treffer zu finden. Schau bald wieder vorbei.',
+    top_matches_scored_count: '{n} Inserate bewertet',
+    top_matches_show_details: 'Details anzeigen',
+    top_matches_hide_details: 'Details ausblenden',
   },
 } as const
 
