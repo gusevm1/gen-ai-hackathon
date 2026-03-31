@@ -6,6 +6,7 @@ export const translations = {
   en: {
     // Navigation
     nav_home: 'Home',
+    nav_new_profile: 'New Profile',
     nav_ai_search: 'AI-Powered Search',
     nav_profiles: 'Profiles',
     nav_analyses: 'Analyses',
@@ -261,6 +262,7 @@ export const translations = {
   de: {
     // Navigation
     nav_home: 'Startseite',
+    nav_new_profile: 'Neues Profil',
     nav_ai_search: 'KI-gestützte Suche',
     nav_profiles: 'Profile',
     nav_analyses: 'Analysen',

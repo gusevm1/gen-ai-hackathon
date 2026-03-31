@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { User, BarChart3, Settings, Sparkles, Download, Home } from "lucide-react"
+import { User, BarChart3, Settings, Sparkles, Home } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/lib/language-context"
 import { t } from "@/lib/translations"
@@ -13,10 +13,9 @@ export function TopNavbar() {
 
   const navItems = [
     { titleKey: "nav_home" as const, url: "/dashboard", icon: Home },
-    { titleKey: "nav_ai_search" as const, url: "/ai-search", icon: Sparkles, accent: true },
+    { titleKey: "nav_new_profile" as const, url: "/ai-search", icon: Sparkles, accent: true },
     { titleKey: "nav_profiles" as const, url: "/profiles", icon: User },
     { titleKey: "nav_analyses" as const, url: "/analyses", icon: BarChart3 },
-    { titleKey: "nav_download" as const, url: "/download", icon: Download },
     { titleKey: "nav_settings" as const, url: "/settings", icon: Settings },
   ]
 
