@@ -16,9 +16,9 @@
 
 ### Dashboard — State-Aware Home
 
-- [ ] **DASH-01**: New user (0 profiles) sees an onboarding-oriented home: 3-step product explainer + two profile creation paths
-- [ ] **DASH-02**: New user sees AI profile creation as the visually recommended primary path (badge + primary styling)
-- [ ] **DASH-03**: New user sees manual profile creation as a secondary option (outline style, lower visual weight)
+- [x] **DASH-01**: New user (0 profiles) sees an onboarding-oriented home: 3-step product explainer + two profile creation paths
+- [x] **DASH-02**: New user sees AI profile creation as the visually recommended primary path (badge + primary styling)
+- [x] **DASH-03**: New user sees manual profile creation as a secondary option (outline style, lower visual weight)
 - [ ] **DASH-04**: Returning user (1+ profiles) sees their active profile name, last-used date, and an "Open Flatfox" CTA on the home page
 - [ ] **DASH-05**: Returning user sees their 3 most recent analyses (score + tier + address) on the home page
 - [ ] **DASH-06**: Returning user can switch active profile or create a new one from the home page
@@ -118,9 +118,9 @@
 | NAV-02 | Phase 35 | Complete |
 | NAV-03 | Phase 35 | Complete |
 | NAV-04 | Phase 35 | Complete |
-| DASH-01 | Phase 36 | Pending |
-| DASH-02 | Phase 36 | Pending |
-| DASH-03 | Phase 36 | Pending |
+| DASH-01 | Phase 36 | Complete |
+| DASH-02 | Phase 36 | Complete |
+| DASH-03 | Phase 36 | Complete |
 | DASH-04 | Phase 36 | Pending |
 | DASH-05 | Phase 36 | Pending |
 | DASH-06 | Phase 36 | Pending |
