@@ -3,6 +3,7 @@
 import { ActiveProfileCard } from './ActiveProfileCard'
 import { TopMatchesSummary } from './TopMatchesSummary'
 import { RecentAnalysesSummary } from './RecentAnalysesSummary'
+import { FadeIn } from '@/components/motion/FadeIn'
 
 interface Preferences {
   location?: string | null
@@ -45,9 +46,15 @@ export function ReturningUserDashboard({
 }: ReturningUserDashboardProps) {
   return (
     <div className="max-w-4xl mx-auto space-y-8 py-8 px-4">
-      <ActiveProfileCard profiles={profiles} activeProfile={activeProfile} />
-      <TopMatchesSummary activeProfileId={activeProfile.id} />
-      <RecentAnalysesSummary analyses={recentAnalyses} />
+      <FadeIn animate="visible" delay={0}>
+        <ActiveProfileCard profiles={profiles} activeProfile={activeProfile} />
+      </FadeIn>
+      <FadeIn animate="visible" delay={0.1}>
+        <TopMatchesSummary activeProfileId={activeProfile.id} />
+      </FadeIn>
+      <FadeIn animate="visible" delay={0.2}>
+        <RecentAnalysesSummary analyses={recentAnalyses} />
+      </FadeIn>
     </div>
   )
 }

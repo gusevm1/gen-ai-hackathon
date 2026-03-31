@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ProfileCard, type ProfileData } from '@/components/profiles/profile-card'
+import { StaggerGroup, StaggerItem } from '@/components/motion/StaggerGroup'
 import { CreateProfileDialog } from '@/components/profiles/create-profile-dialog'
 import { RenameProfileDialog } from '@/components/profiles/rename-profile-dialog'
 import { DeleteProfileDialog } from '@/components/profiles/delete-profile-dialog'
@@ -138,20 +139,21 @@ export function ProfileList({ profiles }: ProfileListProps) {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <StaggerGroup animate="visible" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {profiles.map((profile) => (
-          <ProfileCard
-            key={profile.id}
-            profile={profile}
-            isOnly={profiles.length === 1}
-            onEdit={() => handleEdit(profile.id)}
-            onSetActive={() => handleSetActive(profile.id)}
-            onRename={() => setRenameTarget(profile)}
-            onDuplicate={() => handleDuplicate(profile.id)}
-            onDelete={() => setDeleteTarget(profile)}
-          />
+          <StaggerItem key={profile.id}>
+            <ProfileCard
+              profile={profile}
+              isOnly={profiles.length === 1}
+              onEdit={() => handleEdit(profile.id)}
+              onSetActive={() => handleSetActive(profile.id)}
+              onRename={() => setRenameTarget(profile)}
+              onDuplicate={() => handleDuplicate(profile.id)}
+              onDelete={() => setDeleteTarget(profile)}
+            />
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerGroup>
 
       <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
         <DialogContent className="sm:max-w-2xl">
