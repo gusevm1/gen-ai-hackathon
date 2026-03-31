@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
 status: executing
-stopped_at: Phase 37 Plan 01 complete — TDD test scaffold created
-last_updated: "2026-03-31T20:34:32.898Z"
-last_activity: "2026-03-31 — 36-02 executed: returning user dashboard with ActiveProfileCard, TopMatchesSummary, RecentAnalysesSummary, NewProfileModal"
+stopped_at: Phase 37 Plan 02 complete — rose cleanup and tier color unification
+last_updated: "2026-03-31T20:39:17.074Z"
+last_activity: "2026-03-31 — 37-01 executed: TDD test scaffold for tier-colors palette and FadeIn animate-prop (Wave 0 RED state)"
 progress:
   total_phases: 14
   completed_phases: 10
   total_plans: 25
-  completed_plans: 22
-  percent: 100
+  completed_plans: 23
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 37 of 40 (Design System Propagation)
-Plan: 01 completed
+Plan: 02 completed
 Status: In progress
-Last activity: 2026-03-31 — 37-01 executed: TDD test scaffold for tier-colors palette and FadeIn animate-prop (Wave 0 RED state)
+Last activity: 2026-03-31 — 37-02 executed: rose→primary cleanup (DS-01) and tier color unification to teal/green/amber/red (DS-03), tier-colors tests GREEN
 
-Progress: [█████████░] 93%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Progress: [█████████░] 93%
 | Phase 36-state-aware-dashboard P01 | 525659 | 2 tasks | 4 files |
 | Phase 36 P02 | 18 | 2 tasks | 9 files |
 | Phase 37-design-system-propagation P01 | 11 | 2 tasks | 2 files |
+| Phase 37-design-system-propagation P02 | 2 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -90,12 +91,18 @@ Progress: [█████████░] 93%
 - Used `as any` cast for animate prop in fade-in test to bypass TypeScript until Plan 02 adds the prop to FadeIn interface
 - tier-colors tests assert NEW palette (teal/green/red) in deliberate RED state per Wave 0 Nyquist compliance — Plan 02 must make them GREEN
 
+### Phase 37 Decisions (37-02)
+
+- Loading bar (`analysis/[listingId]/loading.tsx`) uses `bg-green-500` not `bg-primary` — intentional exception matching extension visual, not brand token
+- Canonical tier color palette established: teal=excellent, green=good, amber=fair, red=poor — all new tier UI must follow this
+- Fallback defaults (`?? 'bg-gray-500'`) in AnalysisSummaryCard/TopMatchSummaryCard left unchanged — guard for unknown tier values, not part of named tier map
+
 ### Blockers/Concerns
 
 - None at roadmap creation
 
 ## Session Continuity
 
-Last session: 2026-03-31T20:34:32.893Z
-Stopped at: Phase 37 Plan 01 complete — TDD test scaffold created
+Last session: 2026-03-31T20:39:17.070Z
+Stopped at: Phase 37 Plan 02 complete — rose cleanup and tier color unification
 Resume file: None
