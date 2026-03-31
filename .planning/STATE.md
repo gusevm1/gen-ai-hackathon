@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
 status: executing
-stopped_at: Phase 37 Plan 02 complete — rose cleanup and tier color unification
-last_updated: "2026-03-31T20:39:17.074Z"
-last_activity: "2026-03-31 — 37-01 executed: TDD test scaffold for tier-colors palette and FadeIn animate-prop (Wave 0 RED state)"
+stopped_at: Phase 37 Plan 03 complete — dual-mode FadeIn/StaggerGroup + dashboard/profile on-mount animations
+last_updated: "2026-03-31T20:44:13.917Z"
+last_activity: "2026-03-31 — 37-02 executed: rose→primary cleanup (DS-01) and tier color unification to teal/green/amber/red (DS-03), tier-colors tests GREEN"
 progress:
   total_phases: 14
   completed_phases: 10
   total_plans: 25
-  completed_plans: 23
-  percent: 93
+  completed_plans: 24
+  percent: 95
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 37 of 40 (Design System Propagation)
-Plan: 02 completed
+Plan: 03 completed
 Status: In progress
-Last activity: 2026-03-31 — 37-02 executed: rose→primary cleanup (DS-01) and tier color unification to teal/green/amber/red (DS-03), tier-colors tests GREEN
+Last activity: 2026-03-31 — 37-03 executed: dual-mode FadeIn/StaggerGroup (animate prop) + dashboard home and profiles list on-mount animations
 
-Progress: [██████████] 95%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Progress: [██████████] 95%
 | Phase 36 P02 | 18 | 2 tasks | 9 files |
 | Phase 37-design-system-propagation P01 | 11 | 2 tasks | 2 files |
 | Phase 37-design-system-propagation P02 | 2 | 2 tasks | 7 files |
+| Phase 37-design-system-propagation P03 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -97,12 +98,19 @@ Progress: [██████████] 95%
 - Canonical tier color palette established: teal=excellent, green=good, amber=fair, red=poor — all new tier UI must follow this
 - Fallback defaults (`?? 'bg-gray-500'`) in AnalysisSummaryCard/TopMatchSummaryCard left unchanged — guard for unknown tier values, not part of named tier map
 
+### Phase 37 Decisions (37-03)
+
+- FadeIn animate prop uses `undefined` check — allows any string state name, consistent with framer-motion animate API
+- StaggerGroup uses spread conditional pattern to keep non-animate (whileInView) path identical to original
+- Dashboard FadeIn delays: 0s / 0.1s / 0.2s per section per CONTEXT.md 0.05–0.15s step guidance
+- Profile card key placed on StaggerItem — StaggerItem is the motion container and owns the key for React reconciliation
+
 ### Blockers/Concerns
 
 - None at roadmap creation
 
 ## Session Continuity
 
-Last session: 2026-03-31T20:39:17.070Z
-Stopped at: Phase 37 Plan 02 complete — rose cleanup and tier color unification
+Last session: 2026-03-31T20:44:13.912Z
+Stopped at: Phase 37 Plan 03 complete — dual-mode FadeIn/StaggerGroup + dashboard/profile on-mount animations
 Resume file: None
