@@ -58,7 +58,7 @@ export function TopMatchCard({ match, rank, defaultExpanded = false }: TopMatchC
   const flatfoxUrl = match.slug ? `https://flatfox.ch/en/flat/${match.slug}/${match.listing_id}/` : null
 
   return (
-    <Card className={`ring-1 ${colors.ring} transition-all`}>
+    <Card className={`ring-1 ${colors.ring} transition-all hover:-translate-y-1 hover:shadow-lg`}>
       <CardContent className="space-y-3">
         {/* Header row: rank + title + score */}
         <div className="flex items-start gap-3">

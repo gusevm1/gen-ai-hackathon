@@ -29,7 +29,7 @@ export function AnalysisSummaryCard({
   return (
     <Link
       href="/analyses"
-      className="block rounded-lg border border-border bg-card p-3 hover:border-muted-foreground/40 hover:shadow-md transition-all duration-200 text-card-foreground"
+      className="block rounded-lg border border-border bg-card p-3 hover:border-muted-foreground/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-200 text-card-foreground"
     >
       <div className="flex items-center gap-3">
         {/* Score circle */}

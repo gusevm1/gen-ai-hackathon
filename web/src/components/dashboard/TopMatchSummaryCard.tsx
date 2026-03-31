@@ -30,7 +30,7 @@ export function TopMatchSummaryCard({
   return (
     <a
       href="/top-matches"
-      className="block rounded-lg border border-border bg-card p-3 hover:border-muted-foreground/40 hover:shadow-md transition-all duration-200 text-card-foreground"
+      className="block rounded-lg border border-border bg-card p-3 hover:border-muted-foreground/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-200 text-card-foreground"
     >
       {/* Rank badge */}
       <div className="flex items-start justify-between mb-2">
