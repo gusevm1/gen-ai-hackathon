@@ -16,6 +16,8 @@ import logging
 import os
 import re
 
+import asyncio
+
 import httpx
 
 from app.models.listing import FlatfoxListing
@@ -125,12 +127,59 @@ class ClaudeScorer:
             logger.error("OPENROUTER_API_KEY is not set in environment")
         return key
 
+    def _log_cost_fire_and_forget(
+        self,
+        usage: dict,
+        call_type: str,
+        listing_id: int | None = None,
+        user_id: str | None = None,
+    ) -> None:
+        """Log AI cost to Supabase ai_costs table (fire-and-forget)."""
+
+        async def _save() -> None:
+            try:
+                from app.services.supabase import supabase_service
+
+                row = {
+                    "call_type": call_type,
+                    "model": SUBJECTIVE_MODEL,
+                    "prompt_tokens": usage.get("prompt_tokens"),
+                    "completion_tokens": usage.get("completion_tokens"),
+                    "total_tokens": usage.get("total_tokens"),
+                    "total_cost": usage.get("total_cost"),
+                    "listing_id": listing_id,
+                    "user_id": user_id,
+                    "raw_usage": usage,
+                }
+                import asyncio as _aio
+
+                await _aio.to_thread(
+                    lambda: supabase_service.get_client()
+                    .table("ai_costs")
+                    .insert(row)
+                    .execute()
+                )
+                logger.info(
+                    "AI cost logged: type=%s model=%s tokens=%s cost=$%s",
+                    call_type,
+                    SUBJECTIVE_MODEL,
+                    usage.get("total_tokens"),
+                    usage.get("total_cost"),
+                )
+            except Exception:
+                logger.warning("Failed to log AI cost", exc_info=True)
+
+        asyncio.create_task(_save())
+
     async def _call_openrouter(
         self,
         system_prompt: str,
         user_content: str,
         max_tokens: int = 4096,
         temperature: float = 0.1,
+        call_type: str = "unknown",
+        listing_id: int | None = None,
+        user_id: str | None = None,
     ) -> str:
         """Make a chat completion request to OpenRouter.
 
@@ -140,6 +189,9 @@ class ClaudeScorer:
                           supported via OpenRouter for this use case).
             max_tokens: Maximum tokens in the response.
             temperature: Sampling temperature.
+            call_type: Label for cost logging.
+            listing_id: Optional listing ID for cost logging.
+            user_id: Optional user ID for cost logging.
 
         Returns:
             The assistant's response text.
@@ -169,6 +221,14 @@ class ClaudeScorer:
         response.raise_for_status()
 
         data = response.json()
+
+        # Log cost if usage data present
+        usage = data.get("usage", {})
+        if usage:
+            self._log_cost_fire_and_forget(
+                usage, call_type, listing_id=listing_id, user_id=user_id
+            )
+
         return data["choices"][0]["message"]["content"]
 
     async def score_listing(
@@ -206,6 +266,7 @@ class ClaudeScorer:
                 system_prompt=build_system_prompt(preferences.language),
                 user_content=full_user_text,
                 max_tokens=4096,
+                call_type="subjective_scoring",
             )
             parsed_json = _parse_json_response(raw)
             parsed = SubjectiveResponse.model_validate(parsed_json)
@@ -239,6 +300,7 @@ class ClaudeScorer:
                 system_prompt=build_bullets_system_prompt(preferences.language),
                 user_content=user_text,
                 max_tokens=1024,
+                call_type="bullets_only",
             )
             parsed_json = _parse_json_response(raw)
             parsed = BulletsOnlyResponse.model_validate(parsed_json)
@@ -327,6 +389,7 @@ class ClaudeScorer:
                 user_content=user_content,
                 max_tokens=1024,
                 temperature=0.3,
+                call_type="deterministic_review",
             )
 
             parsed = _parse_json_response(raw)
