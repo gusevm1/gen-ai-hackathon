@@ -12,7 +12,7 @@ import { createClient } from '@/lib/supabase/client';
 type OnboardingContextValue = ReturnType<typeof useOnboarding> & {
   startTour: () => Promise<void>;
   launchTourForCurrentPage: () => void;
-  advanceToOpenFlatfox: () => void;
+  showOpenFlatfoxStep: () => void;
 };
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
@@ -109,7 +109,6 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router = useRouter();
   const driverRef = useRef<Driver | null>(null);
-  const step4SavedRef = useRef(false);
 
   // Controls visibility of the Step 1 welcome modal
   const [showWelcome, setShowWelcome] = useState(false);
@@ -139,7 +138,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   // Step 1: Welcome modal (React, no driver.js)
   // Step 2: /download — highlight install CTA
   // Step 3: /dashboard — highlight create profile section
-  // Step 4: /profiles/* — save preferences then open Flatfox
+  // Step 4: /profiles/* — inline banner shown by preferences-form.tsx; Open Flatfox popover fired by showOpenFlatfoxStep() after save
   // Step 9: /analyses or /analysis — post-analysis tooltips
 
   const launchTourForCurrentPage = useCallback(() => {
@@ -201,53 +200,6 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       });
       driverRef.current = inst;
       inst.drive();
-    } else if (pathname.startsWith('/profiles/') && step === 4) {
-      // Step 4: Save preferences then open Flatfox
-      const inst = driver({
-        showProgress: false,
-        overlayOpacity: 0,
-        onCloseClick: exitTutorial,
-        steps: [
-          {
-            element: '#save-preferences-btn',
-            popover: {
-              title: 'Save Your Preferences',
-              description:
-                'Fill in your search criteria — location, budget, rooms — then save. These preferences will be used to score Flatfox listings.',
-              side: 'top',
-              align: 'center',
-              showButtons: ['close'],
-              disableButtons: ['previous'],
-              progressText: 'Step 4 of 9',
-            },
-          },
-          {
-            element: '#open-flatfox-profile-btn',
-            popover: {
-              title: 'Head to Flatfox',
-              description:
-                'Open Flatfox with your filters pre-applied. The HomeMatch extension will guide you through scoring your first listing.',
-              side: 'bottom',
-              align: 'center',
-              showButtons: ['close'],
-              disableButtons: ['previous'],
-              progressText: 'Step 4 of 9',
-            },
-          },
-        ],
-      });
-      driverRef.current = inst;
-      if (step4SavedRef.current) {
-        inst.drive(1);
-      } else {
-        setTimeout(() => {
-          if (step4SavedRef.current) {
-            inst.drive(1);
-          } else {
-            inst.drive();
-          }
-        }, 3000);
-      }
     } else if ((pathname.startsWith('/analyses') || pathname.startsWith('/analysis')) && step === 9) {
       // Step 9: Post-analysis feature awareness tooltips
       const step9Targets = [
@@ -343,9 +295,6 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!state?.onboarding_active) return;
-    if (!pathname.startsWith('/profiles/')) {
-      step4SavedRef.current = false;
-    }
     const timer = setTimeout(() => {
       launchTourForCurrentPage();
     }, 600);
@@ -353,21 +302,38 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // ─── Advance step 4 from "Save" to "Open Flatfox" sub-step ───────────────
+  // ─── Show the "Open Flatfox" driver step after preferences are saved ──────
+  //
+  // Creates a fresh standalone driver pointing at #open-flatfox-profile-btn.
+  // Called by preferences-form.tsx after a successful save during onboarding step 4.
+  // Does NOT rely on driverRef.current (avoids stale-destroyed-instance bugs).
 
-  const advanceToOpenFlatfox = useCallback(() => {
-    step4SavedRef.current = true;
-    if (driverRef.current) {
-      try {
-        driverRef.current.moveNext();
-      } catch {
-        launchTourForCurrentPage();
-      }
-    } else {
-      launchTourForCurrentPage();
-    }
+  const showOpenFlatfoxStep = useCallback(() => {
+    destroyDriver();
+    const inst = driver({
+      showProgress: false,
+      overlayOpacity: 0,
+      onCloseClick: exitTutorial,
+      steps: [
+        {
+          element: '#open-flatfox-profile-btn',
+          popover: {
+            title: 'Head to Flatfox',
+            description:
+              'Open Flatfox with your filters pre-applied. The HomeMatch extension will guide you through scoring your first listing.',
+            side: 'top',
+            align: 'center',
+            showButtons: ['close'],
+            disableButtons: ['previous'],
+            progressText: 'Step 4 of 9',
+          },
+        },
+      ],
+    });
+    driverRef.current = inst;
+    inst.drive();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [launchTourForCurrentPage]);
+  }, [destroyDriver, exitTutorial]);
 
   // ─── Manual start (TakeATourButton, NavUser menu) ────────────────────────
 
@@ -400,7 +366,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     ...onboarding,
     startTour: startTourAndNavigate,
     launchTourForCurrentPage,
-    advanceToOpenFlatfox,
+    showOpenFlatfoxStep,
   };
 
   return (

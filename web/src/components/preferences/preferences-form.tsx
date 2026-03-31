@@ -24,6 +24,7 @@ import { useLanguage } from '@/lib/language-context'
 import { t } from '@/lib/translations'
 import { useOnboardingContext } from '@/components/onboarding/OnboardingProvider'
 import { updateOnboardingState } from '@/lib/onboarding-state'
+import { Info } from 'lucide-react'
 
 interface PreferencesFormProps {
   defaultValues: Preferences
@@ -39,7 +40,7 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
     text: string
   } | null>(null)
   const { language } = useLanguage()
-  const { state: onboardingState, isActive: onboardingActive, advanceToOpenFlatfox } = useOnboardingContext()
+  const { state: onboardingState, isActive: onboardingActive, showOpenFlatfoxStep } = useOnboardingContext()
 
   const internalForm = useForm<Preferences>({
     resolver: zodResolver(preferencesSchema) as Resolver<Preferences>,
@@ -57,10 +58,12 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
       setSaveMessage({ type: 'success', text: t(language, 'pref_saved') })
       setTimeout(() => setSaveMessage(null), 3000)
 
-      // Issue 6: Advance the onboarding tour from "Save Preferences" to "Open in Flatfox"
+      // Advance the onboarding tour from "Save Preferences" to "Open in Flatfox"
       // after a successful save when the user is on onboarding step 4.
+      // showOpenFlatfoxStep() creates a fresh driver instance — avoids the stale
+      // destroyed-driver bug that prevented the Open Flatfox popover from showing.
       if (onboardingActive && onboardingState?.onboarding_step === 4) {
-        advanceToOpenFlatfox()
+        showOpenFlatfoxStep()
       }
     } catch (error) {
       setSaveMessage({
@@ -74,6 +77,14 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         {profileId && <ProfileSummary form={form} />}
+        {onboardingActive && onboardingState?.onboarding_step === 4 && (
+          <div className="flex items-start gap-2 rounded-md border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-sm text-blue-300">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Fill in your search criteria, then click <strong>Save Preferences</strong> to continue the tour.
+            </span>
+          </div>
+        )}
         <Accordion
           multiple
           defaultValue={["location", "budget", "size", "features", "dynamic", "importance"]}
