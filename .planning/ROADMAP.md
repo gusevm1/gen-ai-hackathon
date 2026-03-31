@@ -92,7 +92,7 @@
 **Milestone Goal:** Redesign the user experience end-to-end — state-aware dashboard, aligned design system, and fixed user journeys for both first-time and returning users so the product is foolproof, intuitive, and visually consistent with the landing page.
 
 - [x] **Phase 35: Navigation & IA** — Rename nav item, remove Download from primary nav, install banner, Settings link (completed 2026-03-31)
-- [ ] **Phase 36: State-Aware Dashboard** — New user explainer state, returning user workspace with active profile + recent analyses
+- [ ] **Phase 36: State-Aware Dashboard** — New user explainer state, returning user workspace with active profile + top matches + recent analyses
 - [ ] **Phase 37: Design System Propagation** — Token cleanup, Framer Motion entrance animations, tier colors, hover states
 - [ ] **Phase 38: Onboarding Rebuild** — WelcomeModal with Shadcn, checklist completion state, Settings re-entry
 - [ ] **Phase 39: Critical Handoffs** — Profile edit CTA + progress indicator, analyses empty state
@@ -269,9 +269,9 @@ Plans:
 
 ### Phase 36: State-Aware Dashboard
 
-**Goal:** The dashboard home page responds to user state — first-time users see a guided 3-step explainer with two profile creation paths, returning users see their active profile, recent analyses, and a direct path to Flatfox.
+**Goal:** The dashboard home page responds to user state — first-time users see a guided 3-step explainer with two profile creation paths, returning users see their active profile, top matches, recent analyses, and a direct path to Flatfox.
 **Depends on:** Phase 35
-**Requirements:** DASH-01, DASH-02, DASH-03, DASH-04, DASH-05, DASH-06
+**Requirements:** DASH-01, DASH-02, DASH-03, DASH-04, DASH-05, DASH-06, DASH-07
 **Plans:** TBD
 
 **Success Criteria** (what must be TRUE):
@@ -279,7 +279,8 @@ Plans:
   2. AI profile creation card is visually distinguished as the recommended primary path (badge + primary button styling); manual creation card is secondary (outline style)
   3. Returning user (1+ profiles) sees their active profile name, last-used date, and "Open Flatfox" CTA without scrolling
   4. Returning user sees their 3 most recent analyses (score, tier, address) on the home page
-  5. Returning user can switch active profile or start a new one directly from the dashboard home without navigating to the Profiles page
+  5. Returning user sees their top matches for the active profile on the home page (summary cards linking to /top-matches for full detail)
+  6. Returning user can switch active profile or start a new one directly from the dashboard home without navigating to the Profiles page
 
 ### Phase 37: Design System Propagation
 

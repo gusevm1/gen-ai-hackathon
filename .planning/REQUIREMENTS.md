@@ -22,6 +22,7 @@
 - [ ] **DASH-04**: Returning user (1+ profiles) sees their active profile name, last-used date, and an "Open Flatfox" CTA on the home page
 - [ ] **DASH-05**: Returning user sees their 3 most recent analyses (score + tier + address) on the home page
 - [ ] **DASH-06**: Returning user can switch active profile or create a new one from the home page
+- [ ] **DASH-07**: Returning user sees top matches for active profile on the home page (summary cards linking to /top-matches)
 
 ### Design System — Tokens & Motion
 
@@ -123,6 +124,7 @@
 | DASH-04 | Phase 36 | Pending |
 | DASH-05 | Phase 36 | Pending |
 | DASH-06 | Phase 36 | Pending |
+| DASH-07 | Phase 36 | Pending |
 | DS-01 | Phase 37 | Pending |
 | DS-02 | Phase 37 | Pending |
 | DS-03 | Phase 37 | Pending |
@@ -147,8 +149,8 @@
 | PG-07 | Phase 40 | Pending |
 
 **Coverage:**
-- v6.0 requirements: 32 total
-- Mapped to phases: 32 (100%)
+- v6.0 requirements: 33 total
+- Mapped to phases: 33 (100%)
 - Unmapped: 0
 
 ---
