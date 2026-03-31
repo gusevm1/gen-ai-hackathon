@@ -109,7 +109,7 @@ class SubjectiveCriterionResult(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
     criterion: str
-    fulfillment: float = Field(ge=0.0, le=1.0)
+    fulfillment: Optional[float] = Field(None, ge=0.0, le=1.0)
     reasoning: str
 
 

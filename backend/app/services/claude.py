@@ -75,7 +75,8 @@ def _to_fulfillment_result(
     """Convert a subjective criterion result to a FulfillmentResult for Phase 31 aggregation."""
     from app.models.scoring import SubjectiveCriterionResult  # noqa: F811
 
-    fulfillment_rounded = round(round(r.fulfillment * 10) / 10, 1)
+    raw_fulfillment = r.fulfillment if r.fulfillment is not None else 0.5
+    fulfillment_rounded = round(round(raw_fulfillment * 10) / 10, 1)
     return FulfillmentResult(
         criterion_name=r.criterion,
         fulfillment=fulfillment_rounded,
@@ -220,10 +221,11 @@ class ClaudeScorer:
                         "Subjective criterion '%s' not found in field map",
                         r.criterion,
                     )
+                    raw_f = r.fulfillment if r.fulfillment is not None else 0.5
                     results.append(
                         FulfillmentResult(
                             criterion_name=r.criterion,
-                            fulfillment=round(round(r.fulfillment * 10) / 10, 1),
+                            fulfillment=round(round(raw_f * 10) / 10, 1),
                             importance=ImportanceLevel.MEDIUM,
                             reasoning=r.reasoning,
                         )
