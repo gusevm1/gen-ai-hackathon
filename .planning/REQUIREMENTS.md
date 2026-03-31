@@ -1,129 +1,158 @@
-# Requirements: HomeMatch v5.0 Hybrid Scoring Engine
+# Requirements: HomeMatch v6.0 UX & Design System Overhaul
 
-**Milestone:** v5.0 Hybrid Scoring Engine
-**Date:** 2026-03-29 (updated 2026-03-30 — integration scope added)
-**Core Value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust — without ever leaving the website they're already on.
-
----
-
-## Milestone v5.0 Requirements
-
-### Data Model & Classifier
-
-- [x] **DM-01**: System assigns each DynamicField criterion exactly one of 6 criterion types: `distance`, `price`, `size`, `binary_feature`, `proximity_quality`, `subjective`
-- [x] **DM-02**: Claude LLM classifies each DynamicField to one of the 6 criterion types at profile save time; result stored as `criterion_type` in JSONB; default falls back to `subjective` for ambiguous criteria
-- [x] **DM-03**: Importance weight map updated to CRITICAL=5, HIGH=3, MEDIUM=2, LOW=1 (replaces legacy 90/70/50/30 scale)
-
-### Deterministic Scorer
-
-- [x] **DS-01**: System computes price fulfillment deterministically: `f=1.0` if `price ≤ budget`, else `f=exp(-2.5 × (price-budget) / budget)`; None/missing price guarded (skip criterion)
-- [x] **DS-02**: System computes distance fulfillment deterministically: `f=1.0` if `actual ≤ target`, else `f=exp(-1.0 × (actual-target) / target)`; None/missing distance guarded (skip criterion)
-- [x] **DS-03**: System computes size fulfillment deterministically: `f=min(1.0, (actual/target)^1.5)`; target=0 or None guard returns `f=1.0` or skip
-- [x] **DS-04**: System computes binary feature fulfillment via slug set-membership check against Flatfox attributes, with a `FEATURE_ALIAS_MAP` for German synonym inputs; `f=1.0` if present, `f=0.0` if absent
-- [x] **DS-05**: System computes proximity quality fulfillment via `f=min(1.0, exp(-1×Δ/r) + min(0.2, (rating-3)/10))`; fallback results (outside requested radius) use fallback distance in formula
-- [x] **DS-06**: Built-in preference fields (budget, rooms, living_space) are synthesized as virtual `FulfillmentResult` entries using dealbreaker flags for importance mapping, without migrating them into `dynamic_fields`
-
-### Subjective Scorer (OpenRouter)
-
-- [x] **SS-01**: `SubjectiveCriterionResult` Pydantic model with `criterion: str`, `fulfillment: float` (0.0–1.0), and `reasoning: str`; `SubjectiveResponse` wraps list of results + `summary_bullets`
-- [x] **SS-02**: All `subjective`-type criteria batched into a single OpenRouter call; model configurable via `SUBJECTIVE_MODEL` env var (default: `google/gemini-2.5-flash-lite`); call skipped entirely if zero subjective criteria exist
-- [x] **SS-03**: Prompt instructs model to return `fulfillment ∈ {0.0, 0.1, ..., 1.0}` per criterion with reasoning; model must never produce an `overall_score` or category-level scores
-- [x] **SS-04**: 3–5 natural-language `summary_bullets` in the user's preferred language included in the same OpenRouter call; no separate call needed — bullets generated alongside subjective evaluation
-
-### Integration & Infrastructure
-
-- [x] **INT-01**: Supabase migrations 005 (listing_profiles table) and 006 (research_json column) applied to production before hybrid scorer ships
-- [x] **INT-02**: `OPENROUTER_API_KEY`, `ALLOW_CLAUDE_FALLBACK=false`, and `SUBJECTIVE_MODEL` env vars set on EC2
-- [x] **INT-03**: Scoring router performs ListingProfile lookup from Supabase; adapter converts ListingProfile fields to FlatfoxListing-compatible format for deterministic scorer consumption without modifying Phase 28 code
-- [x] **INT-04**: When `ALLOW_CLAUDE_FALLBACK=false` and no ListingProfile exists, scoring endpoint returns a response with `enrichment_status="unavailable"` instead of calling Claude; old Claude path preserved behind the gate
-- [x] **INT-05**: OpenRouter model constant updated from deprecated `google/gemini-2.0-flash-001` to `google/gemini-2.5-flash-lite`
-
-### Hybrid Aggregation Engine
-
-- [x] **HA-01**: System computes final score via weighted average: `score = (Σ weight × fulfillment / Σ weights) × 100`, using the new CRITICAL=5/HIGH=3/MEDIUM=2/LOW=1 weight scale
-- [x] **HA-02**: Criteria with missing data (None fulfillment) are excluded from both numerator and denominator in the weighted aggregation; score computed over available criteria only
-- [x] **HA-03**: Any CRITICAL-importance criterion with `fulfillment=0` forces `match_tier="poor"` and caps the numeric score at a maximum of 39
-- [x] **HA-04**: `ScoreResponse` v2 schema: `overall_score` computed in Python backend (not from LLM), `categories` list removed, `criteria_results: list[CriterionResult]` added, `schema_version: 2` field added; `overall_score`, `match_tier`, and `summary_bullets` field names preserved for backward compatibility
-
-### Database & Cache
-
-- [x] **DB-01**: `schema_version` field added to the `breakdown` JSONB column in the `analyses` table; this migration deploys before any `ScoreResponse` schema changes reach production
-- [x] **DB-02**: Cache read logic checks `schema_version`; any cached analysis with `schema_version < 2` (or missing `schema_version`) triggers a re-score instead of returning the stale cached entry; edge function cache also updated
-- [x] **DB-03**: `fulfillment_data` JSONB column added to `analyses` table (additive); existing `breakdown` column and `score` column retained for v1 backward compatibility
-
-### Frontend Consumers
-
-- [x] **FE-01**: New `FulfillmentBreakdown` component renders on the analysis page, showing per-criterion name, fulfillment score, weight, and reasoning for each criterion in `criteria_results`
-- [x] **FE-02**: `ChecklistSection` updated to derive met/partial/not-met display from fulfillment float thresholds: met (≥0.7), partial (0.3–0.69), not-met (<0.3)
-- [x] **FE-03**: Chrome extension TypeScript types updated to reflect new `ScoreResponse` v2 shape; changes are additive only — `overall_score`, `match_tier`, and `summary_bullets` field names unchanged
-- [x] **FE-04**: Frontend analysis page branches on `schema_version`: renders legacy category breakdown for v1 cached analyses and new per-criterion fulfillment breakdown for v2 responses
-- [x] **FE-05**: Extension renders grey "beta" badge for listings with `enrichment_status="unavailable"`, indicating scoring is not yet available for this area
+**Defined:** 2026-03-31
+**Core Value:** Help users instantly see how well each property listing matches their specific needs — without ever leaving the website they're already on.
 
 ---
 
-## Future Requirements (Deferred)
+## v6.0 Requirements
 
-- Image-based condition scoring as a formal criterion — deferred (image analysis still occurs via summary bullets but not as a scored criterion)
-- Criterion reclassification UI: allow users to override Claude's assigned `criterion_type` — deferred to v5.1
-- Fulfillment threshold configuration: user-customizable met/partial/not-met thresholds — deferred
-- v4.2 Dashboard Alignment & QA (phases 24-25) — deferred
-- OpenRouter gap-fill in critical scoring path — deferred (HA-02 skip-missing-data approach used instead)
-- Enrichment pipeline for zipcodes beyond 8051 — deferred to v5.1+
+### Navigation & Information Architecture
+
+- [ ] **NAV-01**: User sees "New Profile" (not "AI-Powered Search") in the top navbar
+- [ ] **NAV-02**: User does not see "Download" as a primary nav item after initial setup
+- [ ] **NAV-03**: User who has not confirmed extension install sees a contextual install banner on the dashboard
+- [ ] **NAV-04**: User can access the Download Extension page from Settings
+
+### Dashboard — State-Aware Home
+
+- [ ] **DASH-01**: New user (0 profiles) sees an onboarding-oriented home: 3-step product explainer + two profile creation paths
+- [ ] **DASH-02**: New user sees AI profile creation as the visually recommended primary path (badge + primary styling)
+- [ ] **DASH-03**: New user sees manual profile creation as a secondary option (outline style, lower visual weight)
+- [ ] **DASH-04**: Returning user (1+ profiles) sees their active profile name, last-used date, and an "Open Flatfox" CTA on the home page
+- [ ] **DASH-05**: Returning user sees their 3 most recent analyses (score + tier + address) on the home page
+- [ ] **DASH-06**: Returning user can switch active profile or create a new one from the home page
+
+### Design System — Tokens & Motion
+
+- [ ] **DS-01**: No hardcoded `rose-500` color remains in the codebase — all replaced with `primary` CSS token
+- [ ] **DS-02**: Dashboard home, profiles list, and analyses list pages have Framer Motion entrance animations (FadeIn on mount, stagger on list items)
+- [ ] **DS-03**: Tier colors are unified across web: excellent=teal, good=green, fair=amber, poor=red
+- [ ] **DS-04**: All card hover states use a consistent lift effect matching the landing page style
+
+### Onboarding — WelcomeModal Rebuild
+
+- [ ] **ONB-01**: WelcomeModal uses Shadcn Dialog/Card components — zero hardcoded inline styles
+- [ ] **ONB-02**: WelcomeModal respects dark/light mode via CSS variables
+- [ ] **ONB-03**: WelcomeModal shows brand primary color on the CTA button
+- [ ] **ONB-04**: WelcomeModal copy includes one sentence explaining what HomeMatch does before asking user to start
+
+### Onboarding — Checklist & Completion
+
+- [ ] **ONB-05**: Onboarding checklist groups steps 5–8 under a visible "In the extension →" section label
+- [ ] **ONB-06**: When onboarding completes, checklist morphs into a success state: "You're all set ✓ — start scoring on Flatfox" with a direct Flatfox link
+- [ ] **ONB-07**: User can re-access the tour from Settings after dismissing the checklist
+
+### Critical Handoffs
+
+- [ ] **HND-01**: After saving preferences on the profile edit page, user sees a full-width primary button: "Save & Open in Flatfox →"
+- [ ] **HND-02**: Profile edit page shows a section progress indicator (e.g. "Step 2 of 5 — Budget")
+- [ ] **HND-03**: Analyses page empty state shows an "Open Flatfox →" primary CTA and a secondary "Download extension" link
+- [ ] **HND-04**: Analyses page filter bar is hidden when there are 0 analyses
+
+### Page Redesigns — Profiles
+
+- [ ] **PG-01**: Profile cards in the profiles list show the active profile badge, total analysis count, and last-used date
+- [ ] **PG-02**: Active profile is visually prominent in the profiles list (highlighted border or pin indicator)
+
+### Page Redesigns — AI Chat (Profile Creation)
+
+- [ ] **PG-03**: AI chat page shows a context heading explaining what the conversation does
+- [ ] **PG-04**: Transition from chat to summary card is animated — not an abrupt swap
+
+### Page Redesigns — Analyses
+
+- [ ] **PG-05**: Analysis cards show a left-edge colored tier bar (teal/green/amber/red) for instant scanability
+- [ ] **PG-06**: Analysis card score number is larger and left-aligned (not a small pill top-right)
+
+### Page Redesigns — Settings
+
+- [ ] **PG-07**: Settings page has a "Download Extension" section with the download button and install link
+
+---
+
+## Future Requirements (v6.1+)
+
+### Landing Page Polish (v4.1 carry-overs)
+
+- **HERO-01**: Stats row removed from SectionHero
+- **HERO-02**: CTA button centered on its own row
+- **HERO-03**: Poor tier color updated to red across landing + extension
+- **PROB-01**: Decorative background numbers removed from problem cards
+- **PROB-02**: Problem cards slide in from left on scroll
+- **PROB-03**: Problem cards visually redesigned — elevated, engaging
+- **SOLN-01**: Browser demo enlarged (max-w-3xl+)
+- **SOLN-02**: Step cards enlarged with more presence
+- **SOLN-03**: Score display uses full tier color system (green/yellow/red)
+- **CTA-01**: Headline font size increased to clamp(2.5rem, 6vw, 4.5rem)
+- **CTA-02**: Headline dramatic bottom-up entrance animation
+- **CRED-01**: ETH + Gen-AI Hackathon credits section added
+
+### Deeper UX (future)
+
+- **UX-01**: Mobile responsive pass for all dashboard pages
+- **UX-02**: Profile edit form validation with inline error states
+- **UX-03**: Skeleton loading states on analyses page
+- **UX-04**: Extension popup onboarding widget (steps 5–8 visible in popup)
+
+---
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Removal of old `Importance` model | Kept for built-in field importance mapping; target removal in v6.0 |
-| SQL data migration of existing cached analyses | Additive strategy (schema_version branching) |
-| Per-criterion LLM calls | Single batched call enforced |
-| Regex-based criterion classifier | Claude LLM classification chosen per user decision |
-| Chat service changes | Out of scope for v5.0 |
-| OpenRouter gap-fill in scoring pipeline | HA-02 skip-missing-data is simpler; gap-fill kept as optional diagnostic |
+| Extension content script changes | Phase 34 onboarding overlay complete and stable |
+| Backend / scoring changes | v5.0 hybrid scorer shipped — no changes needed |
+| Auth page redesign | Works correctly; not on critical path |
+| Real-time notifications | High complexity, not core to current user journey |
+| Mobile app | Web-first approach remains |
 
 ---
 
 ## Traceability
 
-| REQ-ID | Phase | Status |
-|--------|-------|--------|
-| DM-01 | Phase 27 | Complete |
-| DM-02 | Phase 27 | Complete |
-| DM-03 | Phase 27 | Complete |
-| DS-01 | Phase 28 | Complete |
-| DS-02 | Phase 28 | Complete |
-| DS-03 | Phase 28 | Complete |
-| DS-04 | Phase 28 | Complete |
-| DS-05 | Phase 28 | Complete |
-| DS-06 | Phase 28 | Complete |
-| SS-01 | Phase 29 | Complete |
-| SS-02 | Phase 29 | Complete |
-| SS-03 | Phase 29 | Complete |
-| SS-04 | Phase 29 | Complete |
-| INT-01 | Phase 30 | Complete |
-| INT-02 | Phase 30 | Complete |
-| INT-03 | Phase 31 | Complete |
-| INT-04 | Phase 31 | Complete |
-| INT-05 | Phase 31 | Complete |
-| DB-01 | Phase 30 | Complete |
-| DB-02 | Phase 31 | Complete |
-| DB-03 | Phase 30 | Complete |
-| HA-01 | Phase 31 | Complete |
-| HA-02 | Phase 31 | Complete |
-| HA-03 | Phase 31 | Complete |
-| HA-04 | Phase 31 | Complete |
-| FE-01 | Phase 32 | Complete |
-| FE-02 | Phase 32 | Complete |
-| FE-03 | Phase 32 | Complete |
-| FE-04 | Phase 32 | Complete |
-| FE-05 | Phase 32 | Complete |
+*Populated during roadmap creation.*
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| NAV-01 | — | Pending |
+| NAV-02 | — | Pending |
+| NAV-03 | — | Pending |
+| NAV-04 | — | Pending |
+| DASH-01 | — | Pending |
+| DASH-02 | — | Pending |
+| DASH-03 | — | Pending |
+| DASH-04 | — | Pending |
+| DASH-05 | — | Pending |
+| DASH-06 | — | Pending |
+| DS-01 | — | Pending |
+| DS-02 | — | Pending |
+| DS-03 | — | Pending |
+| DS-04 | — | Pending |
+| ONB-01 | — | Pending |
+| ONB-02 | — | Pending |
+| ONB-03 | — | Pending |
+| ONB-04 | — | Pending |
+| ONB-05 | — | Pending |
+| ONB-06 | — | Pending |
+| ONB-07 | — | Pending |
+| HND-01 | — | Pending |
+| HND-02 | — | Pending |
+| HND-03 | — | Pending |
+| HND-04 | — | Pending |
+| PG-01 | — | Pending |
+| PG-02 | — | Pending |
+| PG-03 | — | Pending |
+| PG-04 | — | Pending |
+| PG-05 | — | Pending |
+| PG-06 | — | Pending |
+| PG-07 | — | Pending |
 
 **Coverage:**
-- v5.0 requirements: 30 total
-- Complete: 9 (DM-01–03, DS-01–06)
-- Pending: 21
-- Unmapped: 0 ✓
+- v6.0 requirements: 31 total
+- Mapped to phases: 0 (pending roadmap)
+- Unmapped: 31 ⚠️
 
 ---
-*Requirements defined: 2026-03-29*
-*Last updated: 2026-03-30 after integration scope adjustment (SS→OpenRouter, INT category added, FE-05 added)*
+*Requirements defined: 2026-03-31*
+*Last updated: 2026-03-31 after initial definition*
