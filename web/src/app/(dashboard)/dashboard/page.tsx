@@ -1,74 +1,37 @@
-'use client'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { NewUserDashboard } from '@/components/dashboard/NewUserDashboard'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { ProfileCreationChooser } from '@/components/profile-creation-chooser'
-import { CreateProfileDialog } from '@/components/profiles/create-profile-dialog'
-import { createProfile } from '@/app/(dashboard)/profiles/actions'
-import { useLanguage } from '@/lib/language-context'
-import { t } from '@/lib/translations'
-import { useOnboardingContext } from '@/components/onboarding/OnboardingProvider'
-import { TakeATourButton } from '@/components/onboarding/TakeATourButton'
-import { ExtensionInstallBanner } from '@/components/ExtensionInstallBanner'
+export default async function DashboardPage() {
+  const supabase = await createClient()
 
-export default function DashboardPage() {
-  const router = useRouter()
-  const { language } = useLanguage()
-  const [createOpen, setCreateOpen] = useState(false)
-  const { state, isActive, advance } = useOnboardingContext()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  async function handleCreate(name: string) {
-    const id = await createProfile(name)
-    // If onboarding is active and we're on the "create profile" step (3), advance to
-    // step 4 (Open Flatfox) so the CTA appears when the user returns to the dashboard.
-    if (isActive && state?.onboarding_step === 3) {
-      await advance()
-    }
-    router.push('/profiles/' + id)
+  if (!user) {
+    redirect('/')
   }
 
-  function openCreateDialog() {
-    setCreateOpen(true)
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, name, is_default, preferences, updated_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+
+  const allProfiles = profiles ?? []
+  const activeProfile =
+    allProfiles.find((p) => p.is_default) ?? allProfiles[0] ?? null
+
+  if (allProfiles.length === 0) {
+    return <NewUserDashboard />
   }
 
-  function goToAiSearch() {
-    // If onboarding is active on step 3, advance before going to AI search
-    if (isActive && state?.onboarding_step === 3) {
-      advance()
-    }
-    router.push('/ai-search')
-  }
-
+  // Plan 02 will replace this with the returning user dashboard
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4">
-      <ExtensionInstallBanner />
-      <h1 className="text-3xl font-bold mb-2">
-        {t(language, 'dashboard_welcome')}
-      </h1>
-      <p className="text-lg text-muted-foreground mb-10">
-        {t(language, 'dashboard_subtitle')}
-      </p>
-
-      <div id="create-profile-section" className="w-full max-w-2xl">
-        <ProfileCreationChooser
-          onManualClick={openCreateDialog}
-          onAiClick={goToAiSearch}
-        />
-      </div>
-
-      {/* Empty state "Take a quick tour" link when onboarding is not active */}
-      {!isActive && (
-        <div className="mt-8 text-center text-sm text-muted-foreground">
-          Not sure where to start?{' '}
-          <TakeATourButton variant="inline" />
-        </div>
-      )}
-
-      <CreateProfileDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onCreate={handleCreate}
-      />
+    <div>
+      {/* Returning user dashboard (Plan 02) */}
+      <div>Returning user dashboard (Plan 02)</div>
     </div>
   )
 }
