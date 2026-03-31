@@ -146,7 +146,7 @@ class ClaudeScorer:
                     "prompt_tokens": usage.get("prompt_tokens"),
                     "completion_tokens": usage.get("completion_tokens"),
                     "total_tokens": usage.get("total_tokens"),
-                    "total_cost": usage.get("total_cost"),
+                    "total_cost": usage.get("cost") or usage.get("total_cost"),
                     "listing_id": listing_id,
                     "user_id": user_id,
                     "raw_usage": usage,
