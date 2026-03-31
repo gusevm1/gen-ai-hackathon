@@ -255,7 +255,7 @@ Plans:
 **Goal:** Users navigate a cleaner information architecture — "New Profile" replaces the ambiguous "AI-Powered Search" label, Download is demoted from primary nav to Settings, and users without confirmed extension installs see a contextual install prompt.
 **Depends on:** Phase 34
 **Requirements:** NAV-01, NAV-02, NAV-03, NAV-04
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 35-01-PLAN.md — Nav rename (New Profile) + remove Download item + extension install banner on dashboard
@@ -347,7 +347,7 @@ Plans:
 | 32. Frontend Consumers | 2/2 | Complete | 2026-03-30 |
 | 33. Dashboard Home & Nav Polish | 2/2 | Complete | 2026-03-30 |
 | 34. Onboarding & Tutorial System | 2/2 | Complete | 2026-03-31 |
-| 35. Navigation & IA | 0/2 | Not started | - |
+| 35. Navigation & IA | 1/2 | In Progress|  |
 | 36. State-Aware Dashboard | 0/TBD | Not started | - |
 | 37. Design System Propagation | 0/TBD | Not started | - |
 | 38. Onboarding Rebuild | 0/TBD | Not started | - |
