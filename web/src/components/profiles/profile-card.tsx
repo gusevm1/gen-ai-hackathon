@@ -151,7 +151,7 @@ export function ProfileCard({
             {t(language, 'profile_set_active')}
           </Button>
         )}
-        <OpenInFlatfoxButton preferences={flatfoxPrefs} />
+        <OpenInFlatfoxButton preferences={flatfoxPrefs} language={language} />
       </CardFooter>
     </Card>
   )

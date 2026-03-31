@@ -3,6 +3,14 @@
  * Maps internal preference fields to Flatfox URL query parameters.
  */
 
+/** Supported UI languages mapped to Flatfox locale path segments. */
+const FLATFOX_LOCALE: Record<string, string> = {
+  de: 'de',
+  en: 'en',
+  fr: 'fr',
+  it: 'it',
+}
+
 export interface FlatfoxUrlPreferences {
   location?: string
   offerType?: string
@@ -14,7 +22,12 @@ export interface FlatfoxUrlPreferences {
   boundingBox?: { north: number; south: number; east: number; west: number }
 }
 
-export function buildFlatfoxUrl(prefs: FlatfoxUrlPreferences): string {
+/**
+ * Build a Flatfox search URL with optional language-specific locale.
+ * Falls back to English if the language is not supported.
+ */
+export function buildFlatfoxUrl(prefs: FlatfoxUrlPreferences, language?: string): string {
+  const locale = (language && FLATFOX_LOCALE[language]) ?? 'en'
   const params = new URLSearchParams()
 
   // Offer type
@@ -55,7 +68,7 @@ export function buildFlatfoxUrl(prefs: FlatfoxUrlPreferences): string {
   }
 
   const query = params.toString()
-  return `https://flatfox.ch/en/search/${query ? `?${query}` : ""}`
+  return `https://flatfox.ch/${locale}/search/${query ? `?${query}` : ""}`
 }
 
 /**
@@ -63,10 +76,11 @@ export function buildFlatfoxUrl(prefs: FlatfoxUrlPreferences): string {
  * URL with bounding box coordinates for proper geographic scoping.
  */
 export async function buildFlatfoxUrlWithGeocode(
-  prefs: FlatfoxUrlPreferences
+  prefs: FlatfoxUrlPreferences,
+  language?: string,
 ): Promise<string> {
   if (!prefs.location) {
-    return buildFlatfoxUrl(prefs)
+    return buildFlatfoxUrl(prefs, language)
   }
 
   try {
@@ -77,16 +91,16 @@ export async function buildFlatfoxUrlWithGeocode(
     })
 
     if (!resp.ok) {
-      return buildFlatfoxUrl(prefs)
+      return buildFlatfoxUrl(prefs, language)
     }
 
     const data = await resp.json()
     if (data.boundingBox) {
-      return buildFlatfoxUrl({ ...prefs, boundingBox: data.boundingBox })
+      return buildFlatfoxUrl({ ...prefs, boundingBox: data.boundingBox }, language)
     }
   } catch {
     // Geocoding failed — fall back to query-only URL
   }
 
-  return buildFlatfoxUrl(prefs)
+  return buildFlatfoxUrl(prefs, language)
 }

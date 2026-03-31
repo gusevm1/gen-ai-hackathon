@@ -3,24 +3,29 @@
 import { useState } from 'react'
 import { ExternalLink, Loader2 } from 'lucide-react'
 import { buildFlatfoxUrl, buildFlatfoxUrlWithGeocode, type FlatfoxUrlPreferences } from '@/lib/flatfox-url'
+import type { Language } from '@/lib/translations'
 
 interface OpenInFlatfoxButtonProps {
   preferences: FlatfoxUrlPreferences
   className?: string
   variant?: 'card' | 'link'
+  /** HTML id attribute — used as onboarding tour target */
+  id?: string
+  /** UI language — used to build locale-specific Flatfox URL */
+  language?: Language
 }
 
-export function OpenInFlatfoxButton({ preferences, className, variant = 'card' }: OpenInFlatfoxButtonProps) {
+export function OpenInFlatfoxButton({ preferences, className, variant = 'card', id, language }: OpenInFlatfoxButtonProps) {
   const [loading, setLoading] = useState(false)
 
   async function handleClick() {
     setLoading(true)
     try {
-      const url = await buildFlatfoxUrlWithGeocode(preferences)
+      const url = await buildFlatfoxUrlWithGeocode(preferences, language)
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch {
       // Fallback to non-geocoded URL
-      const url = buildFlatfoxUrl(preferences)
+      const url = buildFlatfoxUrl(preferences, language)
       window.open(url, '_blank', 'noopener,noreferrer')
     } finally {
       setLoading(false)
@@ -30,6 +35,7 @@ export function OpenInFlatfoxButton({ preferences, className, variant = 'card' }
   if (variant === 'link') {
     return (
       <button
+        id={id}
         onClick={handleClick}
         disabled={loading}
         className={className ?? "inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline shrink-0 disabled:opacity-50 cursor-pointer"}
@@ -42,9 +48,10 @@ export function OpenInFlatfoxButton({ preferences, className, variant = 'card' }
 
   return (
     <button
+      id={id}
       onClick={handleClick}
       disabled={loading}
-      className={className ?? "inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-50 cursor-pointer"}
+      className={className ?? "inline-flex items-center gap-1 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 transition-colors disabled:opacity-50 cursor-pointer"}
     >
       {loading ? <Loader2 className="size-3 animate-spin" /> : <ExternalLink className="size-3" />}
       {loading ? 'Opening...' : 'Open in Flatfox'}

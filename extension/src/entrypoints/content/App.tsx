@@ -13,7 +13,7 @@ import { SummaryPanel } from './components/SummaryPanel';
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 import { OnboardingOverlay } from './components/OnboardingOverlay';
 
-/** Extension onboarding steps 4-7 that run on the Flatfox page. */
+/** Extension onboarding steps 5-8 that run on the Flatfox page. */
 interface ExtensionStepConfig {
   step: number;
   title: string;
@@ -26,33 +26,33 @@ interface ExtensionStepConfig {
 const EXTENSION_STEPS: ExtensionStepConfig[] = [
   {
     step: 5,
-    title: 'Log In',
-    instruction: 'Click the HomeMatch icon in your browser toolbar and log in with your account.',
-    targetSelector: null,
+    title: 'Open the HomeMatch Extension',
+    instruction: 'Click the HomeMatch icon in the top-right of your browser toolbar to open the extension.',
+    targetSelector: null, // Points to extension icon area via fallback rect in OnboardingOverlay
+    targetShadowHost: null,
+    nextLabel: "Got it",
+  },
+  {
+    step: 6,
+    title: 'Log In to HomeMatch',
+    instruction: 'Log in with your HomeMatch account in the extension popup that just opened.',
+    targetSelector: null, // Extension popup is outside the DOM — uses fallback rect
     targetShadowHost: null,
     nextLabel: "I'm logged in",
   },
   {
-    step: 6,
+    step: 7,
     title: 'Analyze Listings',
-    instruction: 'Click the HomeMatch button to score the listings on this page.',
+    instruction: 'Click the HomeMatch button (bottom-right) to score all listings on this page against your profile.',
     targetSelector: null,
     targetShadowHost: 'homematch-fab',
     nextLabel: null, // Auto-advances when scoring completes
   },
   {
-    step: 7,
-    title: 'Your Results',
-    instruction: 'See how each listing matches your preferences. Click a badge for details.',
-    targetSelector: null, // Dynamically set to first badge shadow host
-    targetShadowHost: null,
-    nextLabel: 'Got it',
-  },
-  {
     step: 8,
     title: 'View Full Analysis',
-    instruction: 'Click "Show full analysis" on any listing to see the detailed breakdown in the web app.',
-    targetSelector: null,
+    instruction: 'Click "Show full analysis" on any scored listing to see the detailed breakdown in HomeMatch.',
+    targetSelector: null, // Dynamically set to first badge shadow host
     targetShadowHost: null,
     nextLabel: 'Done',
   },
@@ -212,10 +212,10 @@ export default function App({ ctx }: AppProps) {
   }, []);
 
   /**
-   * Handle "Next" for step 5 (login verification).
+   * Handle "Next" for step 6 (login verification).
    * Verifies auth before advancing; shows error if not logged in.
    */
-  const handleStep4Next = useCallback(async () => {
+  const handleLoginVerify = useCallback(async () => {
     try {
       const response = await browser.runtime.sendMessage({ action: 'getSession' });
       const session = response?.session;
@@ -413,14 +413,14 @@ export default function App({ ctx }: AppProps) {
     rerenderAllBadges(openPanelRef.current);
     setIsScoring(false);
 
-    // Onboarding step 6: auto-advance to step 7 when scoring finishes with results
+    // Onboarding step 7: auto-advance to step 8 when scoring finishes with results
     setOnboardingState((prev) => {
-      if (prev && prev.onboarding_step === 6 && scoresRef.current.size > 0) {
+      if (prev && prev.onboarding_step === 7 && scoresRef.current.size > 0) {
         const newState: OnboardingState = {
           ...prev,
-          onboarding_step: 7,
+          onboarding_step: 8,
         };
-        updateOnboardingState(7, newState.onboarding_active, newState.onboarding_completed);
+        updateOnboardingState(8, newState.onboarding_active, newState.onboarding_completed);
         return newState;
       }
       return prev;
@@ -436,9 +436,9 @@ export default function App({ ctx }: AppProps) {
     ? EXTENSION_STEPS.find((s) => s.step === onboardingState.onboarding_step) ?? null
     : null;
 
-  // For step 7, dynamically target the first scored badge shadow host
-  const step7TargetShadowHost =
-    onboardingState?.onboarding_step === 7 && scoresRef.current.size > 0
+  // For step 8 ("View Full Analysis"), dynamically target the first scored badge shadow host
+  const step8TargetShadowHost =
+    onboardingState?.onboarding_step === 8 && scoresRef.current.size > 0
       ? `homematch-badge-${[...scoresRef.current.keys()][0]}`
       : null;
 
@@ -459,11 +459,11 @@ export default function App({ ctx }: AppProps) {
           instruction={activeStepConfig.instruction}
           targetSelector={activeStepConfig.targetSelector}
           targetShadowHost={
-            activeStepConfig.step === 7
-              ? step7TargetShadowHost
+            activeStepConfig.step === 8
+              ? step8TargetShadowHost
               : activeStepConfig.targetShadowHost
           }
-          onNext={activeStepConfig.step === 5 ? handleStep4Next : advanceOnboarding}
+          onNext={activeStepConfig.step === 6 ? handleLoginVerify : advanceOnboarding}
           onSkip={skipOnboarding}
           nextLabel={activeStepConfig.nextLabel ?? 'Next'}
           statusMessage={onboardingStatusMsg}

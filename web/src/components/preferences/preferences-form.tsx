@@ -19,6 +19,7 @@ import { SizeRoomsSection } from '@/components/preferences/size-rooms-section'
 import { FeaturesSection } from '@/components/preferences/features-section'
 import { DynamicFieldsSection } from '@/components/preferences/dynamic-fields-section'
 import { ImportanceSection } from '@/components/preferences/importance-section'
+import { OpenInFlatfoxButton } from '@/components/profiles/open-in-flatfox-button'
 import { useLanguage } from '@/lib/language-context'
 import { t } from '@/lib/translations'
 
@@ -112,10 +113,23 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
           </AccordionItem>
         </Accordion>
 
-        <div className="flex items-center gap-4">
-          <Button type="submit" disabled={form.formState.isSubmitting}>
+        <div className="flex flex-wrap items-center gap-4">
+          <Button id="save-preferences-btn" type="submit" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? t(language, 'pref_saving') : t(language, 'pref_save')}
           </Button>
+          <OpenInFlatfoxButton
+            id="open-flatfox-profile-btn"
+            preferences={{
+              location: form.watch('location'),
+              offerType: form.watch('offerType'),
+              objectCategory: form.watch('objectCategory') === 'ANY' ? undefined : form.watch('objectCategory'),
+              budgetMin: form.watch('budgetMin'),
+              budgetMax: form.watch('budgetMax'),
+              roomsMin: form.watch('roomsMin'),
+              roomsMax: form.watch('roomsMax'),
+            }}
+            language={language}
+          />
           {saveMessage && (
             <p
               className={`text-sm ${

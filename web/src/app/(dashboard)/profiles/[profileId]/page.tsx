@@ -54,7 +54,7 @@ export default async function EditProfilePage({ params }: EditProfilePageProps) 
       </Link>
       <div className="flex items-start justify-between mb-2">
         <h1 className="text-2xl font-bold">{profile.name}</h1>
-        <OpenInFlatfoxButton preferences={defaults} variant="link" />
+        <OpenInFlatfoxButton preferences={defaults} variant="link" language={lang} />
       </div>
       <p className="text-muted-foreground mb-8">
         {t(lang, 'edit_profile_desc')}

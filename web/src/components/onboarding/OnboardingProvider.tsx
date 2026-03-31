@@ -6,6 +6,8 @@ import { driver, Driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { updateOnboardingState } from '@/lib/onboarding-state';
+import { useLanguage } from '@/lib/language-context';
+import { buildFlatfoxUrl } from '@/lib/flatfox-url';
 
 type OnboardingContextValue = ReturnType<typeof useOnboarding>;
 
@@ -22,6 +24,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   const { state, isLoading, skip, advance } = onboarding;
   const pathname = usePathname();
   const router = useRouter();
+  const { language } = useLanguage();
   const driverRef = useRef<Driver | null>(null);
 
   /**
@@ -53,7 +56,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     if (step === 1) {
       // Step 1: Welcome — no DOM target, centered popover on any page
       const driverInstance = driver({
-        showProgress: true,
+        showProgress: false,
         allowClose: true,
         overlayColor: 'black',
         overlayOpacity: 0.5,
@@ -71,6 +74,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
               align: 'center',
               showButtons: ['next', 'close'],
               disableButtons: ['previous'],
+              progressText: 'Step 1 of 9',
               onNextClick: async () => {
                 driverInstance.destroy();
                 driverRef.current = null;
@@ -86,7 +90,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     } else if (pathname === '/download' && step === 2) {
       // Step 2: Highlight install CTA on download page
       const driverInstance = driver({
-        showProgress: true,
+        showProgress: false,
         allowClose: true,
         overlayColor: 'black',
         overlayOpacity: 0.5,
@@ -106,80 +110,96 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
               align: 'center',
               showButtons: ['close'],
               disableButtons: ['previous'],
+              progressText: 'Step 2 of 9',
             },
           },
         ],
       });
       driverRef.current = driverInstance;
       driverInstance.drive();
-    } else if (pathname === '/dashboard') {
-      if (step === 3) {
-        // Step 3: Highlight the profile creation section
-        const driverInstance = driver({
-          showProgress: true,
-          allowClose: true,
-          overlayColor: 'black',
-          overlayOpacity: 0.5,
-          onCloseClick: () => {
-            skip();
-            driverInstance.destroy();
-            driverRef.current = null;
+    } else if (pathname === '/dashboard' && step === 3) {
+      // Step 3: Highlight the profile creation section on dashboard
+      const driverInstance = driver({
+        showProgress: false,
+        allowClose: true,
+        overlayColor: 'black',
+        overlayOpacity: 0.5,
+        onCloseClick: () => {
+          skip();
+          driverInstance.destroy();
+          driverRef.current = null;
+        },
+        steps: [
+          {
+            element: '#create-profile-section',
+            popover: {
+              title: 'Create Your First Profile',
+              description:
+                'Choose manual or AI-powered profile creation to define your search criteria.',
+              side: 'top',
+              align: 'center',
+              showButtons: ['close'],
+              disableButtons: ['previous'],
+              progressText: 'Step 3 of 9',
+            },
           },
-          steps: [
-            {
-              element: '#create-profile-section',
-              popover: {
-                title: 'Create Your First Profile',
-                description:
-                  'Choose manual or AI-powered profile creation to define your search criteria.',
-                side: 'top',
-                align: 'center',
-                showButtons: ['close'],
-                disableButtons: ['previous'],
+        ],
+      });
+      driverRef.current = driverInstance;
+      driverInstance.drive();
+    } else if (pathname.startsWith('/profiles/') && step === 4) {
+      // Step 4: On the profile edit page — highlight Save Preferences, then guide to Open Flatfox
+      const driverInstance = driver({
+        showProgress: false,
+        allowClose: true,
+        overlayColor: 'black',
+        overlayOpacity: 0.5,
+        onCloseClick: () => {
+          skip();
+          driverInstance.destroy();
+          driverRef.current = null;
+        },
+        steps: [
+          {
+            element: '#save-preferences-btn',
+            popover: {
+              title: 'Save Your Preferences',
+              description:
+                'Fill in your search criteria — location, budget, rooms — then save. These preferences will be used to score Flatfox listings.',
+              side: 'top',
+              align: 'center',
+              showButtons: ['next', 'close'],
+              disableButtons: ['previous'],
+              progressText: 'Step 4 of 9',
+              onNextClick: async () => {
+                driverInstance.moveNext();
               },
             },
-          ],
-        });
-        driverRef.current = driverInstance;
-        driverInstance.drive();
-      } else if (step === 4) {
-        // Step 4: Highlight "Open Flatfox" CTA
-        const driverInstance = driver({
-          showProgress: true,
-          allowClose: true,
-          overlayColor: 'black',
-          overlayOpacity: 0.5,
-          onCloseClick: () => {
-            skip();
-            driverInstance.destroy();
-            driverRef.current = null;
           },
-          steps: [
-            {
-              element: '#open-flatfox-cta',
-              popover: {
-                title: 'Head to Flatfox',
-                description:
-                  'Open Flatfox and the extension will guide you through scoring your first listing.',
-                side: 'top',
-                align: 'center',
-                showButtons: ['next', 'close'],
-                disableButtons: ['previous'],
-                onNextClick: async () => {
-                  // Write step=5, active=true to Supabase BEFORE opening Flatfox
-                  // This prevents stale state when extension reads onboarding step
-                  await updateOnboardingState(5, true, state.onboarding_completed);
-                  driverInstance.destroy();
-                  driverRef.current = null;
-                  window.open('https://flatfox.ch/en/search/', '_blank');
-                },
+          {
+            element: '#open-flatfox-profile-btn',
+            popover: {
+              title: 'Head to Flatfox',
+              description:
+                'Open Flatfox with your filters pre-applied. The HomeMatch extension will guide you through scoring your first listing.',
+              side: 'bottom',
+              align: 'center',
+              showButtons: ['next', 'close'],
+              disableButtons: ['previous'],
+              progressText: 'Step 4 of 9',
+              onNextClick: async () => {
+                // Write step=5, active=true to Supabase BEFORE opening Flatfox
+                await updateOnboardingState(5, true, state.onboarding_completed);
+                driverInstance.destroy();
+                driverRef.current = null;
+                window.open(buildFlatfoxUrl({}, language), '_blank');
               },
             },
-          ],
-        });
-        driverRef.current = driverInstance;
-        driverInstance.drive();
-      }
+          },
+        ],
+      });
+      driverRef.current = driverInstance;
+      driverInstance.drive();
     } else if ((pathname.startsWith('/analyses') || pathname.startsWith('/analysis')) && step === 9) {
       // Step 9: Light non-blocking tooltips for post-analysis feature awareness
       const step9Targets = [
@@ -226,7 +246,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         driverInstance.drive();
       }
     }
-  }, [state, pathname, skip, advance, router]);
+  }, [state, pathname, skip, advance, router, language]);
 
   // Resume an in-progress active tour after page load, state change, or manual start.
   // Does NOT auto-start for users who have never started the tour (only fires when active=true).
