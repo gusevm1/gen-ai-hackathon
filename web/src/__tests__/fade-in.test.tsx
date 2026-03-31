@@ -29,4 +29,14 @@ describe("FadeIn", () => {
     )
     expect(container.firstChild).toBeTruthy()
   })
+
+  it("renders children in animate (mount) mode", () => {
+    const { getByText } = render(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      <FadeIn animate={"visible" as any}>
+        <span>Mount mode</span>
+      </FadeIn>
+    )
+    expect(getByText("Mount mode")).toBeTruthy()
+  })
 })
