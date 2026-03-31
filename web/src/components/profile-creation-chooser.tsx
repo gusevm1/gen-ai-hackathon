@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { useLanguage } from '@/lib/language-context'
 import { t } from '@/lib/translations'
 
@@ -24,13 +25,15 @@ export function ProfileCreationChooser({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+      {/* AI card — primary/recommended */}
       <Card
-        className="cursor-pointer border-[6px] border-rose-500 hover:border-rose-400 hover:shadow-[0_0_30px_rgba(244,63,94,0.25)] transition-all duration-300 min-h-[180px]"
+        className="cursor-pointer border-2 border-primary hover:border-primary/80 hover:shadow-lg transition-all duration-300 min-h-[180px]"
         onClick={onAiClick}
       >
         <CardHeader>
+          <Badge className="mb-1 w-fit bg-primary text-primary-foreground">Recommended</Badge>
           <div className="flex items-center gap-3 mb-1">
-            <Sparkles className="size-6 text-rose-400" />
+            <Sparkles className="size-6 text-primary" />
             <CardTitle className="text-lg">
               {t(language, 'dashboard_ai_title')}
             </CardTitle>
@@ -43,8 +46,9 @@ export function ProfileCreationChooser({
         </CardContent>
       </Card>
 
+      {/* Manual card — secondary/outline */}
       <Card
-        className="cursor-pointer border-[6px] border-rose-500 hover:border-rose-400 hover:shadow-[0_0_30px_rgba(244,63,94,0.25)] transition-all duration-300 min-h-[180px]"
+        className="cursor-pointer border border-border hover:border-muted-foreground/40 hover:shadow-md transition-all duration-300 min-h-[180px]"
         onClick={onManualClick}
       >
         <CardHeader>
