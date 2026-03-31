@@ -25,7 +25,7 @@ def get_listing_profile(listing_id: int) -> ListingProfile | None:
         client.table("listing_profiles")
         .select("*")
         .eq("listing_id", listing_id)
-        .maybeSingle()
+        .maybe_single()
         .execute()
     )
     if result.data:
