@@ -12,6 +12,14 @@ Resolved debug sessions. Used by `gsd-debugger` to surface known-pattern hypothe
 - **Files changed:** web/src/components/onboarding/OnboardingProvider.tsx, web/src/app/(dashboard)/dashboard/page.tsx, web/src/components/preferences/preferences-form.tsx, web/src/components/profiles/open-in-flatfox-button.tsx, web/src/lib/flatfox-url.ts, web/src/components/profiles/profile-card.tsx, web/src/app/(dashboard)/profiles/[profileId]/page.tsx, extension/src/entrypoints/content/App.tsx
 ---
 
+## extension-onboarding-steps — Extension onboarding overlay (steps 5-7) never renders on Flatfox
+- **Date:** 2026-03-30
+- **Error patterns:** extension onboarding, steps 5-7, overlay, flatfox, not showing, content script, auth, getOnboardingState, null
+- **Root cause:** The extension's `getOnboardingState()` routes through the background script which gate-checks `auth.getUser()` before querying Supabase. Step 5 is designed for users not yet logged into the extension, so the background returns null and the overlay never renders.
+- **Fix:** Added `appendParams` prop to `OpenInFlatfoxButton`. When transitioning from step 4, the web app appends `?homematch_onboarding=5` to the Flatfox URL. The content script reads this URL param as a fallback when `getOnboardingState()` returns null, bootstrapping the overlay for steps 5-6 without requiring extension auth.
+- **Files changed:** extension/src/entrypoints/content/App.tsx, web/src/components/preferences/preferences-form.tsx, web/src/components/profiles/open-in-flatfox-button.tsx
+---
+
 ## background-image-not-displaying — Background image missing from web app despite file existing locally
 - **Date:** 2026-03-29
 - **Error patterns:** background image, not displaying, webp, missing, public, zurich
