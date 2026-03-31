@@ -621,8 +621,32 @@ async def top_matches(request: TopMatchesRequest) -> TopMatchesResponse:
             logger.info("Returning cached top matches for profile=%s", request.profile_id)
             return cached
 
-    # 3. Fetch all listing profiles
+    # 3. Fetch all listing profiles and filter by offer_type + object_category
     all_profiles = await asyncio.to_thread(get_all_listing_profiles)
+
+    # Filter: match offer_type (RENT/SALE)
+    all_profiles = [
+        p for p in all_profiles
+        if p.offer_type.upper() == preferences.offer_type.value.upper()
+    ]
+
+    # Filter: match object_category (skip parking, storage, etc.)
+    # "ANY" means apartment or house (still exclude parking/commercial)
+    RESIDENTIAL_TYPES = {"APARTMENT", "HOUSE", "VILLA", "STUDIO", "LOFT", "MAISONETTE", "TERRACE_HOUSE", "CHALET"}
+    pref_cat = preferences.object_category.value.upper()
+    if pref_cat == "ANY":
+        all_profiles = [
+            p for p in all_profiles
+            if p.object_category.upper() in RESIDENTIAL_TYPES
+            or p.object_type.upper() in RESIDENTIAL_TYPES
+        ]
+    else:
+        all_profiles = [
+            p for p in all_profiles
+            if p.object_category.upper() == pref_cat
+            or p.object_type.upper() == pref_cat
+        ]
+
     if not all_profiles:
         return TopMatchesResponse(
             matches=[],
