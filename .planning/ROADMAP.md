@@ -291,7 +291,7 @@ Plans:
 **Goal:** The codebase has no hardcoded color values for brand colors — only CSS tokens remain; all dashboard-area pages gain Framer Motion entrance animations matching the landing page quality; tier colors and card hover states are consistent everywhere.
 **Depends on:** Phase 35
 **Requirements:** DS-01, DS-02, DS-03, DS-04
-**Plans:** 4/4 plans complete
+**Plans:** 5/5 plans complete
 
 Plans:
 - [ ] 37-01-PLAN.md — Wave 0: test scaffolding (tier-colors unit tests + FadeIn animate-prop test extension)
@@ -360,7 +360,7 @@ Plans:
 | 34. Onboarding & Tutorial System | 2/2 | Complete | 2026-03-31 |
 | 35. Navigation & IA | 2/2 | Complete   | 2026-03-31 |
 | 36. State-Aware Dashboard | 2/2 | Complete    | 2026-03-31 |
-| 37. Design System Propagation | 4/4 | Complete   | 2026-03-31 |
+| 37. Design System Propagation | 5/5 | Complete   | 2026-03-31 |
 | 38. Onboarding Rebuild | 0/TBD | Not started | - |
 | 39. Critical Handoffs | 0/TBD | Not started | - |
 | 40. Page Redesigns | 0/TBD | Not started | - |
