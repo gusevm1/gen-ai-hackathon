@@ -4,15 +4,15 @@ import { deriveFulfillmentChecklist, type CriterionResult } from '@/lib/fulfillm
 
 describe('ScoreHeader', () => {
   describe('getTierColor', () => {
-    it('returns emerald colors for excellent tier', () => {
+    it('returns teal colors for excellent tier', () => {
       const result = getTierColor('excellent')
-      expect(result.bg).toBe('bg-emerald-500')
+      expect(result.bg).toBe('bg-teal-500')
       expect(result.text).toBe('text-white')
     })
 
-    it('returns blue colors for good tier', () => {
+    it('returns green colors for good tier', () => {
       const result = getTierColor('good')
-      expect(result.bg).toBe('bg-blue-500')
+      expect(result.bg).toBe('bg-green-500')
       expect(result.text).toBe('text-white')
     })
 
@@ -22,15 +22,15 @@ describe('ScoreHeader', () => {
       expect(result.text).toBe('text-gray-900')
     })
 
-    it('returns gray colors for poor tier', () => {
+    it('returns red colors for poor tier', () => {
       const result = getTierColor('poor')
-      expect(result.bg).toBe('bg-gray-500')
+      expect(result.bg).toBe('bg-red-500')
       expect(result.text).toBe('text-white')
     })
 
     it('defaults to poor colors for unknown tier', () => {
       const result = getTierColor('unknown')
-      expect(result.bg).toBe('bg-gray-500')
+      expect(result.bg).toBe('bg-red-500')
       expect(result.text).toBe('text-white')
     })
   })
