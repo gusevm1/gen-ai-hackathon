@@ -291,7 +291,13 @@ Plans:
 **Goal:** The codebase has no hardcoded color values for brand colors — only CSS tokens remain; all dashboard-area pages gain Framer Motion entrance animations matching the landing page quality; tier colors and card hover states are consistent everywhere.
 **Depends on:** Phase 35
 **Requirements:** DS-01, DS-02, DS-03, DS-04
-**Plans:** TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 37-01-PLAN.md — Wave 0: test scaffolding (tier-colors unit tests + FadeIn animate-prop test extension)
+- [ ] 37-02-PLAN.md — rose→primary token cleanup (DS-01) + tier color map unification across 5 files (DS-03)
+- [ ] 37-03-PLAN.md — FadeIn/StaggerGroup dual-mode animate prop + dashboard home + profiles list animations (DS-02)
+- [ ] 37-04-PLAN.md — Analyses page animation via AnalysesGrid extraction (DS-02) + hover lift on all 5 card types (DS-04)
 
 **Success Criteria** (what must be TRUE):
   1. No `rose-500` class appears anywhere in the web app codebase — all instances are replaced with the `primary` CSS token
@@ -354,7 +360,7 @@ Plans:
 | 34. Onboarding & Tutorial System | 2/2 | Complete | 2026-03-31 |
 | 35. Navigation & IA | 2/2 | Complete   | 2026-03-31 |
 | 36. State-Aware Dashboard | 2/2 | Complete    | 2026-03-31 |
-| 37. Design System Propagation | 0/TBD | Not started | - |
+| 37. Design System Propagation | 0/4 | Not started | - |
 | 38. Onboarding Rebuild | 0/TBD | Not started | - |
 | 39. Critical Handoffs | 0/TBD | Not started | - |
 | 40. Page Redesigns | 0/TBD | Not started | - |
