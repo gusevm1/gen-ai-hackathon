@@ -62,7 +62,7 @@ export function OnboardingTooltip({
     boxShadow: '0 8px 30px rgba(0,0,0,0.18)',
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
     color: '#1a1a1a',
-    zIndex: 100001,
+    zIndex: 2147483647,
     boxSizing: 'border-box',
   };
 

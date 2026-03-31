@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
+import { createPortal } from 'react-dom';
 import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import type { ScoreResponse } from '@/types/scoring';
 import { extractVisibleListingPKs, findListingCardElement } from '@/lib/flatfox';
@@ -471,7 +472,7 @@ export default function App({ ctx }: AppProps) {
         scoredCount={scores.size}
         error={error}
       />
-      {activeStepConfig && onboardingState && (
+      {activeStepConfig && onboardingState && createPortal(
         <OnboardingOverlay
           step={onboardingState.onboarding_step}
           totalSteps={9}
@@ -487,7 +488,8 @@ export default function App({ ctx }: AppProps) {
           onSkip={skipOnboarding}
           nextLabel={activeStepConfig.nextLabel ?? 'Next'}
           statusMessage={onboardingStatusMsg}
-        />
+        />,
+        document.body,
       )}
     </>
   );

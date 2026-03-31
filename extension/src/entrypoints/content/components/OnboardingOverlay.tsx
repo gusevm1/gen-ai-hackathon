@@ -124,7 +124,7 @@ export function OnboardingOverlay({
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 99999,
+        zIndex: 2147483647,
         // Allow pointer events on the overlay container itself
         pointerEvents: 'auto',
       }}
@@ -178,7 +178,7 @@ export function OnboardingOverlay({
           height: cutout.h,
           borderRadius: cutout.rx,
           pointerEvents: 'none',
-          zIndex: 100000,
+          zIndex: 2147483646,
         }}
       />
 
