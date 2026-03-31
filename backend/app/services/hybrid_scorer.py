@@ -1,9 +1,10 @@
-"""Weighted aggregation engine with CRITICAL override for hybrid scoring.
+"""Weighted aggregation engine with CRITICAL penalty for hybrid scoring.
 
-Implements the Phase 31 scoring aggregation requirements:
+Implements the scoring aggregation requirements:
 - HA-01: Weighted average using IMPORTANCE_WEIGHT_MAP
 - HA-02: None fulfillment values excluded from numerator and denominator
-- HA-03: CRITICAL importance with fulfillment=0 forces match_tier=poor, caps score at 39
+- HA-03: CRITICAL importance with fulfillment < 0.05 applies a 0.55x penalty
+         per failed criterion (compounding), preserving score differentiation
 
 Also provides to_criterion_result() to convert internal FulfillmentResult
 to the API-facing CriterionResult model.
@@ -14,6 +15,10 @@ from __future__ import annotations
 from app.models.preferences import IMPORTANCE_WEIGHT_MAP, ImportanceLevel
 from app.models.scoring import CriterionResult
 from app.services.deterministic_scorer import FulfillmentResult
+
+# Penalty multiplier applied per CRITICAL criterion that is near-zero.
+# Two critical failures: 0.55 * 0.55 = 0.3025x — harsh but differentiating.
+CRITICAL_FAIL_PENALTY = 0.55
 
 
 def compute_weighted_score(results: list[FulfillmentResult]) -> tuple[int, str]:
@@ -28,8 +33,8 @@ def compute_weighted_score(results: list[FulfillmentResult]) -> tuple[int, str]:
     Scoring rules:
         - HA-01: score = round((sum(weight * fulfillment) / sum(weights)) * 100)
         - HA-02: Results with fulfillment=None are excluded from both sums
-        - HA-03: If any CRITICAL criterion has fulfillment=0.0, force tier="poor"
-          and cap score at 39
+        - HA-03: Each CRITICAL criterion with fulfillment < 0.05 applies a
+          compounding 0.55x penalty to the raw score
     """
     # HA-02: Filter to results with non-None fulfillment
     scored = [r for r in results if r.fulfillment is not None]
@@ -37,10 +42,11 @@ def compute_weighted_score(results: list[FulfillmentResult]) -> tuple[int, str]:
     if not scored:
         return (0, "poor")
 
-    # HA-03: Check for CRITICAL zero
-    critical_zero = any(
-        r.importance == ImportanceLevel.CRITICAL and r.fulfillment == 0.0
+    # HA-03: Count CRITICAL near-zero failures
+    critical_fails = sum(
+        1
         for r in scored
+        if r.importance == ImportanceLevel.CRITICAL and r.fulfillment < 0.05
     )
 
     # HA-01: Weighted average
@@ -55,22 +61,25 @@ def compute_weighted_score(results: list[FulfillmentResult]) -> tuple[int, str]:
 
     raw_score = round((numerator / denominator) * 100)
 
-    # HA-03: CRITICAL override
-    if critical_zero:
-        capped_score = min(raw_score, 39)
-        return (capped_score, "poor")
+    # HA-03: Apply compounding penalty for CRITICAL failures
+    if critical_fails > 0:
+        penalized = round(raw_score * (CRITICAL_FAIL_PENALTY ** critical_fails))
+        tier = _derive_tier(penalized)
+        return (penalized, tier)
 
-    # Derive tier from raw score
-    if raw_score >= 80:
-        tier = "excellent"
-    elif raw_score >= 60:
-        tier = "good"
-    elif raw_score >= 40:
-        tier = "fair"
-    else:
-        tier = "poor"
-
+    tier = _derive_tier(raw_score)
     return (raw_score, tier)
+
+
+def _derive_tier(score: int) -> str:
+    """Map a numeric score to a match tier label."""
+    if score >= 80:
+        return "excellent"
+    if score >= 60:
+        return "good"
+    if score >= 40:
+        return "fair"
+    return "poor"
 
 
 def to_criterion_result(fr: FulfillmentResult) -> CriterionResult:

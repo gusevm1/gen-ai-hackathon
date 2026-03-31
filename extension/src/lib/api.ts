@@ -60,7 +60,7 @@ export async function scoreListing(
  * @param jwt - Supabase JWT access token
  * @param onResult - Optional callback invoked after each listing is scored
  * @param forceRescore - Bypass cache and force fresh scores
- * @param concurrency - Max parallel requests per batch (default: 5)
+ * @param concurrency - Max parallel requests per batch (default: 20)
  * @returns Map of listingId to ScoreResponse (only successful scores)
  */
 export async function scoreListings(
@@ -68,7 +68,7 @@ export async function scoreListings(
   jwt: string,
   onResult?: (id: number, result: ScoreResponse, prefStale: boolean) => void,
   forceRescore: boolean = false,
-  concurrency: number = 10,
+  concurrency: number = 20,
 ): Promise<Map<number, ScoreResponse>> {
   const results = new Map<number, ScoreResponse>();
 
