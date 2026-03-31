@@ -272,7 +272,11 @@ Plans:
 **Goal:** The dashboard home page responds to user state — first-time users see a guided 3-step explainer with two profile creation paths, returning users see their active profile, top matches, recent analyses, and a direct path to Flatfox.
 **Depends on:** Phase 35
 **Requirements:** DASH-01, DASH-02, DASH-03, DASH-04, DASH-05, DASH-06, DASH-07
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 36-01-PLAN.md — Server component conversion + new user explainer + ProfileCreationChooser visual differentiation
+- [ ] 36-02-PLAN.md — Returning user dashboard: ActiveProfileCard + TopMatchesSummary + RecentAnalyses + NewProfileModal
 
 **Success Criteria** (what must be TRUE):
   1. New user (0 profiles) sees a 3-step product explainer and two profile creation cards on the dashboard home
@@ -349,7 +353,7 @@ Plans:
 | 33. Dashboard Home & Nav Polish | 2/2 | Complete | 2026-03-30 |
 | 34. Onboarding & Tutorial System | 2/2 | Complete | 2026-03-31 |
 | 35. Navigation & IA | 2/2 | Complete   | 2026-03-31 |
-| 36. State-Aware Dashboard | 0/TBD | Not started | - |
+| 36. State-Aware Dashboard | 0/2 | Planned | - |
 | 37. Design System Propagation | 0/TBD | Not started | - |
 | 38. Onboarding Rebuild | 0/TBD | Not started | - |
 | 39. Critical Handoffs | 0/TBD | Not started | - |
