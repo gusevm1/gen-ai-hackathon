@@ -2,10 +2,10 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
 const TIER_COLORS: Record<string, string> = {
-  excellent: 'bg-emerald-500',
-  good: 'bg-blue-500',
+  excellent: 'bg-teal-500',
+  good: 'bg-green-500',
   fair: 'bg-amber-500',
-  poor: 'bg-gray-500',
+  poor: 'bg-red-500',
 }
 
 interface AnalysisSummaryCardProps {

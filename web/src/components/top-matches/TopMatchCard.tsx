@@ -11,10 +11,10 @@ import { useLanguage } from '@/lib/language-context'
 import { t } from '@/lib/translations'
 
 const TIER_COLORS: Record<string, { bg: string; text: string; ring: string; scoreBg: string }> = {
-  excellent: { bg: 'bg-emerald-50 dark:bg-emerald-950/30', text: 'text-emerald-700 dark:text-emerald-400', ring: 'ring-emerald-200 dark:ring-emerald-800', scoreBg: 'bg-emerald-500' },
-  good: { bg: 'bg-blue-50 dark:bg-blue-950/30', text: 'text-blue-700 dark:text-blue-400', ring: 'ring-blue-200 dark:ring-blue-800', scoreBg: 'bg-blue-500' },
+  excellent: { bg: 'bg-teal-50 dark:bg-teal-950/30', text: 'text-teal-700 dark:text-teal-400', ring: 'ring-teal-200 dark:ring-teal-800', scoreBg: 'bg-teal-500' },
+  good: { bg: 'bg-green-50 dark:bg-green-950/30', text: 'text-green-700 dark:text-green-400', ring: 'ring-green-200 dark:ring-green-800', scoreBg: 'bg-green-500' },
   fair: { bg: 'bg-amber-50 dark:bg-amber-950/30', text: 'text-amber-700 dark:text-amber-400', ring: 'ring-amber-200 dark:ring-amber-800', scoreBg: 'bg-amber-500' },
-  poor: { bg: 'bg-gray-50 dark:bg-gray-950/30', text: 'text-gray-700 dark:text-gray-400', ring: 'ring-gray-200 dark:ring-gray-800', scoreBg: 'bg-gray-500' },
+  poor: { bg: 'bg-red-50 dark:bg-red-950/30', text: 'text-red-700 dark:text-red-400', ring: 'ring-red-200 dark:ring-red-800', scoreBg: 'bg-red-500' },
 }
 
 const RANK_COLORS = [

@@ -4,10 +4,10 @@ import { ExternalLink } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
 const TIER_COLORS: Record<string, { bg: string; text: string; ring: string; scoreBg: string }> = {
-  excellent: { bg: 'bg-emerald-500', text: 'text-white', ring: 'ring-emerald-500/40', scoreBg: 'bg-emerald-50 dark:bg-emerald-950/30' },
-  good: { bg: 'bg-blue-500', text: 'text-white', ring: 'ring-blue-500/40', scoreBg: 'bg-blue-50 dark:bg-blue-950/30' },
+  excellent: { bg: 'bg-teal-500', text: 'text-white', ring: 'ring-teal-500/40', scoreBg: 'bg-teal-50 dark:bg-teal-950/30' },
+  good: { bg: 'bg-green-500', text: 'text-white', ring: 'ring-green-500/40', scoreBg: 'bg-green-50 dark:bg-green-950/30' },
   fair: { bg: 'bg-amber-500', text: 'text-gray-900', ring: 'ring-amber-500/40', scoreBg: 'bg-amber-50 dark:bg-amber-950/30' },
-  poor: { bg: 'bg-gray-500', text: 'text-white', ring: 'ring-gray-500/40', scoreBg: 'bg-gray-50 dark:bg-gray-950/30' },
+  poor: { bg: 'bg-red-500', text: 'text-white', ring: 'ring-red-500/40', scoreBg: 'bg-red-50 dark:bg-red-950/30' },
 }
 
 export function getTierColor(tier: string) {

@@ -15,10 +15,10 @@ function getTierFromScore(score: number): string {
 }
 
 const TIER_STYLES: Record<string, { bg: string; text: string }> = {
-  excellent: { bg: 'bg-emerald-500', text: 'text-white' },
-  good: { bg: 'bg-blue-500', text: 'text-white' },
+  excellent: { bg: 'bg-teal-500', text: 'text-white' },
+  good: { bg: 'bg-green-500', text: 'text-white' },
   fair: { bg: 'bg-amber-500', text: 'text-gray-900' },
-  poor: { bg: 'bg-gray-500', text: 'text-white' },
+  poor: { bg: 'bg-red-500', text: 'text-white' },
 }
 
 function formatDate(dateString: string): string {
