@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
-status: planning
-stopped_at: Completed 35-01-PLAN.md
-last_updated: "2026-03-31T16:28:22.890Z"
-last_activity: 2026-03-31 — v6.0 roadmap created (phases 35-40, 32 requirements mapped)
+status: executing
+stopped_at: Phase 36 context gathered
+last_updated: "2026-03-31T17:48:33.051Z"
+last_activity: "2026-03-31 — 35-01 executed: nav cleanup + ExtensionInstallBanner"
 progress:
   total_phases: 14
   completed_phases: 9
   total_plans: 19
   completed_plans: 19
-  percent: 0
+  percent: 17
 ---
 
 # Project State
@@ -74,6 +74,6 @@ Progress: [█░░░░░░░░░] ~17% (v6.0 milestone, 1/6 phases star
 
 ## Session Continuity
 
-Last session: 2026-03-31T16:28:22.886Z
-Stopped at: Completed 35-01-PLAN.md
-Resume file: None
+Last session: 2026-03-31T17:48:33.039Z
+Stopped at: Phase 36 context gathered
+Resume file: .planning/phases/36-state-aware-dashboard/36-CONTEXT.md
