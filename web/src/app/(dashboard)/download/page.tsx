@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { CheckCircle2, FolderOpen, ToggleRight, Puzzle, Download } from "lucide-react"
+import { CheckCircle2, FolderOpen, ToggleRight, Puzzle, Download, Pin } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CopyExtensionsUrl } from "@/components/copy-extensions-url"
@@ -22,24 +22,35 @@ export default function DownloadPage() {
       icon: FolderOpen,
       title: t(language, "download_step1_title"),
       description: t(language, "download_step1_desc"),
+      optional: false,
     },
     {
       number: 2,
       icon: null,
       title: t(language, "download_step2_title"),
       description: null,
+      optional: false,
     },
     {
       number: 3,
       icon: ToggleRight,
       title: t(language, "download_step3_title"),
       description: t(language, "download_step3_desc"),
+      optional: false,
     },
     {
       number: 4,
       icon: Puzzle,
       title: t(language, "download_step4_title"),
       description: t(language, "download_step4_desc"),
+      optional: false,
+    },
+    {
+      number: 5,
+      icon: Pin,
+      title: t(language, "download_step5_title"),
+      description: t(language, "download_step5_desc"),
+      optional: true,
     },
   ]
 
@@ -90,6 +101,11 @@ export default function DownloadPage() {
                 </span>
                 {s.icon && <s.icon className="size-5" />}
                 {s.title}
+                {s.optional && (
+                  <span className="ml-2 text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                    Optional but recommended
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>

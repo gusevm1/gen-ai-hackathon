@@ -13,14 +13,23 @@ interface OpenInFlatfoxButtonProps {
   id?: string
   /** UI language — used to build locale-specific Flatfox URL */
   language?: Language
+  /**
+   * Optional async callback invoked before the Flatfox tab opens.
+   * Used by onboarding to write step=5 to Supabase before the user leaves the page.
+   */
+  onBeforeOpen?: () => Promise<void>
 }
 
-export function OpenInFlatfoxButton({ preferences, className, variant = 'card', id, language }: OpenInFlatfoxButtonProps) {
+export function OpenInFlatfoxButton({ preferences, className, variant = 'card', id, language, onBeforeOpen }: OpenInFlatfoxButtonProps) {
   const [loading, setLoading] = useState(false)
 
   async function handleClick() {
     setLoading(true)
     try {
+      // Run pre-open callback (e.g. persist onboarding state) before opening the tab
+      if (onBeforeOpen) {
+        await onBeforeOpen()
+      }
       const url = await buildFlatfoxUrlWithGeocode(preferences, language)
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch {

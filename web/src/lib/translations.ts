@@ -147,6 +147,8 @@ export const translations = {
     download_step3_desc: "In the top-right corner of the extensions page, toggle the 'Developer mode' switch to ON.",
     download_step4_title: 'Load the extension',
     download_step4_desc: "Click 'Load unpacked' in the top-left, then select the unzipped folder. The HomeMatch extension will appear in your extensions list.",
+    download_step5_title: 'Pin HomeMatch to your toolbar',
+    download_step5_desc: "Click the puzzle icon in the Chrome toolbar (top right) → find HomeMatch → click the pin icon to keep it visible.",
 
     // Preferences form
     pref_location_type: 'Location & Type',
@@ -399,6 +401,8 @@ export const translations = {
     download_step3_desc: "Aktiviere den Schalter 'Entwicklermodus' oben rechts auf der Erweiterungsseite.",
     download_step4_title: 'Erweiterung laden',
     download_step4_desc: "Klicke oben links auf 'Entpackt laden' und wähle dann den entpackten Ordner aus. Die HomeMatch-Erweiterung erscheint in deiner Erweiterungsliste.",
+    download_step5_title: 'HomeMatch in der Toolbar anheften',
+    download_step5_desc: "Klicke auf das Puzzle-Symbol in der Chrome-Symbolleiste (oben rechts) → suche HomeMatch → klicke das Stecknadel-Symbol, um es sichtbar zu halten.",
 
     // Preferences form
     pref_location_type: 'Standort & Typ',

@@ -22,6 +22,8 @@ import { ImportanceSection } from '@/components/preferences/importance-section'
 import { OpenInFlatfoxButton } from '@/components/profiles/open-in-flatfox-button'
 import { useLanguage } from '@/lib/language-context'
 import { t } from '@/lib/translations'
+import { useOnboardingContext } from '@/components/onboarding/OnboardingProvider'
+import { updateOnboardingState } from '@/lib/onboarding-state'
 
 interface PreferencesFormProps {
   defaultValues: Preferences
@@ -37,6 +39,7 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
     text: string
   } | null>(null)
   const { language } = useLanguage()
+  const { state: onboardingState, isActive: onboardingActive, advanceToOpenFlatfox } = useOnboardingContext()
 
   const internalForm = useForm<Preferences>({
     resolver: zodResolver(preferencesSchema) as Resolver<Preferences>,
@@ -53,6 +56,12 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
       await onSave(dataWithLang)
       setSaveMessage({ type: 'success', text: t(language, 'pref_saved') })
       setTimeout(() => setSaveMessage(null), 3000)
+
+      // Issue 6: Advance the onboarding tour from "Save Preferences" to "Open in Flatfox"
+      // after a successful save when the user is on onboarding step 4.
+      if (onboardingActive && onboardingState?.onboarding_step === 4) {
+        advanceToOpenFlatfox()
+      }
     } catch (error) {
       setSaveMessage({
         type: 'error',
@@ -129,6 +138,15 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
               roomsMax: form.watch('roomsMax'),
             }}
             language={language}
+            onBeforeOpen={
+              onboardingActive && onboardingState?.onboarding_step === 4
+                ? async () => {
+                    // Issue 8: Write step=5, active=true to Supabase BEFORE opening Flatfox
+                    // so the extension content script reads the correct step on load.
+                    await updateOnboardingState(5, true, onboardingState.onboarding_completed)
+                  }
+                : undefined
+            }
           />
           {saveMessage && (
             <p
