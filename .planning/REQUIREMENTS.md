@@ -111,48 +111,46 @@
 
 ## Traceability
 
-*Populated during roadmap creation.*
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NAV-01 | — | Pending |
-| NAV-02 | — | Pending |
-| NAV-03 | — | Pending |
-| NAV-04 | — | Pending |
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| DASH-03 | — | Pending |
-| DASH-04 | — | Pending |
-| DASH-05 | — | Pending |
-| DASH-06 | — | Pending |
-| DS-01 | — | Pending |
-| DS-02 | — | Pending |
-| DS-03 | — | Pending |
-| DS-04 | — | Pending |
-| ONB-01 | — | Pending |
-| ONB-02 | — | Pending |
-| ONB-03 | — | Pending |
-| ONB-04 | — | Pending |
-| ONB-05 | — | Pending |
-| ONB-06 | — | Pending |
-| ONB-07 | — | Pending |
-| HND-01 | — | Pending |
-| HND-02 | — | Pending |
-| HND-03 | — | Pending |
-| HND-04 | — | Pending |
-| PG-01 | — | Pending |
-| PG-02 | — | Pending |
-| PG-03 | — | Pending |
-| PG-04 | — | Pending |
-| PG-05 | — | Pending |
-| PG-06 | — | Pending |
-| PG-07 | — | Pending |
+| NAV-01 | Phase 35 | Pending |
+| NAV-02 | Phase 35 | Pending |
+| NAV-03 | Phase 35 | Pending |
+| NAV-04 | Phase 35 | Pending |
+| DASH-01 | Phase 36 | Pending |
+| DASH-02 | Phase 36 | Pending |
+| DASH-03 | Phase 36 | Pending |
+| DASH-04 | Phase 36 | Pending |
+| DASH-05 | Phase 36 | Pending |
+| DASH-06 | Phase 36 | Pending |
+| DS-01 | Phase 37 | Pending |
+| DS-02 | Phase 37 | Pending |
+| DS-03 | Phase 37 | Pending |
+| DS-04 | Phase 37 | Pending |
+| ONB-01 | Phase 38 | Pending |
+| ONB-02 | Phase 38 | Pending |
+| ONB-03 | Phase 38 | Pending |
+| ONB-04 | Phase 38 | Pending |
+| ONB-05 | Phase 38 | Pending |
+| ONB-06 | Phase 38 | Pending |
+| ONB-07 | Phase 38 | Pending |
+| HND-01 | Phase 39 | Pending |
+| HND-02 | Phase 39 | Pending |
+| HND-03 | Phase 39 | Pending |
+| HND-04 | Phase 39 | Pending |
+| PG-01 | Phase 40 | Pending |
+| PG-02 | Phase 40 | Pending |
+| PG-03 | Phase 40 | Pending |
+| PG-04 | Phase 40 | Pending |
+| PG-05 | Phase 40 | Pending |
+| PG-06 | Phase 40 | Pending |
+| PG-07 | Phase 40 | Pending |
 
 **Coverage:**
-- v6.0 requirements: 31 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 31 ⚠️
+- v6.0 requirements: 32 total
+- Mapped to phases: 32 (100%)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 after initial definition*
+*Last updated: 2026-03-31 — traceability populated during roadmap creation*
