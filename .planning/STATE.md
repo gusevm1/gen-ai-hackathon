@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Quick Apply
-status: planning
-stopped_at: Defining requirements
+status: roadmap_ready
+stopped_at: Roadmap created — ready to plan Phase 42
 last_updated: "2026-04-02T00:00:00.000Z"
-last_activity: "2026-04-02 — Milestone v7.0 started — 18 requirements defined across 5 categories (PROF, QA, MSG, SEND, TRACK)"
+last_activity: "2026-04-02 — Roadmap created for v7.0 Quick Apply — 5 phases (42-46), 18 requirements mapped"
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,19 +18,29 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-31)
+See: .planning/PROJECT.md (updated 2026-04-02)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** v7.0 Quick Apply — defining roadmap
+**Current focus:** v7.0 Quick Apply — roadmap ready, begin Phase 42
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 42 — Profile Contact Details (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-02 — Milestone v7.0 Quick Apply started
+Status: Roadmap ready
+Last activity: 2026-04-02 — v7.0 roadmap created (5 phases, 18 requirements)
 
 Progress: [░░░░░░░░░░] 0%
+
+## v7.0 Phase Map
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 42 | Profile Contact Details | PROF-01, PROF-02 | Not started |
+| 43 | Backend Send Endpoint | SEND-01, SEND-02, SEND-03 | Not started |
+| 44 | AI Message Generation | MSG-01, MSG-02, MSG-03 | Not started |
+| 45 | Quick Apply UI | QA-01, QA-02, QA-03, QA-04, QA-05, QA-06, QA-07 | Not started |
+| 46 | Apply Tracking | TRACK-01, TRACK-02, TRACK-03 | Not started |
 
 ## Performance Metrics
 
@@ -66,21 +76,33 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 
+### v7.0 Architecture Notes
+
+- Stack: Next.js (Vercel) + FastAPI (EC2) + Supabase (auth/DB)
+- Send mechanism: backend fetches CSRF from Flatfox listing page HTML, then POSTs flat-contact-form using requests.Session
+- Message generation: AI-drafted using Claude (already available on EC2 backend)
+- TopMatches page already exists at /top-matches in the web app
+- Profile edit already exists — Phase 42 adds a Contact Details section with editable phone number
+- Supabase DB has profiles + analyses tables — Phase 46 needs a new `applications` table
+- Phase 43 (send endpoint) and Phase 44 (message generation) are independent of each other and can be planned in parallel
+- Phase 45 (Quick Apply UI) depends on both Phase 43 and Phase 44 being complete
+- Phase 46 (Apply Tracking) depends on Phase 45 (applications are written at send time)
+
+### v7.0 Phase Dependencies
+
+- Phase 42 (Profile) is the foundation — phone number must exist before SEND-03 can use it
+- Phase 43 (Send) depends on Phase 42 (needs phone from profile)
+- Phase 44 (Message Generation) depends on Phase 42 (needs profile preferences for draft)
+- Phase 45 (Quick Apply UI) depends on Phase 43 + Phase 44 (calls both backend endpoints)
+- Phase 46 (Tracking) depends on Phase 45 (writes records at send time)
+
 ### v6.0 Architecture Notes
 
-- No backend changes in this milestone — all work is Next.js web app only
+- No backend changes in v6.0 — all work was Next.js web app only
 - Extension content script is frozen (Phase 34 onboarding overlay complete and stable)
 - Framer Motion already installed (v4.0); extend existing motion primitives (FadeIn, StaggerGroup)
 - Design tokens already partially applied (landing page uses `primary`); ProfileCreationChooser now uses primary token (rose-500 cleared in 36-01)
 - WelcomeModal and onboarding checklist are driver.js-based (Phase 34); rebuild to Shadcn in Phase 38
-
-### Phase Dependencies
-
-- Phase 35 (Nav) is the foundation — all other phases depend on it
-- Phase 36 (Dashboard) and Phase 37 (Design System) can proceed after Phase 35
-- Phase 38 (Onboarding Rebuild) can proceed after Phase 35
-- Phase 39 (Handoffs) depends on Phase 36 (dashboard state patterns established)
-- Phase 40 (Page Redesigns) depends on Phase 37 + 38 + 39 (design system and patterns in place)
 
 ### Phase 35 Decisions (35-01)
 
@@ -179,6 +201,7 @@ Progress: [░░░░░░░░░░] 0%
 ### Roadmap Evolution
 
 - Phase 41 added: Add Google Maps Street View to property listings
+- Phases 42-46 added: v7.0 Quick Apply
 
 ### Phase 41 Decisions (41-01)
 
@@ -192,6 +215,6 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-Last session: 2026-04-01T20:11:24.817Z
-Stopped at: Completed 41-02-PLAN.md
+Last session: 2026-04-02T00:00:00.000Z
+Stopped at: Roadmap created for v7.0 Quick Apply
 Resume file: None

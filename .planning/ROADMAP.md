@@ -10,7 +10,8 @@
 - ✅ **v4.1 Landing Page v2 & Hackathon Credits** — Phases 22-23 (shipped 2026-03-29)
 - 🔮 **v4.2 Dashboard Alignment & QA** — Phases TBD (deferred)
 - ✅ **v5.0 Hybrid Scoring Engine** — Phases 27-34 (shipped 2026-03-31)
-- 🚧 **v6.0 UX & Design System Overhaul** — Phases 35-40 (in progress)
+- ✅ **v6.0 UX & Design System Overhaul** — Phases 35-41 (shipped 2026-04-01)
+- 🚧 **v7.0 Quick Apply** — Phases 42-46 (in progress)
 
 ## Phases
 
@@ -87,16 +88,28 @@
 
 </details>
 
-### v6.0 UX & Design System Overhaul (In Progress)
+<details>
+<summary>✅ v6.0 UX & Design System Overhaul (Phases 35-41) — SHIPPED 2026-04-01</summary>
 
-**Milestone Goal:** Redesign the user experience end-to-end — state-aware dashboard, aligned design system, and fixed user journeys for both first-time and returning users so the product is foolproof, intuitive, and visually consistent with the landing page.
+- [x] Phase 35: Navigation & IA — Rename nav item, remove Download from primary nav, install banner, Settings link (completed 2026-03-31)
+- [x] Phase 36: State-Aware Dashboard — New user explainer state, returning user workspace with active profile + top matches + recent analyses (completed 2026-03-31)
+- [x] Phase 37: Design System Propagation — Token cleanup, Framer Motion entrance animations, tier colors, hover states (completed 2026-03-31)
+- [x] Phase 38: Onboarding Rebuild — WelcomeModal with Shadcn, checklist completion state, Settings re-entry (completed 2026-04-01)
+- [x] Phase 39: Critical Handoffs — Profile edit CTA + progress indicator, analyses empty state (completed 2026-04-01)
+- [x] Phase 40: Page Redesigns — Profiles list, AI chat, analyses cards, settings download section (completed 2026-04-01)
+- [x] Phase 41: Google Maps Street View — PropertyMapView component, Street View + Map toggle, analysis page integration (completed 2026-04-01)
 
-- [x] **Phase 35: Navigation & IA** — Rename nav item, remove Download from primary nav, install banner, Settings link (completed 2026-03-31)
-- [x] **Phase 36: State-Aware Dashboard** — New user explainer state, returning user workspace with active profile + top matches + recent analyses (completed 2026-03-31)
-- [x] **Phase 37: Design System Propagation** — Token cleanup, Framer Motion entrance animations, tier colors, hover states (completed 2026-03-31)
-- [x] **Phase 38: Onboarding Rebuild** — WelcomeModal with Shadcn, checklist completion state, Settings re-entry (completed 2026-04-01)
-- [x] **Phase 39: Critical Handoffs** — Profile edit CTA + progress indicator, analyses empty state (completed 2026-04-01)
-- [x] **Phase 40: Page Redesigns** — Profiles list, AI chat, analyses cards, settings download section (completed 2026-04-01)
+</details>
+
+### v7.0 Quick Apply (In Progress)
+
+**Milestone Goal:** Complete the find→score→rank→apply loop by letting users send a personalized AI-drafted contact message to Flatfox listing owners directly from the Top Matches page — without leaving HomeMatch.
+
+- [ ] **Phase 42: Profile Contact Details** — Add phone number field to profile and expose Contact Details section on profile edit page
+- [ ] **Phase 43: Backend Send Endpoint** — FastAPI endpoint that fetches Flatfox CSRF token and POSTs the contact form on the user's behalf
+- [ ] **Phase 44: AI Message Generation** — Claude-drafted application message personalized from user profile and specific listing details, with regeneration
+- [ ] **Phase 45: Quick Apply UI** — Inline expandable panel on TopMatches cards with editable draft, send, collapse, applied state, and error/retry
+- [ ] **Phase 46: Apply Tracking** — Supabase applications table, applied indicators on TopMatches cards, and dedicated Applications page
 
 ## Phase Details
 
@@ -363,6 +376,90 @@ Plans:
 - [ ] 40-02-PLAN.md — Analysis card layout: border-l-4 tier bar + two-column score+info layout + remove pill badge (PG-05, PG-06)
 - [ ] 40-03-PLAN.md — Chat splash heading + FadeIn wrapper on summary card transition (PG-03, PG-04, PG-07)
 
+### Phase 41: Google Maps Street View
+
+**Goal:** Add a Google Maps viewer to the property analysis detail page — interactive Street View panorama facing the building by default, with a toggle to Map view and automatic fallback when Street View is unavailable.
+**Requirements:** D-01 through D-15
+**Depends on:** Phase 40
+**Plans:** 2/2 plans complete
+
+Plans:
+- [x] 41-01-PLAN.md — PropertyMapView client component: @googlemaps/js-api-loader, all states (loading/ready/unavailable/error), toggle, accessibility
+- [x] 41-02-PLAN.md — Analysis page integration: listing_profiles secondary query, conditional render, env var setup
+
+**Success Criteria** (what must be TRUE):
+  1. Analysis page shows a Google Maps Street View panorama for listings that have a geocoded address
+  2. User can toggle between Street View and Map view without a page reload
+  3. When Street View is unavailable for an address, the component falls back to Map view automatically
+  4. Component renders nothing (graceful omission) when no address geocode is available
+
+### Phase 42: Profile Contact Details
+
+**Goal:** Users can store their phone number on their profile so it is available when submitting Flatfox contact forms.
+**Depends on:** Phase 41
+**Requirements:** PROF-01, PROF-02
+**Plans:** TBD
+
+**Success Criteria** (what must be TRUE):
+  1. User can enter a phone number on the profile edit page and save it — the value persists across sessions
+  2. Profile edit page displays a "Contact Details" section containing name (read-only, from auth display name), email (read-only, from auth), and an editable phone number field
+  3. Phone number is saved to the user's profile in Supabase and is returned when the profile is fetched
+  4. Profile edit page does not regress the existing Contact Details section layout when phone is empty
+
+### Phase 43: Backend Send Endpoint
+
+**Goal:** The FastAPI backend can accept a Quick Apply request from the web app and deliver the user's message to the Flatfox contact form on their behalf.
+**Depends on:** Phase 42
+**Requirements:** SEND-01, SEND-02, SEND-03
+**Plans:** TBD
+
+**Success Criteria** (what must be TRUE):
+  1. A POST endpoint (e.g. `/quick-apply`) on the FastAPI backend accepts listing ID, user name, email, phone, and message body, and returns a success or error response
+  2. Before submitting, the backend fetches the Flatfox listing page with a `requests.Session` and extracts a fresh CSRF token from the HTML
+  3. The backend POSTs the Flatfox flat-contact-form with the correct field names and CSRF token; a successful Flatfox response is propagated back to the caller
+  4. If the Flatfox CSRF fetch or form POST fails, the endpoint returns a structured error response (not an unhandled 500) so the web app can display a retry option
+
+### Phase 44: AI Message Generation
+
+**Goal:** Every Quick Apply flow begins with a Claude-drafted message personalized to the user and the specific listing, and users can regenerate it if it misses the mark.
+**Depends on:** Phase 42
+**Requirements:** MSG-01, MSG-02, MSG-03
+**Plans:** TBD
+
+**Success Criteria** (what must be TRUE):
+  1. When a user opens the Quick Apply panel, a draft message is returned by the backend that includes the user's name, their stated situation or move-in intent from their profile preferences, and at least one key preference
+  2. The draft message references the specific listing — at minimum the property address or type — so it does not read as a generic template
+  3. Two drafts generated for the same listing and profile read noticeably differently (Claude is not returning a static string)
+  4. User can tap "Regenerate" in the Quick Apply panel and receive a new draft without closing and reopening the panel
+
+### Phase 45: Quick Apply UI
+
+**Goal:** Users can initiate, review, edit, and send a contact message to a Flatfox listing owner directly from the Top Matches page with full feedback on success and failure.
+**Depends on:** Phase 43, Phase 44
+**Requirements:** QA-01, QA-02, QA-03, QA-04, QA-05, QA-06, QA-07
+**Plans:** TBD
+
+**Success Criteria** (what must be TRUE):
+  1. Every listing card on the Top Matches page has a "Quick Apply" button visible without hovering
+  2. Clicking "Quick Apply" expands an inline panel directly below the card containing an editable text area pre-populated with the AI draft
+  3. User can modify the draft text in the panel and send the modified version; the original draft is not sent if the user edited it
+  4. User can close the panel without sending by clicking a dismiss control — the card returns to its default state
+  5. After a successful send, the card shows a persistent "Applied" indicator and the Quick Apply button is replaced or disabled
+  6. If the send fails, the card displays an error message and a "Retry" control that re-attempts the same message without requiring the user to re-open the panel
+
+### Phase 46: Apply Tracking
+
+**Goal:** Users can see at a glance which listings they have already applied to and review their full application history in one place.
+**Depends on:** Phase 45
+**Requirements:** TRACK-01, TRACK-02, TRACK-03
+**Plans:** TBD
+
+**Success Criteria** (what must be TRUE):
+  1. After a successful Quick Apply send, a record is written to a new Supabase `applications` table containing the user ID, profile ID, listing ID, and timestamp
+  2. When the Top Matches page loads, cards for listings the user has previously applied to (for the active profile) show an "Applied" badge without requiring the user to take any action
+  3. A dedicated Applications page at `/applications` lists all sent applications for the active profile, showing the listing address, property type, application date, and a link to the listing on Flatfox
+  4. Applications page is reachable from the main navigation
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -375,20 +472,15 @@ Plans:
 | 32. Frontend Consumers | 2/2 | Complete | 2026-03-30 |
 | 33. Dashboard Home & Nav Polish | 2/2 | Complete | 2026-03-30 |
 | 34. Onboarding & Tutorial System | 2/2 | Complete | 2026-03-31 |
-| 35. Navigation & IA | 2/2 | Complete   | 2026-03-31 |
-| 36. State-Aware Dashboard | 2/2 | Complete    | 2026-03-31 |
-| 37. Design System Propagation | 5/5 | Complete    | 2026-03-31 |
-| 38. Onboarding Rebuild | 4/4 | Complete    | 2026-04-01 |
-| 39. Critical Handoffs | 3/3 | Complete    | 2026-04-01 |
-| 40. Page Redesigns | 4/4 | Complete    | 2026-04-01 |
-
-### Phase 41: Add Google Maps Street View to property listings
-
-**Goal:** Add a Google Maps viewer to the property analysis detail page — interactive Street View panorama facing the building by default, with a toggle to Map view and automatic fallback when Street View is unavailable.
-**Requirements**: D-01 through D-15 (CONTEXT.md)
-**Depends on:** Phase 40
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 41-01-PLAN.md — PropertyMapView client component: @googlemaps/js-api-loader, all states (loading/ready/unavailable/error), toggle, accessibility
-- [x] 41-02-PLAN.md — Analysis page integration: listing_profiles secondary query, conditional render, env var setup
+| 35. Navigation & IA | 2/2 | Complete | 2026-03-31 |
+| 36. State-Aware Dashboard | 2/2 | Complete | 2026-03-31 |
+| 37. Design System Propagation | 5/5 | Complete | 2026-03-31 |
+| 38. Onboarding Rebuild | 4/4 | Complete | 2026-04-01 |
+| 39. Critical Handoffs | 3/3 | Complete | 2026-04-01 |
+| 40. Page Redesigns | 4/4 | Complete | 2026-04-01 |
+| 41. Google Maps Street View | 2/2 | Complete | 2026-04-01 |
+| 42. Profile Contact Details | 0/? | Not started | - |
+| 43. Backend Send Endpoint | 0/? | Not started | - |
+| 44. AI Message Generation | 0/? | Not started | - |
+| 45. Quick Apply UI | 0/? | Not started | - |
+| 46. Apply Tracking | 0/? | Not started | - |
