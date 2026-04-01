@@ -15,7 +15,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(name)s %(levelname)s: %(message)s")
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import chat, classifier, geocoding, listings, scoring
+from app.routers import chat, classifier, geocoding, listings, neighborhood, scoring
 from app.services.conversation import conversation_service
 from app.services.flatfox import flatfox_client
 
@@ -45,6 +45,7 @@ app.include_router(scoring.router)
 app.include_router(chat.router)
 app.include_router(classifier.router)
 app.include_router(geocoding.router)
+app.include_router(neighborhood.router)
 
 
 @app.get("/health")
