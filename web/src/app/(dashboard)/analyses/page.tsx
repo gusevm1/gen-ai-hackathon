@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { FileSearch } from 'lucide-react'
+import { FileSearch, ExternalLink, Download } from 'lucide-react'
+import { buttonVariants } from '@/components/ui/button'
 import { AnalysesFilterBar } from '@/components/analyses/analyses-filter-bar'
 import { AnalysesGrid } from '@/components/analyses/AnalysesGrid'
 import { t, type Language, LANG_COOKIE } from '@/lib/translations'
@@ -60,6 +61,7 @@ export default async function AnalysesPage({
         currentProfile={profileFilter}
         currentSort={sort}
         lang={lang}
+        analysisCount={analyses?.length ?? 0}
       />
 
       {!analyses || analyses.length === 0 ? (
@@ -68,9 +70,25 @@ export default async function AnalysesPage({
             <FileSearch className="h-7 w-7 text-muted-foreground" />
           </div>
           <h2 className="text-lg font-semibold mb-2">{t(lang, 'analyses_empty_title')}</h2>
-          <p className="text-sm text-muted-foreground max-w-sm">
+          <p className="text-sm text-muted-foreground max-w-sm mb-6">
             {t(lang, 'analyses_empty_desc')}
           </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <a
+              href="https://flatfox.ch/en/search/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonVariants({ variant: 'default', size: 'lg' })}
+            >
+              Open Flatfox <ExternalLink className="ml-2 size-4" />
+            </a>
+            <a
+              href="/download"
+              className={buttonVariants({ variant: 'outline', size: 'lg' })}
+            >
+              <Download className="mr-2 size-4" /> Download Extension
+            </a>
+          </div>
         </div>
       ) : (
         <AnalysesGrid analyses={analyses ?? []} profileMap={profileRecord} lang={lang} />

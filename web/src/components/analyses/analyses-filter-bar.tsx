@@ -15,9 +15,10 @@ interface Props {
   currentProfile: string
   currentSort: string
   lang: Language
+  analysisCount: number
 }
 
-export function AnalysesFilterBar({ profiles, currentProfile, currentSort, lang }: Props) {
+export function AnalysesFilterBar({ profiles, currentProfile, currentSort, lang, analysisCount }: Props) {
   const router = useRouter()
 
   const updateParam = (key: string, value: string | null) => {
@@ -31,7 +32,7 @@ export function AnalysesFilterBar({ profiles, currentProfile, currentSort, lang 
     router.push(`/analyses${qs ? `?${qs}` : ""}`)
   }
 
-  if (profiles.length === 0) return null
+  if (profiles.length === 0 || analysisCount === 0) return null
 
   return (
     <div className="flex flex-wrap gap-3 mb-6">

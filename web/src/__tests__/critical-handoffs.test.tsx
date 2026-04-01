@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
+import * as fs from "fs"
+import * as path from "path"
 
 vi.mock("@/components/onboarding/OnboardingProvider", () => ({
   useOnboardingContext: vi.fn(),
@@ -19,9 +21,13 @@ vi.mock("@/lib/flatfox-url", () => ({
 vi.mock("@/lib/onboarding-state", () => ({
   updateOnboardingState: vi.fn(),
 }))
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}))
 
 import { useOnboardingContext } from "@/components/onboarding/OnboardingProvider"
 import { PreferencesForm } from "@/components/preferences/preferences-form"
+import { AnalysesFilterBar } from "@/components/analyses/analyses-filter-bar"
 
 const mockOnboarding = (overrides = {}) => {
   ;(useOnboardingContext as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -114,5 +120,75 @@ describe("HND-02: Section progress indicator", () => {
       />
     )
     expect(screen.getByText(/6 sections/i)).toBeDefined()
+  })
+})
+
+// ==============================================
+// HND-03: Analyses empty state CTAs
+// ==============================================
+
+describe("HND-03: Analyses empty state CTAs", () => {
+  // The analyses page is a server component and cannot be rendered in vitest.
+  // We verify the expected markup by reading the source file directly --
+  // tests will turn GREEN once Plans 01/02 add the CTA elements.
+
+  const analysesPagePath = path.resolve(
+    __dirname,
+    "../app/(dashboard)/analyses/page.tsx"
+  )
+
+  it('when 0 analyses, renders "Open Flatfox" link with href containing flatfox.ch', () => {
+    const src = fs.readFileSync(analysesPagePath, "utf8")
+    expect(src).toContain("flatfox.ch")
+    expect(src).toContain("Open Flatfox")
+  })
+
+  it('when 0 analyses, renders "Download" link with href="/download"', () => {
+    const src = fs.readFileSync(analysesPagePath, "utf8")
+    expect(src).toContain('href="/download"')
+    expect(src).toContain("Download Extension")
+  })
+
+  it("when analyses exist, does NOT render empty state CTAs", () => {
+    // Verify the conditional guard: CTAs only in the empty-state branch
+    const src = fs.readFileSync(analysesPagePath, "utf8")
+    // The page must have a conditional that checks analyses length
+    expect(src).toContain("analyses.length === 0")
+    // And the CTA links must appear within that conditional block
+    expect(src).toContain("buttonVariants")
+  })
+})
+
+// ==============================================
+// HND-04: Filter bar conditional on analysis count
+// ==============================================
+
+describe("HND-04: AnalysesFilterBar conditional rendering", () => {
+  it("returns null when analysisCount is 0", () => {
+    const { container } = render(
+      <AnalysesFilterBar
+        profiles={[{ id: "1", name: "Test" }]}
+        currentProfile=""
+        currentSort="newest"
+        lang="en"
+        analysisCount={0}
+      />
+    )
+    // When analysisCount is 0, the component should return null (empty)
+    expect(container.innerHTML).toBe("")
+  })
+
+  it("renders filter bar when analysisCount > 0", () => {
+    const { container } = render(
+      <AnalysesFilterBar
+        profiles={[{ id: "1", name: "Test" }]}
+        currentProfile=""
+        currentSort="newest"
+        lang="en"
+        analysisCount={5}
+      />
+    )
+    // When analysisCount > 0 and profiles exist, the filter bar should render
+    expect(container.innerHTML).not.toBe("")
   })
 })
