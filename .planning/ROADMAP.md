@@ -367,6 +367,6 @@ Plans:
 | 35. Navigation & IA | 2/2 | Complete   | 2026-03-31 |
 | 36. State-Aware Dashboard | 2/2 | Complete    | 2026-03-31 |
 | 37. Design System Propagation | 5/5 | Complete    | 2026-03-31 |
-| 38. Onboarding Rebuild | 4/4 | Complete   | 2026-04-01 |
+| 38. Onboarding Rebuild | 4/4 | Complete    | 2026-04-01 |
 | 39. Critical Handoffs | 0/TBD | Not started | - |
 | 40. Page Redesigns | 0/TBD | Not started | - |
