@@ -67,6 +67,7 @@ async def discover_all_listings(city: str, max_listings: int | None = None) -> l
         "limit": 50,
     }
     all_pks: list[int] = []
+    seen: set[int] = set()
     page = 0
     async with httpx.AsyncClient(timeout=30.0) as client:
         while url:
@@ -74,16 +75,25 @@ async def discover_all_listings(city: str, max_listings: int | None = None) -> l
             resp.raise_for_status()
             data = resp.json()
             results = data.get("results", [])
+            new_on_page = 0
             for item in results:
                 if isinstance(item, dict) and "pk" in item:
-                    all_pks.append(item["pk"])
+                    pk = item["pk"]
+                    if pk not in seen:
+                        seen.add(pk)
+                        all_pks.append(pk)
+                        new_on_page += 1
             page += 1
             total = data.get("count", "?")
-            logger.info("  Page %d: fetched %d listings (total available: %s)", page, len(results), total)
+            logger.info("  Page %d: %d new / %d on page (total unique: %d, available: %s)", page, new_on_page, len(results), len(all_pks), total)
             # Stop early if we have enough
             if max_listings and len(all_pks) >= max_listings:
                 all_pks = all_pks[:max_listings]
                 logger.info("  Reached --max %d during discovery, stopping pagination", max_listings)
+                break
+            # Stop if page returned no new results (all duplicates)
+            if new_on_page == 0:
+                logger.info("  Page %d had no new listings — stopping pagination", page)
                 break
             url = data.get("next")
             params = {}  # next URL already includes query params
