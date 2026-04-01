@@ -1,14 +1,15 @@
-"""OpenRouter LLM client for cheap gap-filling.
+"""Featherless AI LLM client for gap-filling.
 
-Calls lightweight models (Gemini 2.0 Flash) via the OpenRouter API to
+Calls open-source models (Qwen 3.5) via the Featherless API to
 answer scoring questions that the deterministic engine could not resolve
 from pre-computed ListingProfile data alone.
 
 Key design decisions:
-- Batch all gaps into a single LLM call (cheaper than N separate calls).
+- Batch all gaps into a single LLM call (fewer requests).
 - Fall back to individual calls if batch parsing fails.
-- Graceful degradation: if OpenRouter is unreachable, return gaps as-is.
+- Graceful degradation: if Featherless is unreachable, return gaps as-is.
 - Robust JSON parsing handles markdown code fences and malformed output.
+- Flat-rate pricing via Featherless subscription (unlimited tokens).
 """
 
 from __future__ import annotations
@@ -26,8 +27,8 @@ from app.models.scoring import ChecklistItem
 
 logger = logging.getLogger(__name__)
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = "google/gemini-2.5-flash-lite"
+FEATHERLESS_URL = "https://api.featherless.ai/v1/chat/completions"
+FEATHERLESS_MODEL = os.environ.get("FEATHERLESS_MODEL", "Qwen/Qwen3.5-27B")
 
 
 # ── JSON parsing helpers ─────────────────────────────────────────────
@@ -131,8 +132,8 @@ def _build_single_prompt(
 # ── Service class ────────────────────────────────────────────────────
 
 
-class OpenRouterService:
-    """Async client for the OpenRouter chat completions API.
+class FeatherlessService:
+    """Async client for the Featherless AI chat completions API.
 
     Lazy-initializes an httpx.AsyncClient on first use.
     Designed as a singleton (see module-level ``openrouter_service``).
@@ -144,18 +145,18 @@ class OpenRouterService:
     def _get_client(self) -> httpx.AsyncClient:
         """Get or create the httpx async client (lazy initialization)."""
         if self._client is None:
-            self._client = httpx.AsyncClient(timeout=60.0)
+            self._client = httpx.AsyncClient(timeout=120.0)
         return self._client
 
     def _get_api_key(self) -> str:
-        """Read OPENROUTER_API_KEY from environment."""
-        key = os.environ.get("OPENROUTER_API_KEY", "")
+        """Read FEATHERLESS_API_KEY from environment."""
+        key = os.environ.get("FEATHERLESS_API_KEY", "")
         if not key:
-            logger.error("OPENROUTER_API_KEY is not set in environment")
+            logger.error("FEATHERLESS_API_KEY is not set in environment")
         return key
 
-    async def _call_openrouter(self, prompt: str) -> str:
-        """Make a single chat completion request to OpenRouter.
+    async def _call_llm(self, prompt: str) -> str:
+        """Make a single chat completion request to Featherless.
 
         Args:
             prompt: The user message content.
@@ -170,16 +171,16 @@ class OpenRouterService:
         api_key = self._get_api_key()
 
         response = await client.post(
-            OPENROUTER_URL,
+            FEATHERLESS_URL,
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
             json={
-                "model": OPENROUTER_MODEL,
+                "model": FEATHERLESS_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.1,
-                "max_tokens": 2048,
+                "max_tokens": 4096,
             },
         )
         response.raise_for_status()
@@ -200,7 +201,7 @@ class OpenRouterService:
         """
         try:
             prompt = _build_single_prompt(gap, listing_description, listing_title)
-            raw = await self._call_openrouter(prompt)
+            raw = await self._call_llm(prompt)
             parsed = _parse_json_response(raw)
 
             if isinstance(parsed, list):
@@ -228,7 +229,7 @@ class OpenRouterService:
         listing_title: str | None = None,
         image_urls: list[str] | None = None,
     ) -> list[dict]:
-        """Fill scoring gaps using a cheap LLM via OpenRouter.
+        """Fill scoring gaps using Featherless AI.
 
         Batches all gaps into a single LLM call for efficiency.  If the
         batch response cannot be parsed, falls back to individual calls
@@ -240,8 +241,7 @@ class OpenRouterService:
             listing_description: Full listing description text.
             listing_title: Optional listing title for additional context.
             image_urls: Optional image URLs (reserved for future
-                        multimodal support; not currently sent to
-                        OpenRouter).
+                        multimodal support).
 
         Returns:
             List of result dicts, each containing:
@@ -268,7 +268,7 @@ class OpenRouterService:
         # ── Attempt batch call ───────────────────────────────────────
         try:
             prompt = _build_batch_prompt(gaps, listing_description, listing_title)
-            raw = await self._call_openrouter(prompt)
+            raw = await self._call_llm(prompt)
             parsed = _parse_json_response(raw)
 
             # Validate batch response structure
@@ -369,4 +369,5 @@ def merge_gap_results(
 
 
 # Singleton instance used by routers and lifespan
-openrouter_service = OpenRouterService()
+# Name kept as openrouter_service for backward compatibility with imports
+openrouter_service = FeatherlessService()
