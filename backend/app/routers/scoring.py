@@ -250,21 +250,39 @@ async def _score_with_profile(profile, preferences: UserPreferences) -> ScoreRes
             )
         )
 
-    # Gap-fill: on-demand Apify for custom proximity criteria with no pre-fetched data
-    if gap_fields and profile.latitude is not None and profile.longitude is not None:
-        queries = [f.name for f in gap_fields]
-        logger.info("On-demand Apify for %d proximity gaps: %s", len(queries), queries)
+    # Gap-fill: on-demand Apify for DISTANCE/PROXIMITY_QUALITY fields with no pre-fetched data.
+    # Also enrich proximity_data for SUBJECTIVE fields so the LLM has real data to evaluate.
+    has_coords = profile.latitude is not None and profile.longitude is not None
+
+    # Collect SUBJECTIVE fields that will go to the LLM — we'll run Apify for them too
+    # so the LLM can evaluate proximity-based subjective criteria (e.g. "McDonald's nearby")
+    subjective_lookup_fields = [
+        f for f in preferences.dynamic_fields
+        if (f.criterion_type is None or f.criterion_type == CriterionType.SUBJECTIVE)
+        and f.name.lower().replace(" ", "_") not in proximity_data
+        and f.name not in proximity_data
+    ]
+
+    all_apify_fields = gap_fields + subjective_lookup_fields
+    if all_apify_fields and has_coords:
+        queries = [f.name for f in all_apify_fields]
+        logger.info(
+            "On-demand Apify for %d fields (%d det gaps + %d subjective): %s",
+            len(queries), len(gap_fields), len(subjective_lookup_fields), queries,
+        )
         try:
+            # Use 10 km radius so we always find the nearest even if outside the user's requested range
             batch_results = await search_nearby_places_batch(
                 queries=queries,
                 latitude=profile.latitude,
                 longitude=profile.longitude,
-                radius_km=2.0,
+                radius_km=10.0,
                 max_results_per_query=5,
             )
-            for field in gap_fields:
-                raw_places = batch_results.get(field.name, [])
-                places_with_dist: list[dict] = []
+
+            def _build_places(raw_places: list[dict]) -> list[dict]:
+                """Compute haversine distances and normalise Apify place dicts."""
+                out = []
                 for place in raw_places:
                     dist_km: Optional[float] = None
                     loc = place.get("location")
@@ -278,16 +296,23 @@ async def _score_with_profile(profile, preferences: UserPreferences) -> ScoreRes
                                 )
                             except Exception:
                                 pass
-                    places_with_dist.append({
+                    out.append({
                         "name": place.get("title", ""),
                         "distance_km": dist_km,
                         "rating": place.get("rating"),
                         "review_count": place.get("reviews"),
                         "address": place.get("address", ""),
                     })
+                return out
 
-                key = field.name.lower().replace(" ", "_")
-                proximity_data[key] = places_with_dist
+            # ── Deterministic gap-fill for DISTANCE / PROXIMITY_QUALITY fields ──
+            for field in gap_fields:
+                raw_places = batch_results.get(field.name, [])
+                places_with_dist = _build_places(raw_places)
+
+                # Store under both original name and normalised key for lookup functions
+                proximity_data[field.name] = places_with_dist
+                proximity_data[field.name.lower().replace(" ", "_")] = places_with_dist
 
                 ct = field.criterion_type
                 if ct == CriterionType.DISTANCE:
@@ -296,12 +321,28 @@ async def _score_with_profile(profile, preferences: UserPreferences) -> ScoreRes
                 else:
                     result_value = score_proximity_quality(field, listing, proximity_data)
 
-                # If still no data (amenity genuinely not found), score 0.0
-                if result_value is None:
-                    result_value = 0.0
-                    reasoning = f"No {field.name} found within search radius"
+                # Build reasoning based on what was actually found
+                nearest = places_with_dist[0] if places_with_dist else None
+                nearest_km = nearest.get("distance_km") if nearest else None
+                nearest_name = nearest.get("name", field.name) if nearest else None
+
+                if result_value is not None:
+                    # Scored successfully — add distance context to reasoning
+                    if nearest_km is not None:
+                        reasoning = f"Closest {field.name}: {nearest_name} at {nearest_km:.1f} km"
+                    else:
+                        reasoning = None
                 else:
-                    reasoning = None
+                    # Scoring function returned None (e.g. no parseable radius in field.value)
+                    if nearest_km is not None:
+                        # Found something but couldn't score — compute directly with 2 km default
+                        import math as _math
+                        default_radius = 2.0
+                        result_value = round(_math.exp(-1.0 * nearest_km / default_radius), 3)
+                        reasoning = f"Closest {field.name}: {nearest_name} at {nearest_km:.1f} km"
+                    else:
+                        result_value = 0.0
+                        reasoning = f"No {field.name} found within 10 km search radius"
 
                 deterministic_results.append(
                     FulfillmentResult(
@@ -311,6 +352,16 @@ async def _score_with_profile(profile, preferences: UserPreferences) -> ScoreRes
                         reasoning=reasoning,
                     )
                 )
+
+            # ── Enrich proximity_data for SUBJECTIVE fields (LLM will evaluate these) ──
+            for field in subjective_lookup_fields:
+                raw_places = batch_results.get(field.name, [])
+                if not raw_places:
+                    continue
+                places_with_dist = _build_places(raw_places)
+                proximity_data[field.name] = places_with_dist
+                proximity_data[field.name.lower().replace(" ", "_")] = places_with_dist
+
         except Exception:
             logger.warning("On-demand Apify gap-fill failed", exc_info=True)
 

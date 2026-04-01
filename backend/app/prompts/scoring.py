@@ -79,9 +79,10 @@ PRICE EVALUATION RULES:
 
 PROXIMITY EVALUATION RULES:
 - Evaluate proximity-based criteria ONLY from the "## Nearby Places Data (Verified)" section in the user prompt.
-- If an amenity is not present in that section, treat it as "not found nearby" — do not guess, infer, or search.
+- If a criterion mentions a specific place (e.g. "McDonald's", "Starbucks", "Migros") and results for it appear in that section, use the distance to evaluate it. State the distance explicitly (e.g. "Closest McDonald's found at 7.3 km").
+- If results exist but the place is outside the user's requested radius, say so clearly: "No [place] found within [X] km, but the closest is [name] at [Y] km".
+- If no results are present for a specific place in the verified section, say "Not found within the search area" — do not guess or infer from description.
 - Never call any tool to search for places. No tool is available for this purpose.
-- If the "## Nearby Places Data (Verified)" section is absent, skip proximity evaluation entirely.
 
 SUMMARY BULLETS:
 - Always generate 3-5 concise summary_bullets in {lang_name} highlighting the most important matches and compromises.
