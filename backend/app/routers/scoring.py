@@ -824,8 +824,13 @@ async def top_matches(request: TopMatchesRequest) -> TopMatchesResponse:
     top_candidates = scored[:TOP_MATCHES_COUNT]
 
     # 5. Phase B: Full hybrid scoring of top candidates
+    # Limit concurrency to 2 to avoid Apify rate-limiting / timeouts when
+    # multiple listings need on-demand geocoding + place searches.
+    _apify_sem = asyncio.Semaphore(2)
+
     async def _full_score(profile):
-        return await _score_with_profile(profile, preferences)
+        async with _apify_sem:
+            return await _score_with_profile(profile, preferences)
 
     full_results = await asyncio.gather(
         *[_full_score(candidate[0]) for candidate in top_candidates],

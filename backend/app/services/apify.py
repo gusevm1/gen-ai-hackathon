@@ -103,7 +103,16 @@ async def geocode_listing(listing: "FlatfoxListing") -> dict | None:
         logger.warning("Listing %s has no address fields for geocoding", getattr(listing, "pk", "unknown"))
         return None
 
-    result = await geocode_location(query)
-    if result and "lat" in result and "lon" in result:
-        return result
+    # Try queries in order of specificity; fall back to less specific if needed
+    queries_to_try = [query]
+    # If full address fails, try zipcode + city as a fallback (less precise but reliable)
+    if listing.zipcode and listing.city:
+        fallback = f"{listing.zipcode} {listing.city}, Switzerland"
+        if fallback != query:
+            queries_to_try.append(fallback)
+
+    for q in queries_to_try:
+        result = await geocode_location(q)
+        if result and result.get("lat") is not None and result.get("lon") is not None:
+            return result
     return None
