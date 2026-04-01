@@ -12,11 +12,12 @@ function getTierFromScore(score: number): string {
   return 'poor'
 }
 
-const TIER_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  excellent: { bg: 'bg-teal-500', text: 'text-white',     border: 'border-teal-500' },
-  good:      { bg: 'bg-green-500', text: 'text-white',    border: 'border-green-500' },
-  fair:      { bg: 'bg-amber-500', text: 'text-gray-900', border: 'border-amber-500' },
-  poor:      { bg: 'bg-red-500',   text: 'text-white',    border: 'border-red-500' },
+// Matches extension TIER_COLORS exactly
+const TIER_COLORS: Record<string, { bg: string; text: string }> = {
+  excellent: { bg: '#10b981', text: '#ffffff' },
+  good:      { bg: '#3b82f6', text: '#ffffff' },
+  fair:      { bg: '#f59e0b', text: '#1a1a1a' },
+  poor:      { bg: '#ef4444', text: '#ffffff' },
 }
 
 function formatDate(dateString: string): string {
@@ -61,7 +62,7 @@ export function AnalysesGrid({ analyses, profileMap, lang }: AnalysesGridProps) 
           listing_object_type?: string
         } | null
         const tier = breakdown?.match_tier ?? getTierFromScore(analysis.score)
-        const tierStyle = TIER_STYLES[tier] ?? TIER_STYLES.poor
+        const tierColor = TIER_COLORS[tier] ?? TIER_COLORS.poor
         const profileName = analysis.profile_id ? profileMap[analysis.profile_id] : null
         const tierKey = `tier_${tier}` as 'tier_excellent' | 'tier_good' | 'tier_fair' | 'tier_poor'
 
@@ -78,15 +79,18 @@ export function AnalysesGrid({ analyses, profileMap, lang }: AnalysesGridProps) 
         return (
           <StaggerItem key={analysis.id}>
             <Link href={`/analysis/${analysis.listing_id}`}>
-              <Card className={`cursor-pointer transition-all hover:ring-2 hover:ring-primary/20 hover:-translate-y-1 hover:shadow-lg h-full border-l-4 ${tierStyle.border}`}>
+              <Card className="cursor-pointer transition-all hover:ring-2 hover:ring-primary/20 hover:-translate-y-1 hover:shadow-lg h-full">
                 <CardContent className="flex flex-col gap-3">
                   <div className="flex gap-4 items-start">
-                    {/* LEFT: Score + tier label */}
-                    <div className="shrink-0 flex flex-col items-center justify-center min-w-[3rem]">
-                      <span className="text-3xl font-bold leading-none text-foreground">
+                    {/* LEFT: Score circle (matches extension ScoreBadge) */}
+                    <div className="shrink-0 flex flex-col items-center gap-1">
+                      <span
+                        className="inline-flex items-center justify-center rounded-full text-base font-extrabold"
+                        style={{ width: 48, height: 48, backgroundColor: tierColor.bg, color: tierColor.text }}
+                      >
                         {analysis.score}
                       </span>
-                      <span className="text-xs text-muted-foreground capitalize mt-0.5">
+                      <span className="text-xs font-semibold capitalize" style={{ color: tierColor.bg }}>
                         {t(lang, tierKey)}
                       </span>
                     </div>
