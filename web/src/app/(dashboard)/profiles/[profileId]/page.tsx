@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/server'
 import { preferencesSchema, migratePreferences } from '@/lib/schemas/preferences'
 import { saveProfilePreferences } from '@/app/(dashboard)/profiles/actions'
 import { PreferencesForm } from '@/components/preferences/preferences-form'
-import { OpenInFlatfoxButton } from '@/components/profiles/open-in-flatfox-button'
 import { t, type Language } from '@/lib/translations'
 
 interface EditProfilePageProps {
@@ -54,7 +53,6 @@ export default async function EditProfilePage({ params }: EditProfilePageProps) 
       </Link>
       <div className="flex items-start justify-between mb-2">
         <h1 className="text-2xl font-bold">{profile.name}</h1>
-        <OpenInFlatfoxButton preferences={defaults} variant="link" language={lang} />
       </div>
       <p className="text-muted-foreground mb-8">
         {t(lang, 'edit_profile_desc')}

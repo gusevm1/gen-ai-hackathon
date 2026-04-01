@@ -19,12 +19,12 @@ import { SizeRoomsSection } from '@/components/preferences/size-rooms-section'
 import { FeaturesSection } from '@/components/preferences/features-section'
 import { DynamicFieldsSection } from '@/components/preferences/dynamic-fields-section'
 import { ImportanceSection } from '@/components/preferences/importance-section'
-import { OpenInFlatfoxButton } from '@/components/profiles/open-in-flatfox-button'
+import { buildFlatfoxUrl, buildFlatfoxUrlWithGeocode } from '@/lib/flatfox-url'
 import { useLanguage } from '@/lib/language-context'
 import { t } from '@/lib/translations'
 import { useOnboardingContext } from '@/components/onboarding/OnboardingProvider'
 import { updateOnboardingState } from '@/lib/onboarding-state'
-import { Info } from 'lucide-react'
+import { Info, ExternalLink, Loader2 } from 'lucide-react'
 
 interface PreferencesFormProps {
   defaultValues: Preferences
@@ -39,6 +39,7 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
     type: 'success' | 'error'
     text: string
   } | null>(null)
+  const [hasSaved, setHasSaved] = useState(false)
   const { language } = useLanguage()
   const { state: onboardingState, isActive: onboardingActive, showOpenFlatfoxStep } = useOnboardingContext()
 
@@ -64,7 +65,27 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
       // destroyed-driver bug that prevented the Open Flatfox popover from showing.
       if (onboardingActive && onboardingState?.onboarding_step === 4) {
         showOpenFlatfoxStep()
+      } else if (hasSaved) {
+        // After first save, subsequent saves also open Flatfox in a new tab
+        const prefs = {
+          location: form.getValues('location'),
+          offerType: form.getValues('offerType'),
+          objectCategory: form.getValues('objectCategory') === 'ANY' ? undefined : form.getValues('objectCategory'),
+          budgetMin: form.getValues('budgetMin'),
+          budgetMax: form.getValues('budgetMax'),
+          roomsMin: form.getValues('roomsMin'),
+          roomsMax: form.getValues('roomsMax'),
+        }
+        try {
+          const url = await buildFlatfoxUrlWithGeocode(prefs, language)
+          window.open(url, '_blank', 'noopener,noreferrer')
+        } catch {
+          const url = buildFlatfoxUrl(prefs, language)
+          window.open(url, '_blank', 'noopener,noreferrer')
+        }
       }
+
+      setHasSaved(true)
     } catch (error) {
       setSaveMessage({
         type: 'error',
@@ -75,7 +96,7 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pb-20">
         {profileId && <ProfileSummary form={form} />}
         {onboardingActive && onboardingState?.onboarding_step === 4 && (
           <div className="flex items-start gap-2 rounded-md border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-sm text-blue-300">
@@ -133,45 +154,18 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
           </AccordionItem>
         </Accordion>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <Button id="save-preferences-btn" type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? t(language, 'pref_saving') : t(language, 'pref_save')}
+        <div className="sticky bottom-0 z-10 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 py-3 -mx-4 mt-6">
+          <Button id="save-preferences-btn" type="submit" className="w-full" size="lg" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? (
+              <><Loader2 className="mr-2 size-4 animate-spin" /> Saving...</>
+            ) : hasSaved ? (
+              <>Save &amp; Open in Flatfox <ExternalLink className="ml-2 size-4" /></>
+            ) : (
+              'Save Preferences'
+            )}
           </Button>
-          <OpenInFlatfoxButton
-            id="open-flatfox-profile-btn"
-            preferences={{
-              location: form.watch('location'),
-              offerType: form.watch('offerType'),
-              objectCategory: form.watch('objectCategory') === 'ANY' ? undefined : form.watch('objectCategory'),
-              budgetMin: form.watch('budgetMin'),
-              budgetMax: form.watch('budgetMax'),
-              roomsMin: form.watch('roomsMin'),
-              roomsMax: form.watch('roomsMax'),
-            }}
-            language={language}
-            onBeforeOpen={
-              onboardingActive && onboardingState?.onboarding_step === 4
-                ? async () => {
-                    // Write step=5, active=true to Supabase BEFORE opening Flatfox
-                    // so the extension content script reads the correct step on load.
-                    await updateOnboardingState(5, true, onboardingState.onboarding_completed)
-                  }
-                : undefined
-            }
-            appendParams={
-              onboardingActive && onboardingState?.onboarding_step === 4
-                ? { homematch_onboarding: '5' }
-                : undefined
-            }
-          />
           {saveMessage && (
-            <p
-              className={`text-sm ${
-                saveMessage.type === 'success'
-                  ? 'text-green-600'
-                  : 'text-red-600'
-              }`}
-            >
+            <p className={`text-sm text-center mt-2 ${saveMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
               {saveMessage.text}
             </p>
           )}
