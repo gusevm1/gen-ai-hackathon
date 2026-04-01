@@ -160,7 +160,6 @@ class FeatherlessService:
     """
 
     def __init__(self) -> None:
-        self._client: httpx.AsyncClient | None = None
         self._api_keys: list[str] = []
         self._key_index = 0
         self._lock = threading.Lock()
@@ -193,37 +192,53 @@ class FeatherlessService:
             self._key_index += 1
         return key
 
-    def _get_client(self) -> httpx.AsyncClient:
-        """Get or create the httpx async client (lazy initialization)."""
-        if self._client is None:
-            self._client = httpx.AsyncClient(timeout=120.0)
-        return self._client
+    async def _call_llm(self, prompt: str, max_retries: int = 3) -> str:
+        """Make a single chat completion request to Featherless AI.
 
-    async def _call_llm(self, prompt: str) -> str:
-        """Make a single chat completion request to Featherless AI."""
-        client = self._get_client()
+        Uses a fresh httpx client per request to avoid HTTP/2 connection
+        sharing issues under high concurrency. Retries on transient errors.
+        """
         api_key = self._next_key()
 
         if not api_key:
             raise RuntimeError("No Featherless API key available")
 
-        response = await client.post(
-            FEATHERLESS_URL,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": FEATHERLESS_MODEL,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.1,
-                "max_tokens": 2048,
-            },
-        )
-        response.raise_for_status()
-
-        data = response.json()
-        return data["choices"][0]["message"]["content"]
+        last_err: Exception | None = None
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=120.0, http2=False) as client:
+                    response = await client.post(
+                        FEATHERLESS_URL,
+                        headers={
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": FEATHERLESS_MODEL,
+                            "messages": [{"role": "user", "content": prompt}],
+                            "temperature": 0.1,
+                            "max_tokens": 2048,
+                        },
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    return data["choices"][0]["message"]["content"]
+            except (httpx.RemoteProtocolError, httpx.LocalProtocolError, httpx.ReadError, ConnectionError) as e:
+                last_err = e
+                wait = 2 ** attempt
+                logger.warning("Featherless attempt %d/%d failed: %s — retrying in %ds", attempt + 1, max_retries, e, wait)
+                import asyncio
+                await asyncio.sleep(wait)
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code in (429, 502, 503, 504):
+                    last_err = e
+                    wait = 2 ** attempt
+                    logger.warning("Featherless HTTP %d — retrying in %ds", e.response.status_code, wait)
+                    import asyncio
+                    await asyncio.sleep(wait)
+                else:
+                    raise
+        raise last_err or RuntimeError("Featherless call failed after retries")
 
     async def analyze_listing(self, context: dict) -> dict:
         """Analyze an apartment listing and return structured insights.
@@ -260,10 +275,8 @@ class FeatherlessService:
             return _fallback_result()
 
     async def close(self) -> None:
-        """Close the underlying HTTP client."""
-        if self._client is not None:
-            await self._client.aclose()
-            self._client = None
+        """No-op — clients are per-request now."""
+        pass
 
 
 # Singleton instance used by routers and services
