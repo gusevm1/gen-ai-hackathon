@@ -5,6 +5,18 @@ import { ChatPage } from "@/components/chat/chat-page"
 // Mock scrollIntoView (not available in jsdom)
 Element.prototype.scrollIntoView = vi.fn()
 
+// PG-04: Mock FadeIn to render a detectable wrapper
+vi.mock("@/components/motion/FadeIn", () => ({
+  FadeIn: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="fade-in">{children}</div>
+  ),
+}))
+
+// PG-04: Mock PreferenceSummaryCard so it renders detectably without heavy deps
+vi.mock("@/components/chat/preference-summary-card", () => ({
+  PreferenceSummaryCard: () => <div data-testid="summary-card" />,
+}))
+
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
   usePathname: () => "/ai-search",
@@ -178,5 +190,56 @@ describe("ChatPage", () => {
         screen.getByText("I want a 2-bedroom flat near the lake")
       ).toBeDefined()
     })
+  })
+
+  // PG-03: Splash heading — visible when messages are empty (fetch pending)
+  it("PG-03: shows splash heading 'Create a Profile' when messages are empty", () => {
+    // Mock fetch to never resolve so messages remain empty on mount
+    mockFetch.mockReturnValue(new Promise(() => {}))
+
+    render(<ChatPage />)
+
+    // The splash heading and subtitle should be visible before any messages arrive
+    expect(screen.getByRole("heading", { name: /create a profile/i })).toBeDefined()
+    expect(
+      screen.getByText(/answer a few questions and ai will build your search profile/i)
+    ).toBeDefined()
+  })
+
+  // PG-04: FadeIn wrapper on summary card
+  it("PG-04: PreferenceSummaryCard is wrapped in FadeIn when phase is summarizing", async () => {
+    // First call (greeting) resolves normally
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: "hello", ready_to_summarize: false, extracted_preferences: null }),
+      })
+      // Second call (user message) triggers summarizing state
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: "done",
+          ready_to_summarize: true,
+          extracted_preferences: { budgetMax: 2000 },
+        }),
+      })
+
+    render(<ChatPage />)
+
+    // Wait for greeting to load, then send a user message via the chat input
+    await waitFor(() => {
+      // The chat input should be available (not disabled during greeting fetch)
+      expect(screen.getByRole("textbox")).toBeDefined()
+    })
+
+    const chatInput = screen.getByRole("textbox")
+    fireEvent.change(chatInput, { target: { value: "I need a flat in Zurich" } })
+    fireEvent.keyDown(chatInput, { key: "Enter", code: "Enter" })
+
+    // When ready_to_summarize fires, the summary card should be wrapped in FadeIn
+    await waitFor(() => {
+      expect(screen.getByTestId("fade-in")).toBeDefined()
+    })
+    expect(screen.getByTestId("summary-card")).toBeDefined()
   })
 })
