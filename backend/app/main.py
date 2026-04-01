@@ -4,12 +4,15 @@ Provides endpoints for fetching and parsing Flatfox listing data.
 Uses httpx.AsyncClient for async HTTP calls to Flatfox public API.
 """
 
+import logging
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO, format="%(name)s %(levelname)s: %(message)s")
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import chat, classifier, geocoding, listings, scoring
