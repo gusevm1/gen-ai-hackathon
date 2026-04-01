@@ -7,6 +7,7 @@ import { ChatInput, type ChatInputHandle } from "./chat-input"
 import { AIAvatar } from "./ai-avatar"
 import { TypingIndicator } from "./typing-indicator"
 import { PreferenceSummaryCard } from "./preference-summary-card"
+import { FadeIn } from "@/components/motion/FadeIn"
 import ReactMarkdown from "react-markdown"
 import { useLanguage } from "@/lib/language-context"
 
@@ -197,11 +198,13 @@ export function ChatPage() {
           </div>
         )}
         {phase === 'summarizing' && extractedPreferences && (
-          <PreferenceSummaryCard
-            extractedPreferences={extractedPreferences}
-            onProfileCreated={handleProfileCreated}
-            onContinueChatting={handleContinueChatting}
-          />
+          <FadeIn animate="visible">
+            <PreferenceSummaryCard
+              extractedPreferences={extractedPreferences}
+              onProfileCreated={handleProfileCreated}
+              onContinueChatting={handleContinueChatting}
+            />
+          </FadeIn>
         )}
         <div ref={bottomRef} />
       </div>
