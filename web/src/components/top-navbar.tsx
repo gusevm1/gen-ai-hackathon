@@ -20,7 +20,6 @@ export function TopNavbar() {
   const [createOpen, setCreateOpen] = useState(false)
 
   const navItems = [
-    { titleKey: "nav_home" as const, url: "/dashboard", icon: Home },
     { titleKey: "nav_top_matches" as const, url: "/top-matches", icon: Trophy, accent: true },
     { titleKey: "nav_profiles" as const, url: "/profiles", icon: User },
     { titleKey: "nav_analyses" as const, url: "/analyses", icon: BarChart3 },
@@ -30,6 +29,18 @@ export function TopNavbar() {
   return (
     <>
       <nav className="flex items-center gap-1">
+        <Link
+          href="/dashboard"
+          className={cn(
+            "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
+            pathname === "/dashboard"
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+          )}
+        >
+          <Home className="size-4" />
+          <span className="hidden sm:inline">{t(language, "nav_home")}</span>
+        </Link>
         <button
           onClick={() => setChooserOpen(true)}
           className={cn(
