@@ -94,7 +94,7 @@
 - [x] **Phase 35: Navigation & IA** — Rename nav item, remove Download from primary nav, install banner, Settings link (completed 2026-03-31)
 - [x] **Phase 36: State-Aware Dashboard** — New user explainer state, returning user workspace with active profile + top matches + recent analyses (completed 2026-03-31)
 - [x] **Phase 37: Design System Propagation** — Token cleanup, Framer Motion entrance animations, tier colors, hover states (completed 2026-03-31)
-- [ ] **Phase 38: Onboarding Rebuild** — WelcomeModal with Shadcn, checklist completion state, Settings re-entry
+- [x] **Phase 38: Onboarding Rebuild** — WelcomeModal with Shadcn, checklist completion state, Settings re-entry (completed 2026-04-01)
 - [ ] **Phase 39: Critical Handoffs** — Profile edit CTA + progress indicator, analyses empty state
 - [ ] **Phase 40: Page Redesigns** — Profiles list, AI chat, analyses cards, settings download section
 
@@ -310,7 +310,7 @@ Plans:
 **Goal:** The WelcomeModal is rebuilt on Shadcn primitives and is dark-mode aware; the onboarding checklist has a proper completion state instead of silently disappearing; and users can re-access the tour from Settings.
 **Depends on:** Phase 35
 **Requirements:** ONB-01, ONB-02, ONB-03, ONB-04, ONB-05, ONB-06, ONB-07
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 38-00-PLAN.md — Wave 0: test scaffolds for ONB-01 through ONB-07 (failing RED state)
@@ -367,6 +367,6 @@ Plans:
 | 35. Navigation & IA | 2/2 | Complete   | 2026-03-31 |
 | 36. State-Aware Dashboard | 2/2 | Complete    | 2026-03-31 |
 | 37. Design System Propagation | 5/5 | Complete    | 2026-03-31 |
-| 38. Onboarding Rebuild | 3/4 | In Progress|  |
+| 38. Onboarding Rebuild | 4/4 | Complete   | 2026-04-01 |
 | 39. Critical Handoffs | 0/TBD | Not started | - |
 | 40. Page Redesigns | 0/TBD | Not started | - |

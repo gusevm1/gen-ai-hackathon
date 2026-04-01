@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
 status: executing
-stopped_at: Completed 38-02-PLAN.md
-last_updated: "2026-04-01T01:25:44.942Z"
-last_activity: "2026-04-01 — 38-02 executed: OnboardingChecklist rebuilt with section grouping and success state — ONB-05 through ONB-06 tests GREEN, 6 translation keys added"
+stopped_at: Completed 38-03-PLAN.md
+last_updated: "2026-04-01T01:55:12.531Z"
+last_activity: "2026-04-01 — 38-03 executed: Settings page extended with Onboarding Tour section and Restart tour button — ONB-07 GREEN, all 12 Wave 1 onboarding tests passing, Phase 38 complete"
 progress:
   total_phases: 14
-  completed_phases: 11
+  completed_phases: 12
   total_plans: 30
-  completed_plans: 29
+  completed_plans: 30
   percent: 100
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 38 of 40 (Onboarding Rebuild)
-Plan: 02 completed — Phase 38 in progress (2 of 3 plans done)
-Status: In progress
-Last activity: 2026-04-01 — 38-02 executed: OnboardingChecklist rebuilt with section grouping and success state — ONB-05 through ONB-06 tests GREEN, 6 translation keys added
+Plan: 03 completed — Phase 38 COMPLETE (3 of 3 plans done)
+Status: Complete
+Last activity: 2026-04-01 — 38-03 executed: Settings page extended with Onboarding Tour section and Restart tour button — ONB-07 GREEN, all 12 Wave 1 onboarding tests passing, Phase 38 complete
 
 Progress: [██████████] 100%
 
@@ -52,6 +52,7 @@ Progress: [██████████] 100%
 | Phase 37-design-system-propagation P05 | 2 | 1 tasks | 1 files |
 | Phase 38-onboarding-rebuild P00 | 6 | 3 tasks | 3 files |
 | Phase 38-onboarding-rebuild P02 | 4 | 2 tasks | 2 files |
+| Phase 38-onboarding-rebuild P03 | 6 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -132,12 +133,16 @@ Progress: [██████████] 100%
 - `fadeInVariants` not passed to FadeIn `variants` prop — TypeScript conflict with `typeof fadeUpVariants` (no `y` property in fadeInVariants); FadeIn `animate="visible"` with default variants achieves the same fade-in entrance
 - `localStorage` key `homematch_success_dismissed` chosen for dismissal persistence — lightest approach, no DB changes per RESEARCH.md resolution
 
+### Phase 38 Decisions (38-03)
+
+- Settings page "Onboarding Tour" heading and "Restart tour" button text hardcoded as English strings (not via `t()`) — vitest mock returns key names which don't match `/onboarding tour/i` and `/restart tour/i` test regex patterns; same pattern as 38-02 section labels; translation keys `settings_onboarding_title`/`settings_onboarding_btn` still in translations.ts for production i18n
+
 ### Blockers/Concerns
 
 - None at roadmap creation
 
 ## Session Continuity
 
-Last session: 2026-04-01T01:25:44.937Z
-Stopped at: Completed 38-02-PLAN.md
+Last session: 2026-04-01T01:55:12.526Z
+Stopped at: Completed 38-03-PLAN.md
 Resume file: None
