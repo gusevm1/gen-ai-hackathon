@@ -71,55 +71,33 @@ Help users instantly see how well each property listing matches their specific n
 
 ### Active
 
-<!-- Navigation & IA -->
-- [ ] NAV-01: "AI-Powered Search" renamed to "New Profile" in top navbar
-- [ ] NAV-02: "Download" removed from primary nav, moved to Settings
-- [ ] NAV-03: Extension install banner shown only for users without confirmed install
+<!-- Profile -->
+- [ ] PROF-01: User can add phone number to their profile
+- [ ] PROF-02: Profile edit page has a "Contact Details" section (name, email pre-filled from auth, phone editable)
 
-<!-- Dashboard -->
-- [ ] DASH-01: Dashboard home detects user state (new vs returning) server-side
-- [ ] DASH-02: New user state — 3-step explainer + recommended AI path + secondary manual path
-- [ ] DASH-03: Returning user state — active profile card + recent analyses strip + Open Flatfox CTA
-- [ ] DASH-04: Profile creation cards use brand primary token (not hardcoded rose-500)
-- [ ] DASH-05: AI card visually recommended (badge + primary style); manual card secondary
+<!-- Quick Apply UI -->
+- [ ] QA-01: TopMatches listing card shows a "Quick Apply" button
+- [ ] QA-02: Clicking Quick Apply expands an inline panel below the card with an editable draft message
+- [ ] QA-03: User can edit the draft message in the inline panel before sending
+- [ ] QA-04: User can collapse the panel without sending
+- [ ] QA-05: User can send the message from the inline panel with a single click
+- [ ] QA-06: Card shows "Applied ✓" state after successful send
+- [ ] QA-07: Card shows an error state if send fails, with a retry option
 
-<!-- Onboarding -->
-- [ ] ONB-01: WelcomeModal rebuilt with Shadcn components — no hardcoded inline styles, dark-mode aware
-- [ ] ONB-02: Checklist groups steps 5–8 under "In the extension" label
-- [ ] ONB-03: Checklist completion state: morphs to "You're all set" with Flatfox link instead of disappearing
-- [ ] ONB-04: "Resume tour" option accessible from Settings after dismissal
+<!-- Message Generation -->
+- [ ] MSG-01: Draft is AI-generated from user profile (name, situation, key preferences, move-in intent)
+- [ ] MSG-02: Draft references specific listing details (address, property type)
+- [ ] MSG-03: User can request a regenerated draft
 
-<!-- Critical handoffs -->
-- [ ] HND-01: Profile edit — sticky bottom CTA: "Save & Open in Flatfox →" (full-width, primary button)
-- [ ] HND-02: Profile edit — section progress indicator ("2 of 5 — Budget")
-- [ ] HND-03: Analyses empty state — "Open Flatfox →" primary CTA + filter bar hidden when empty
-- [ ] HND-04: Post-save redirect behavior: saving preferences navigates to confirmation step, not silent
+<!-- Send Mechanism -->
+- [ ] SEND-01: FastAPI backend endpoint accepts send requests from the web app
+- [ ] SEND-02: Backend fetches a fresh CSRF token from the Flatfox listing page
+- [ ] SEND-03: Backend POSTs the contact form to Flatfox using user's name, email, and phone
 
-<!-- Design system -->
-- [ ] DS-01: All hardcoded rose-500 references replaced with primary token
-- [ ] DS-02: Dashboard pages get Framer Motion entrance animations (FadeIn on mount, stagger on lists)
-- [ ] DS-03: Tier colors unified: teal/green/amber/red across web + extension (not emerald/blue/amber/gray)
-
-<!-- Page redesigns -->
-- [ ] PG-01: Profiles list cards show active indicator, analysis count, last-used date
-- [ ] PG-02: AI chat page — context panel explaining what the chat is doing
-- [ ] PG-03: AI chat — summary card transition is smooth, not abrupt
-- [ ] PG-04: Analyses cards — left-edge tier color bar, larger score display
-- [ ] PG-05: Settings page — Download Extension section added
-
-<!-- Deferred LP polish (v4.1 carry-overs) -->
-- [ ] HERO-01: Stats row removed from SectionHero
-- [ ] HERO-02: CTA button centered on its own row
-- [ ] HERO-03: Poor tier color updated to red across landing + extension
-- [ ] PROB-01: Decorative background numbers removed from problem cards
-- [ ] PROB-02: Problem cards slide in from left on scroll
-- [ ] PROB-03: Problem cards visually redesigned — elevated, engaging
-- [ ] SOLN-01: Browser demo enlarged (max-w-3xl+)
-- [ ] SOLN-02: Step cards enlarged with more presence
-- [ ] SOLN-03: Score display uses full tier color system (green/yellow/red)
-- [ ] CTA-01: Headline font size increased to clamp(2.5rem, 6vw, 4.5rem)
-- [ ] CTA-02: Headline dramatic bottom-up entrance animation
-- [ ] CRED-01: ETH + Gen-AI Hackathon credits section added
+<!-- Apply Tracking -->
+- [ ] TRACK-01: Applied listings stored per user + profile in Supabase (listing ID, timestamp)
+- [ ] TRACK-02: TopMatches cards show an "Applied" indicator for listings already contacted
+- [ ] TRACK-03: User can view a dedicated Applications page listing all sent applications with details and date
 
 ### Out of Scope
 
@@ -133,21 +111,17 @@ Help users instantly see how well each property listing matches their specific n
 - HIST-01/02: Analysis history across profiles — deferred
 - SEC-01/02: Edge function JWT verification — deferred (auth handled at function level)
 
-## Current Milestone: v6.0 UX & Design System Overhaul
+## Current Milestone: v7.0 Quick Apply
 
-**Goal:** Redesign the user experience end-to-end — state-aware dashboard, aligned design system, and fixed user journeys for both first-time and returning users so the product is foolproof, intuitive, and visually consistent with the landing page.
+**Goal:** Complete the find→score→rank→apply loop by letting users send a personalized AI-drafted contact message to Flatfox listing owners directly from the Top Matches page — without leaving HomeMatch.
 
 **Target features:**
-- State-aware dashboard home: new user onboarding state vs returning user workspace
-- Navigation restructure: rename "AI-Powered Search" → "New Profile", remove "Download" from primary nav
-- Design system propagation: replace hardcoded rose-500 with brand tokens, Framer Motion entrance animations
-- WelcomeModal rebuilt with Shadcn components (dark-mode aware, brand-aligned)
-- Critical handoff fix: full-width "Save & Open in Flatfox →" CTA on profile edit
-- Profile edit section progress indicator
-- Onboarding checklist completion state (not silent disappearance)
-- Analyses empty state with actionable CTAs
-- Tier colors unified across web and extension
-- Page-level redesigns: profiles list, AI chat, analyses cards, settings
+- Quick Apply button on TopMatches cards — inline editable draft panel
+- AI-generated draft message personalized from user profile and listing details
+- Backend POSTs Flatfox contact form on user's behalf (CSRF + requests.Session)
+- Phone number added to profile (required for Flatfox contact form)
+- Applied state tracked per user+profile in Supabase
+- Applications page listing all sent applications
 
 ## Context
 
@@ -213,4 +187,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-31 — Milestone v6.0 UX & Design System Overhaul started*
+*Last updated: 2026-04-02 — Milestone v7.0 Quick Apply started*

@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.0
-milestone_name: UX & Design System Overhaul
-status: executing
-stopped_at: Completed 41-02-PLAN.md
-last_updated: "2026-04-01T20:11:24.819Z"
-last_activity: "2026-04-01 — 41-01 executed: PropertyMapView client component with Street View + Map toggle using @googlemaps/js-api-loader v2 functional API"
+milestone: v7.0
+milestone_name: Quick Apply
+status: planning
+stopped_at: Defining requirements
+last_updated: "2026-04-02T00:00:00.000Z"
+last_activity: "2026-04-02 — Milestone v7.0 started — 18 requirements defined across 5 categories (PROF, QA, MSG, SEND, TRACK)"
 progress:
-  total_phases: 15
-  completed_phases: 15
-  total_plans: 39
-  completed_plans: 39
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** Phase 41 — add-google-maps-street-view-to-property-listings
+**Current focus:** v7.0 Quick Apply — defining roadmap
 
 ## Current Position
 
-Phase: 41 (add-google-maps-street-view-to-property-listings) — EXECUTING
-Plan: 01 complete — 02 remaining
-Status: Executing Phase 41
-Last activity: 2026-04-01 — 41-01 executed: PropertyMapView client component with Street View + Map toggle using @googlemaps/js-api-loader v2 functional API
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-02 — Milestone v7.0 Quick Apply started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
