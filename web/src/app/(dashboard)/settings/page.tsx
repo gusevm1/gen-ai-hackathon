@@ -11,12 +11,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { buttonVariants } from "@/components/ui/button"
-import { Download } from "lucide-react"
+import { buttonVariants, Button } from "@/components/ui/button"
+import { Download, RotateCcw } from "lucide-react"
 import { updateProfilesLanguage } from "@/app/(dashboard)/profiles/actions"
+import { useOnboardingContext } from "@/components/onboarding/OnboardingProvider"
 
 export default function SettingsPage() {
   const { language, setLanguage } = useLanguage()
+  const { startTour } = useOnboardingContext()
 
   async function handleLanguageChange(newLang: Language) {
     setLanguage(newLang)
@@ -54,6 +56,18 @@ export default function SettingsPage() {
           <Download className="size-4 mr-2" />
           {t(language, "download_btn")}
         </Link>
+      </div>
+
+      {/* Onboarding Tour section */}
+      <div className="mt-10">
+        <h2 className="text-lg font-semibold mb-1">Onboarding Tour</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Take the tour again to revisit the setup steps.
+        </p>
+        <Button variant="outline" onClick={startTour}>
+          <RotateCcw className="size-4 mr-2" />
+          Restart tour
+        </Button>
       </div>
     </div>
   )
