@@ -6,6 +6,8 @@ import { driver, Driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { createClient } from '@/lib/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 // ─── Context types ────────────────────────────────────────────────────────────
 
@@ -33,71 +35,29 @@ interface WelcomeModalProps {
   onExit: () => void;
 }
 
-function WelcomeModal({ onStart, onExit }: WelcomeModalProps) {
+function WelcomeModal({ onStart, onExit, open }: WelcomeModalProps & { open: boolean }) {
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        // No dark backdrop — non-blocking
-        pointerEvents: 'none',
-      }}
-    >
-      <div
-        style={{
-          background: '#fff',
-          borderRadius: '12px',
-          padding: '28px 32px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-          maxWidth: '400px',
-          width: '90vw',
-          pointerEvents: 'auto',
-          fontFamily: 'inherit',
-        }}
-      >
-        <h2 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700, color: '#111' }}>
-          Welcome to HomeMatch!
-        </h2>
-        <p style={{ margin: '0 0 20px', fontSize: '14px', color: '#555', lineHeight: 1.5 }}>
-          Let&apos;s take a quick tour to show you how to find your perfect home. This will only take a minute.
-        </p>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <button
-            onClick={onStart}
-            style={{
-              background: '#111',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '8px 18px',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Start Tour
-          </button>
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onExit(); }}>
+      <DialogContent showCloseButton className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Welcome to HomeMatch!</DialogTitle>
+          <DialogDescription>
+            HomeMatch scores property listings against your preferences so you instantly know what fits.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-3 pt-2">
+          <Button className="w-full" onClick={onStart}>
+            Let&apos;s get started
+          </Button>
           <button
             onClick={onExit}
-            style={{
-              background: 'transparent',
-              color: '#888',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              padding: '8px 14px',
-              fontSize: '13px',
-              cursor: 'pointer',
-            }}
+            className="text-xs text-muted-foreground hover:text-foreground text-center cursor-pointer transition-colors"
           >
-            Exit Tutorial
+            Skip tour
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -372,9 +332,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   return (
     <OnboardingContext.Provider value={contextValue}>
       {children}
-      {showWelcome && (
-        <WelcomeModal onStart={handleWelcomeStart} onExit={handleWelcomeExit} />
-      )}
+      <WelcomeModal open={showWelcome} onStart={handleWelcomeStart} onExit={handleWelcomeExit} />
     </OnboardingContext.Provider>
   );
 }
