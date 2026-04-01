@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
 status: executing
-stopped_at: Completed 40-01-PLAN.md
-last_updated: "2026-04-01T07:39:07.019Z"
-last_activity: "2026-04-01 — 39-02 executed: Analyses empty state CTAs (Open Flatfox + Download Extension) and conditional filter bar — HND-03 and HND-04 GREEN, Phase 39 complete"
+stopped_at: Completed 40-02-PLAN.md
+last_updated: "2026-04-01T07:42:31.268Z"
+last_activity: "2026-04-01 — 40-01 executed: Profile card redesign — active ring border (ring-2 ring-primary) replaces star icon, last-used date row added, updated_at plumbed through Supabase query — PG-01 and PG-02 GREEN"
 progress:
   total_phases: 14
   completed_phases: 13
   total_plans: 37
-  completed_plans: 35
+  completed_plans: 36
   percent: 98
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 40 of 40 (Page Redesigns)
-Plan: 01 completed — Phase 40 IN PROGRESS (2 of 4 plans done)
+Plan: 02 completed — Phase 40 IN PROGRESS (3 of 4 plans done)
 Status: In Progress
-Last activity: 2026-04-01 — 40-01 executed: Profile card redesign — active ring border (ring-2 ring-primary) replaces star icon, last-used date row added, updated_at plumbed through Supabase query — PG-01 and PG-02 GREEN
+Last activity: 2026-04-01 — 40-02 executed: Analysis card redesign — border-l-4 tier color bar + two-column layout (text-3xl score left, title/address right), rounded-full pill removed — PG-05 and PG-06 GREEN
 
 Progress: [██████████] 98%
 
@@ -58,6 +58,7 @@ Progress: [██████████] 98%
 | Phase 39 P00 | 3 | 1 tasks | 1 files |
 | Phase 40-page-redesigns P00 | 4 | 3 tasks | 3 files |
 | Phase 40-page-redesigns P01 | 2 | 2 tasks | 2 files |
+| Phase 40-page-redesigns P02 | 2 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -164,12 +165,19 @@ Progress: [██████████] 98%
 - Last-used date rendered as plain <p> below CardDescription — preserves semantic card structure without overloading CardDescription
 - formatLastUsed placed above buildSummaryLine — both are pure formatting helpers, grouped by function type
 
+### Phase 40 Decisions (40-02)
+
+- TIER_STYLES extended with border property (border-teal/green/amber/red-500) alongside existing bg/text — minimal change to existing map structure
+- border-l-4 combined with tierStyle.border on Card className — Shadcn Card base border (1px all-around) overridden only on the left side to 4px, intentional per design
+- Score moved from rounded-full pill to text-3xl span in two-column left column — tier + score are now the primary visual signals
+- Standalone tier label span (below old flex row) removed and relocated inside the left column alongside score
+
 ### Blockers/Concerns
 
 - None at roadmap creation
 
 ## Session Continuity
 
-Last session: 2026-04-01T07:39:07.013Z
-Stopped at: Completed 40-01-PLAN.md
+Last session: 2026-04-01T07:42:31.263Z
+Stopped at: Completed 40-02-PLAN.md
 Resume file: None
