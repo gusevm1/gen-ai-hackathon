@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
-status: completed
-stopped_at: Completed 40-03-PLAN.md
-last_updated: "2026-04-01T07:52:15.314Z"
-last_activity: "2026-04-01 — 40-03 executed: Chat splash heading 'Create a Profile' added for empty state, PreferenceSummaryCard wrapped in FadeIn on summarizing phase — PG-03, PG-04, PG-07 GREEN"
+status: executing
+stopped_at: Completed 41-02-PLAN.md
+last_updated: "2026-04-01T20:11:24.819Z"
+last_activity: "2026-04-01 — 41-01 executed: PropertyMapView client component with Street View + Map toggle using @googlemaps/js-api-loader v2 functional API"
 progress:
-  total_phases: 14
-  completed_phases: 14
-  total_plans: 37
-  completed_plans: 37
+  total_phases: 15
+  completed_phases: 15
+  total_plans: 39
+  completed_plans: 39
   percent: 100
 ---
 
@@ -21,20 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** v6.0 UX & Design System Overhaul — Phase 40: Page Redesigns (COMPLETE)
+**Current focus:** Phase 41 — add-google-maps-street-view-to-property-listings
 
 ## Current Position
 
-Phase: 40 of 40 (Page Redesigns)
-Plan: 03 completed — Phase 40 COMPLETE (all 4 plans done)
-Status: Complete
-Last activity: 2026-04-01 — 40-03 executed: Chat splash heading 'Create a Profile' added for empty state, PreferenceSummaryCard wrapped in FadeIn on summarizing phase — PG-03, PG-04, PG-07 GREEN
+Phase: 41 (add-google-maps-street-view-to-property-listings) — EXECUTING
+Plan: 01 complete — 02 remaining
+Status: Executing Phase 41
+Last activity: 2026-04-01 — 41-01 executed: PropertyMapView client component with Street View + Map toggle using @googlemaps/js-api-loader v2 functional API
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity (v5.0 reference):**
+
 - Total plans completed: 17 (phases 27-34)
 - Average duration: ~5 min/plan
 - Total execution time: ~85 min
@@ -60,6 +61,8 @@ Progress: [██████████] 100%
 | Phase 40-page-redesigns P01 | 2 | 2 tasks | 2 files |
 | Phase 40-page-redesigns P02 | 2 | 1 tasks | 1 files |
 | Phase 40-page-redesigns P03 | 4 | 2 tasks | 1 files |
+| Phase 41-google-maps-street-view P01 | 3 | 2 tasks | 2 files |
+| Phase 41 P02 | 158 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -173,12 +176,22 @@ Progress: [██████████] 100%
 - Score moved from rounded-full pill to text-3xl span in two-column left column — tier + score are now the primary visual signals
 - Standalone tier label span (below old flex row) removed and relocated inside the left column alongside score
 
+### Roadmap Evolution
+
+- Phase 41 added: Add Google Maps Street View to property listings
+
+### Phase 41 Decisions (41-01)
+
+- Used importLibrary() functional API (v2) instead of deprecated Loader class — @googlemaps/js-api-loader v2.0.2 no longer exposes .load() method on the Loader class
+- Map container always rendered (hidden via cn() + hidden class) so Google Maps constructor can attach to the ref during init — conditional rendering would produce null ref
+- cancelled flag in useEffect cleanup prevents state updates on unmounted component
+
 ### Blockers/Concerns
 
 - None at roadmap creation
 
 ## Session Continuity
 
-Last session: 2026-04-01T07:48:02.591Z
-Stopped at: Completed 40-03-PLAN.md
+Last session: 2026-04-01T20:11:24.817Z
+Stopped at: Completed 41-02-PLAN.md
 Resume file: None

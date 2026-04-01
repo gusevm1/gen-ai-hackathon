@@ -381,3 +381,14 @@ Plans:
 | 38. Onboarding Rebuild | 4/4 | Complete    | 2026-04-01 |
 | 39. Critical Handoffs | 3/3 | Complete    | 2026-04-01 |
 | 40. Page Redesigns | 4/4 | Complete    | 2026-04-01 |
+
+### Phase 41: Add Google Maps Street View to property listings
+
+**Goal:** Add a Google Maps viewer to the property analysis detail page — interactive Street View panorama facing the building by default, with a toggle to Map view and automatic fallback when Street View is unavailable.
+**Requirements**: D-01 through D-15 (CONTEXT.md)
+**Depends on:** Phase 40
+**Plans:** 2/2 plans complete
+
+Plans:
+- [x] 41-01-PLAN.md — PropertyMapView client component: @googlemaps/js-api-loader, all states (loading/ready/unavailable/error), toggle, accessibility
+- [x] 41-02-PLAN.md — Analysis page integration: listing_profiles secondary query, conditional render, env var setup
