@@ -12,11 +12,11 @@ function getTierFromScore(score: number): string {
   return 'poor'
 }
 
-const TIER_STYLES: Record<string, { bg: string; text: string }> = {
-  excellent: { bg: 'bg-teal-500', text: 'text-white' },
-  good: { bg: 'bg-green-500', text: 'text-white' },
-  fair: { bg: 'bg-amber-500', text: 'text-gray-900' },
-  poor: { bg: 'bg-red-500', text: 'text-white' },
+const TIER_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+  excellent: { bg: 'bg-teal-500', text: 'text-white',     border: 'border-teal-500' },
+  good:      { bg: 'bg-green-500', text: 'text-white',    border: 'border-green-500' },
+  fair:      { bg: 'bg-amber-500', text: 'text-gray-900', border: 'border-amber-500' },
+  poor:      { bg: 'bg-red-500',   text: 'text-white',    border: 'border-red-500' },
 }
 
 function formatDate(dateString: string): string {
@@ -78,10 +78,20 @@ export function AnalysesGrid({ analyses, profileMap, lang }: AnalysesGridProps) 
         return (
           <StaggerItem key={analysis.id}>
             <Link href={`/analysis/${analysis.listing_id}`}>
-              <Card className="cursor-pointer transition-all hover:ring-2 hover:ring-primary/20 hover:-translate-y-1 hover:shadow-lg h-full">
+              <Card className={`cursor-pointer transition-all hover:ring-2 hover:ring-primary/20 hover:-translate-y-1 hover:shadow-lg h-full border-l-4 ${tierStyle.border}`}>
                 <CardContent className="flex flex-col gap-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0 mr-2">
+                  <div className="flex gap-4 items-start">
+                    {/* LEFT: Score + tier label */}
+                    <div className="shrink-0 flex flex-col items-center justify-center min-w-[3rem]">
+                      <span className="text-3xl font-bold leading-none text-foreground">
+                        {analysis.score}
+                      </span>
+                      <span className="text-xs text-muted-foreground capitalize mt-0.5">
+                        {t(lang, tierKey)}
+                      </span>
+                    </div>
+                    {/* RIGHT: Title + address */}
+                    <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium text-foreground block truncate">
                         {primaryTitle}
                       </span>
@@ -91,17 +101,8 @@ export function AnalysesGrid({ analyses, profileMap, lang }: AnalysesGridProps) 
                         </span>
                       )}
                     </div>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold shrink-0 ${tierStyle.bg} ${tierStyle.text}`}
-                    >
-                      {analysis.score}
-                    </span>
                   </div>
-
-                  <span className="text-xs text-muted-foreground capitalize">
-                    {t(lang, tierKey)}
-                  </span>
-
+                  {/* Footer: profile name + date — unchanged */}
                   <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-1 border-t border-border">
                     {profileName ? (
                       <span className="truncate max-w-[60%]">{profileName}</span>
