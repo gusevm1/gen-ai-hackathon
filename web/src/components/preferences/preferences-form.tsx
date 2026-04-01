@@ -94,6 +94,15 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
     }
   }
 
+  const SECTIONS = [
+    { value: 'location', label: 'Location & Type', key: 'pref_location_type' as const },
+    { value: 'budget', label: 'Budget', key: 'pref_budget' as const },
+    { value: 'size', label: 'Size & Rooms', key: 'pref_size_rooms' as const },
+    { value: 'features', label: 'Features', key: 'pref_features_availability' as const },
+    { value: 'dynamic', label: 'Custom Criteria', key: 'pref_custom_criteria' as const },
+    { value: 'importance', label: 'What Matters', key: 'pref_what_matters' as const },
+  ]
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pb-20">
@@ -106,52 +115,37 @@ export function PreferencesForm({ defaultValues, onSave, profileId, profileName,
             </span>
           </div>
         )}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+          <span className="font-medium">6 sections</span>
+          <div className="flex gap-1">
+            {SECTIONS.map((_, i) => (
+              <div key={i} className="h-1.5 w-6 rounded-full bg-muted" />
+            ))}
+          </div>
+        </div>
         <Accordion
           multiple
           defaultValue={["location", "budget", "size", "features", "dynamic", "importance"]}
           className="w-full"
         >
-          <AccordionItem value="location">
-            <AccordionTrigger>{t(language, 'pref_location_type')}</AccordionTrigger>
-            <AccordionContent>
-              <LocationTypeSection form={form} />
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="budget">
-            <AccordionTrigger>{t(language, 'pref_budget')}</AccordionTrigger>
-            <AccordionContent>
-              <BudgetSection form={form} />
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="size">
-            <AccordionTrigger>{t(language, 'pref_size_rooms')}</AccordionTrigger>
-            <AccordionContent>
-              <SizeRoomsSection form={form} />
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="features">
-            <AccordionTrigger>{t(language, 'pref_features_availability')}</AccordionTrigger>
-            <AccordionContent>
-              <FeaturesSection form={form} />
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="dynamic">
-            <AccordionTrigger>{t(language, 'pref_custom_criteria')}</AccordionTrigger>
-            <AccordionContent>
-              <DynamicFieldsSection form={form} />
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="importance">
-            <AccordionTrigger>{t(language, 'pref_what_matters')}</AccordionTrigger>
-            <AccordionContent>
-              <ImportanceSection form={form} />
-            </AccordionContent>
-          </AccordionItem>
+          {SECTIONS.map((section, i) => (
+            <AccordionItem key={section.value} value={section.value}>
+              <AccordionTrigger>
+                <span className="flex items-center gap-2">
+                  <span className="flex items-center justify-center size-6 rounded-full bg-muted text-xs font-medium">{i + 1}</span>
+                  {t(language, section.key)}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                {section.value === 'location' && <LocationTypeSection form={form} />}
+                {section.value === 'budget' && <BudgetSection form={form} />}
+                {section.value === 'size' && <SizeRoomsSection form={form} />}
+                {section.value === 'features' && <FeaturesSection form={form} />}
+                {section.value === 'dynamic' && <DynamicFieldsSection form={form} />}
+                {section.value === 'importance' && <ImportanceSection form={form} />}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
         </Accordion>
 
         <div className="sticky bottom-0 z-10 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 py-3 -mx-4 mt-6">
