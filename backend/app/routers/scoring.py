@@ -771,6 +771,19 @@ async def top_matches(request: TopMatchesRequest) -> TopMatchesResponse:
 
     preferences = UserPreferences.model_validate(raw_prefs)
 
+    # 1b. Guard: empty preferences produce score 0 for everything — bail early
+    has_criteria = (
+        preferences.budget_max is not None
+        or preferences.rooms_min is not None
+        or preferences.living_space_min is not None
+        or len(preferences.dynamic_fields) > 0
+    )
+    if not has_criteria:
+        raise HTTPException(
+            status_code=422,
+            detail="No scoring criteria configured. Please set budget, rooms, size, or custom criteria in your profile.",
+        )
+
     # 2. Cache check
     if not request.force_refresh:
         cached = await asyncio.to_thread(
