@@ -1,6 +1,7 @@
 'use client'
 
-import { Star, MoreHorizontal, Copy, Pencil, Trash2 } from 'lucide-react'
+import { MoreHorizontal, Copy, Pencil, Trash2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { OpenInFlatfoxButton } from '@/components/profiles/open-in-flatfox-button'
 import {
   Card,
@@ -109,15 +110,18 @@ export function ProfileCard({
   }
 
   return (
-    <Card className="hover:-translate-y-1 hover:shadow-lg hover:ring-2 hover:ring-primary/10 transition-all">
+    <Card className={cn(
+      "hover:-translate-y-1 hover:shadow-lg transition-all",
+      profile.is_default
+        ? "ring-2 ring-primary"
+        : "hover:ring-2 hover:ring-primary/10"
+    )}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-1.5">
-          {profile.is_default && (
-            <Star className="size-4 text-amber-500 fill-amber-500" />
-          )}
-          {profile.name}
-        </CardTitle>
+        <CardTitle>{profile.name}</CardTitle>
         <CardDescription>{summary}</CardDescription>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Last used {formatLastUsed(profile.updated_at)}
+        </p>
         <CardAction>
           <DropdownMenu>
             <DropdownMenuTrigger
