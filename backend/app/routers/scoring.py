@@ -254,6 +254,45 @@ async def _score_with_profile(profile, preferences: UserPreferences) -> ScoreRes
     # Also enrich proximity_data for SUBJECTIVE fields so the LLM has real data to evaluate.
     has_coords = profile.latitude is not None and profile.longitude is not None
 
+    # Geocode from address if profile lacks coordinates (98% of profiles have NULL lat/lon)
+    if not has_coords:
+        try:
+            from app.services.apify import geocode_listing as _geocode_listing
+            geo = await _geocode_listing(listing)
+            if geo:
+                listing.latitude = float(geo["lat"])
+                listing.longitude = float(geo["lon"])
+                has_coords = True
+                logger.info(
+                    "Geocoded listing %d to lat=%.6f lon=%.6f for on-demand Apify",
+                    profile.listing_id, listing.latitude, listing.longitude,
+                )
+                # Persist geocoded coords back to profile (fire-and-forget)
+                try:
+                    from app.services.listing_profile_db import save_listing_profile
+                    profile.latitude = listing.latitude
+                    profile.longitude = listing.longitude
+                    await asyncio.to_thread(save_listing_profile, profile)
+                    logger.info(
+                        "Saved geocoded coords for listing %d", profile.listing_id,
+                    )
+                except Exception:
+                    logger.warning(
+                        "Failed to persist geocoded coords for listing %d",
+                        profile.listing_id,
+                    )
+            else:
+                logger.warning(
+                    "Geocoding failed for listing %d — skipping on-demand Apify",
+                    profile.listing_id,
+                )
+        except Exception:
+            logger.warning(
+                "Geocoding error for listing %d — continuing without coords",
+                profile.listing_id,
+                exc_info=True,
+            )
+
     # Collect SUBJECTIVE fields that will go to the LLM — we'll run Apify for them too
     # so the LLM can evaluate proximity-based subjective criteria (e.g. "McDonald's nearby")
     subjective_lookup_fields = [
