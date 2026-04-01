@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
 status: completed
-stopped_at: Phase 40 context gathered
-last_updated: "2026-04-01T05:48:50.061Z"
+stopped_at: Completed 40-00-PLAN.md
+last_updated: "2026-04-01T07:34:16.079Z"
 last_activity: "2026-04-01 — 39-02 executed: Analyses empty state CTAs (Open Flatfox + Download Extension) and conditional filter bar — HND-03 and HND-04 GREEN, Phase 39 complete"
 progress:
   total_phases: 14
   completed_phases: 13
-  total_plans: 33
-  completed_plans: 33
+  total_plans: 37
+  completed_plans: 34
   percent: 98
 ---
 
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ## Current Position
 
-Phase: 39 of 40 (Critical Handoffs)
-Plan: 02 completed — Phase 39 COMPLETE (2 of 2 plans done)
-Status: Complete
+Phase: 40 of 40 (Page Redesigns)
+Plan: 00 completed — Phase 40 IN PROGRESS (1 of 4 plans done)
+Status: In Progress
 Last activity: 2026-04-01 — 39-02 executed: Analyses empty state CTAs (Open Flatfox + Download Extension) and conditional filter bar — HND-03 and HND-04 GREEN, Phase 39 complete
 
 Progress: [██████████] 98%
@@ -56,6 +56,7 @@ Progress: [██████████] 98%
 | Phase 39-critical-handoffs P01 | 3 | 2 tasks | 3 files |
 | Phase 39 P02 | 3 | 1 tasks | 3 files |
 | Phase 39 P00 | 3 | 1 tasks | 1 files |
+| Phase 40-page-redesigns P00 | 4 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -148,12 +149,19 @@ Progress: [██████████] 98%
 - hasSaved state set to true AFTER save-then-open logic runs, so first save only saves (no surprise Flatfox tab), subsequent saves do both
 - Onboarding step 4 logic preserved: showOpenFlatfoxStep() fires instead of save-then-open when user is on step 4
 
+### Phase 40 Decisions (40-00)
+
+- Static ring check filters hover: prefixed classes — current Card has `hover:ring-2 hover:ring-primary/10` which would incorrectly satisfy `toContain('ring-2')` without filtering; test splits className and filters `hover:` entries
+- FadeIn mock renders `<div data-testid="fade-in">{children}</div>` for implementation-agnostic PG-04 detection — Plan 04 only needs to wrap with FadeIn, test does not care about animation props
+- PreferenceSummaryCard mocked with `data-testid="summary-card"` to prevent deep dependency chain in jsdom test environment
+- StaggerGroup/StaggerItem mocked as pass-through divs in analyses-grid.test to isolate Card rendering from motion library jsdom incompatibility
+
 ### Blockers/Concerns
 
 - None at roadmap creation
 
 ## Session Continuity
 
-Last session: 2026-04-01T05:48:50.047Z
-Stopped at: Phase 40 context gathered
-Resume file: .planning/phases/40-page-redesigns/40-CONTEXT.md
+Last session: 2026-04-01T07:34:10.829Z
+Stopped at: Completed 40-00-PLAN.md
+Resume file: None

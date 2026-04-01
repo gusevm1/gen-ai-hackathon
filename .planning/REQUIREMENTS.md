@@ -53,18 +53,18 @@
 
 ### Page Redesigns — Profiles
 
-- [ ] **PG-01**: Profile cards in the profiles list show the active profile badge, total analysis count, and last-used date
-- [ ] **PG-02**: Active profile is visually prominent in the profiles list (highlighted border or pin indicator)
+- [x] **PG-01**: Profile cards in the profiles list show the active profile badge, total analysis count, and last-used date
+- [x] **PG-02**: Active profile is visually prominent in the profiles list (highlighted border or pin indicator)
 
 ### Page Redesigns — AI Chat (Profile Creation)
 
-- [ ] **PG-03**: AI chat page shows a context heading explaining what the conversation does
-- [ ] **PG-04**: Transition from chat to summary card is animated — not an abrupt swap
+- [x] **PG-03**: AI chat page shows a context heading explaining what the conversation does
+- [x] **PG-04**: Transition from chat to summary card is animated — not an abrupt swap
 
 ### Page Redesigns — Analyses
 
-- [ ] **PG-05**: Analysis cards show a left-edge colored tier bar (teal/green/amber/red) for instant scanability
-- [ ] **PG-06**: Analysis card score number is larger and left-aligned (not a small pill top-right)
+- [x] **PG-05**: Analysis cards show a left-edge colored tier bar (teal/green/amber/red) for instant scanability
+- [x] **PG-06**: Analysis card score number is larger and left-aligned (not a small pill top-right)
 
 ### Page Redesigns — Settings
 
@@ -140,12 +140,12 @@
 | HND-02 | Phase 39 | Complete |
 | HND-03 | Phase 39 | Complete |
 | HND-04 | Phase 39 | Complete |
-| PG-01 | Phase 40 | Pending |
-| PG-02 | Phase 40 | Pending |
-| PG-03 | Phase 40 | Pending |
-| PG-04 | Phase 40 | Pending |
-| PG-05 | Phase 40 | Pending |
-| PG-06 | Phase 40 | Pending |
+| PG-01 | Phase 40 | Complete |
+| PG-02 | Phase 40 | Complete |
+| PG-03 | Phase 40 | Complete |
+| PG-04 | Phase 40 | Complete |
+| PG-05 | Phase 40 | Complete |
+| PG-06 | Phase 40 | Complete |
 | PG-07 | Phase 40 | Pending |
 
 **Coverage:**
