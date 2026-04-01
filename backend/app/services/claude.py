@@ -37,7 +37,7 @@ from app.prompts.scoring import (
 logger = logging.getLogger(__name__)
 
 FEATHERLESS_URL = "https://api.featherless.ai/v1/chat/completions"
-SUBJECTIVE_MODEL = os.environ.get("SUBJECTIVE_MODEL", "Qwen/Qwen3.5-27B")
+SUBJECTIVE_MODEL = os.environ.get("SUBJECTIVE_MODEL", "Qwen/Qwen2.5-72B-Instruct")
 
 
 # ---------------------------------------------------------------------------

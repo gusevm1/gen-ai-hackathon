@@ -28,7 +28,7 @@ from app.models.scoring import ChecklistItem
 logger = logging.getLogger(__name__)
 
 FEATHERLESS_URL = "https://api.featherless.ai/v1/chat/completions"
-FEATHERLESS_MODEL = os.environ.get("FEATHERLESS_MODEL", "Qwen/Qwen3.5-27B")
+FEATHERLESS_MODEL = os.environ.get("FEATHERLESS_MODEL", "Qwen/Qwen2.5-72B-Instruct")
 
 
 # ── JSON parsing helpers ─────────────────────────────────────────────
