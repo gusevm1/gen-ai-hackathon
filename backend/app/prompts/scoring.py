@@ -61,11 +61,14 @@ EVALUATION RULES:
 - If no subjective criteria are listed, still generate summary_bullets based on the listing data and preferences.
 
 IMAGE ANALYSIS:
-- When listing photos are provided, evaluate: interior condition and finish quality, natural light \
-and window views, kitchen and bathroom condition, general maintenance and upkeep.
-- Use observations from photos to inform your criterion evaluations where relevant.
-- If no photos are provided, evaluate based on text data only and note that visual assessment \
-was not possible.
+- The "## Pre-Analyzed Property Data" section in the user prompt may contain image-derived scores \
+(condition, natural light, kitchen quality, bathroom quality, interior style, image highlights, image concerns). \
+These were produced by visual analysis of the listing photos.
+- When any reasoning or summary bullet draws on these image-derived fields, you MUST explicitly say so. \
+Use phrases like "Based on the listing images, ...", "The photos show ...", or "Visually assessed at ...".
+- Never silently present image-derived data as if it came from the description or your own inference.
+- If no image data is present in the pre-analyzed section, evaluate based on text data only and note \
+that visual assessment was not possible.
 
 PRICE EVALUATION RULES:
 - The listing's **Type** field shows the offer_type (RENT or SALE). Always use this to interpret the price.
@@ -136,6 +139,8 @@ BULLET GENERATION RULES:
 - Highlight the most important match and mismatch points between the listing and user preferences.
 - Include specific numbers from the listing (e.g., "CHF 2,100/mo vs your CHF 2,500 max").
 - Highlight what the user would be giving up by choosing this property.
+- If a bullet draws on image-derived data (condition, light, kitchen/bathroom quality, visual highlights/concerns \
+from the "## Pre-Analyzed Property Data" section), it MUST start with or include "Based on the listing images, ...".
 
 OUTPUT FORMAT:
 You MUST respond with valid JSON only, no other text. Use this exact schema:
@@ -407,32 +412,46 @@ highlighting key matches and compromises."""
         ctx = listing_profile_context
         lines = ["\n\n---\n\n## Pre-Analyzed Property Data (AI-assessed)\n"]
         lines.append(
-            "The following data was assessed before this evaluation. "
-            "Use it when generating criterion evaluations and summary bullets.\n"
+            "Use this data in your evaluations and bullets. "
+            "Fields marked [FROM IMAGES] were derived by visual analysis of the listing photos — "
+            "you MUST attribute those insights with 'Based on the listing images, ...' or similar.\n"
         )
+
+        # Image-derived fields
+        image_lines = []
         if ctx.get("condition_score") is not None:
-            note = f" ({ctx['condition_note']})" if ctx.get("condition_note") else ""
-            lines.append(f"- Condition score: {ctx['condition_score']}/100{note}")
+            note = f" — {ctx['condition_note']}" if ctx.get("condition_note") else ""
+            image_lines.append(f"  - Condition score: {ctx['condition_score']}/100{note}")
         if ctx.get("natural_light_score") is not None:
-            lines.append(f"- Natural light: {ctx['natural_light_score']}/100")
+            image_lines.append(f"  - Natural light score: {ctx['natural_light_score']}/100")
         if ctx.get("kitchen_quality_score") is not None:
-            note = f" ({ctx['kitchen_note']})" if ctx.get("kitchen_note") else ""
-            lines.append(f"- Kitchen quality: {ctx['kitchen_quality_score']}/100{note}")
+            note = f" — {ctx['kitchen_note']}" if ctx.get("kitchen_note") else ""
+            image_lines.append(f"  - Kitchen quality score: {ctx['kitchen_quality_score']}/100{note}")
         if ctx.get("bathroom_quality_score") is not None:
-            note = f" ({ctx['bathroom_note']})" if ctx.get("bathroom_note") else ""
-            lines.append(f"- Bathroom quality: {ctx['bathroom_quality_score']}/100{note}")
+            note = f" — {ctx['bathroom_note']}" if ctx.get("bathroom_note") else ""
+            image_lines.append(f"  - Bathroom quality score: {ctx['bathroom_quality_score']}/100{note}")
         if ctx.get("interior_style"):
-            lines.append(f"- Interior style: {ctx['interior_style']}")
-        if ctx.get("neighborhood_character"):
-            lines.append(f"- Neighborhood character: {ctx['neighborhood_character']}")
-        if ctx.get("noise_level_estimate") is not None:
-            lines.append(f"- Noise level estimate: {ctx['noise_level_estimate']}/100 (100=very noisy)")
+            image_lines.append(f"  - Interior style: {ctx['interior_style']}")
         if ctx.get("image_highlights"):
-            lines.append(f"- Image highlights: {', '.join(ctx['image_highlights'])}")
+            image_lines.append(f"  - Visual highlights: {', '.join(ctx['image_highlights'])}")
         if ctx.get("image_concerns"):
-            lines.append(f"- Image concerns: {', '.join(ctx['image_concerns'])}")
+            image_lines.append(f"  - Visual concerns: {', '.join(ctx['image_concerns'])}")
+        if image_lines:
+            lines.append("[FROM IMAGES] — cite these as visual observations:")
+            lines.extend(image_lines)
+
+        # Description-derived fields
+        desc_lines = []
+        if ctx.get("neighborhood_character"):
+            desc_lines.append(f"  - Neighborhood character: {ctx['neighborhood_character']}")
+        if ctx.get("noise_level_estimate") is not None:
+            desc_lines.append(f"  - Noise level estimate: {ctx['noise_level_estimate']}/100 (100=very noisy)")
         if ctx.get("description_summary"):
-            lines.append(f"- Description summary: {ctx['description_summary']}")
+            desc_lines.append(f"  - Summary: {ctx['description_summary']}")
+        if desc_lines:
+            lines.append("\n[FROM DESCRIPTION] — cite these as text-derived observations:")
+            lines.extend(desc_lines)
+
         base += "\n".join(lines)
 
     # Append verified nearby places section when pre-fetched data is available (PROMPT-01, PROMPT-02)
