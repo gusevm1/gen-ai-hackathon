@@ -17,7 +17,7 @@ export default async function ProfilesPage() {
 
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, name, is_default, preferences')
+    .select('id, name, is_default, preferences, updated_at')
     .order('created_at', { ascending: true })
 
   return (

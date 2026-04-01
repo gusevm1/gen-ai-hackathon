@@ -28,6 +28,7 @@ export interface ProfileData {
   name: string
   is_default: boolean
   preferences: Record<string, unknown>
+  updated_at: string
 }
 
 interface ProfileCardProps {
@@ -38,6 +39,13 @@ interface ProfileCardProps {
   onRename: () => void
   onDuplicate: () => void
   onDelete: () => void
+}
+
+function formatLastUsed(dateString: string): string {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 function buildSummaryLine(prefs: Record<string, unknown>, lang: ReturnType<typeof useLanguage>['language']): string {
