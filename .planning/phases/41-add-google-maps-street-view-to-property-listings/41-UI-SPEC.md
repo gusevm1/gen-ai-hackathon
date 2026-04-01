@@ -49,9 +49,9 @@ Exceptions: none
 |------|------|--------|-------------|
 | Body | 14px | 400 (regular) | 1.5 |
 | Section heading | 20px | 600 (semibold) | 1.2 |
-| Toggle label | 14px | 500 (medium) | 1.0 |
+| Toggle label | 14px | 600 (semibold) | 1.0 |
 
-Note: Only 2 weights used in this phase (regular 400 and semibold 600). Toggle labels at 500 inherit from shadcn Button font-medium.
+Note: 2 weights used in this phase — regular (400) and semibold (600). Toggle buttons use `font-semibold` explicitly.
 
 ---
 
