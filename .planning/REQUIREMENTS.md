@@ -46,8 +46,8 @@
 
 ### Critical Handoffs
 
-- [ ] **HND-01**: After saving preferences on the profile edit page, user sees a full-width primary button: "Save & Open in Flatfox →"
-- [ ] **HND-02**: Profile edit page shows a section progress indicator (e.g. "Step 2 of 5 — Budget")
+- [x] **HND-01**: After saving preferences on the profile edit page, user sees a full-width primary button: "Save & Open in Flatfox →"
+- [x] **HND-02**: Profile edit page shows a section progress indicator (e.g. "Step 2 of 5 — Budget")
 - [ ] **HND-03**: Analyses page empty state shows an "Open Flatfox →" primary CTA and a secondary "Download extension" link
 - [ ] **HND-04**: Analyses page filter bar is hidden when there are 0 analyses
 
@@ -136,8 +136,8 @@
 | ONB-05 | Phase 38 | Complete |
 | ONB-06 | Phase 38 | Complete |
 | ONB-07 | Phase 38 | Complete |
-| HND-01 | Phase 39 | Pending |
-| HND-02 | Phase 39 | Pending |
+| HND-01 | Phase 39 | Complete |
+| HND-02 | Phase 39 | Complete |
 | HND-03 | Phase 39 | Pending |
 | HND-04 | Phase 39 | Pending |
 | PG-01 | Phase 40 | Pending |

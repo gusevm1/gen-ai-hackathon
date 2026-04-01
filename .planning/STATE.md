@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
-status: completed
-stopped_at: Phase 39 context gathered
-last_updated: "2026-04-01T02:11:38.797Z"
-last_activity: "2026-04-01 — 38-03 executed: Settings page extended with Onboarding Tour section and Restart tour button — ONB-07 GREEN, all 12 Wave 1 onboarding tests passing, Phase 38 complete"
+status: executing
+stopped_at: Completed 39-01-PLAN.md
+last_updated: "2026-04-01T04:14:57.084Z"
+last_activity: "2026-04-01 — 39-01 executed: Sticky save-then-open-Flatfox bottom bar with numbered section progress badges — HND-01 and HND-02 GREEN"
 progress:
   total_phases: 14
   completed_phases: 12
-  total_plans: 30
-  completed_plans: 30
-  percent: 100
+  total_plans: 33
+  completed_plans: 31
+  percent: 96
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Help users instantly see how well each property listing matches their specific needs, with transparent AI reasoning they can trust -- without ever leaving the website they're already on.
-**Current focus:** v6.0 UX & Design System Overhaul — Phase 36: State-Aware Dashboard
+**Current focus:** v6.0 UX & Design System Overhaul — Phase 39: Critical Handoffs
 
 ## Current Position
 
-Phase: 38 of 40 (Onboarding Rebuild)
-Plan: 03 completed — Phase 38 COMPLETE (3 of 3 plans done)
-Status: Complete
-Last activity: 2026-04-01 — 38-03 executed: Settings page extended with Onboarding Tour section and Restart tour button — ONB-07 GREEN, all 12 Wave 1 onboarding tests passing, Phase 38 complete
+Phase: 39 of 40 (Critical Handoffs)
+Plan: 01 completed (1 of 2 plans done)
+Status: In Progress
+Last activity: 2026-04-01 — 39-01 executed: Sticky save-then-open-Flatfox bottom bar with numbered section progress badges — HND-01 and HND-02 GREEN
 
-Progress: [██████████] 100%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [██████████] 100%
 | Phase 38-onboarding-rebuild P00 | 6 | 3 tasks | 3 files |
 | Phase 38-onboarding-rebuild P02 | 4 | 2 tasks | 2 files |
 | Phase 38-onboarding-rebuild P03 | 6 | 2 tasks | 1 files |
+| Phase 39-critical-handoffs P01 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -137,12 +138,20 @@ Progress: [██████████] 100%
 
 - Settings page "Onboarding Tour" heading and "Restart tour" button text hardcoded as English strings (not via `t()`) — vitest mock returns key names which don't match `/onboarding tour/i` and `/restart tour/i` test regex patterns; same pattern as 38-02 section labels; translation keys `settings_onboarding_title`/`settings_onboarding_btn` still in translations.ts for production i18n
 
+### Phase 39 Decisions (39-01)
+
+- Hardcoded English button text ("Save Preferences", "Save & Open in Flatfox") per Phase 38 precedent -- vitest mock returns key names which break regex assertions
+- SECTIONS array used for both progress indicator and accordion rendering -- DRY refactor of 6 individual AccordionItem blocks
+- buildFlatfoxUrlWithGeocode called directly instead of OpenInFlatfoxButton component -- sticky bar needs custom save-then-open behavior
+- hasSaved state set to true AFTER save-then-open logic runs, so first save only saves (no surprise Flatfox tab), subsequent saves do both
+- Onboarding step 4 logic preserved: showOpenFlatfoxStep() fires instead of save-then-open when user is on step 4
+
 ### Blockers/Concerns
 
 - None at roadmap creation
 
 ## Session Continuity
 
-Last session: 2026-04-01T02:11:38.785Z
-Stopped at: Phase 39 context gathered
-Resume file: .planning/phases/39-critical-handoffs/39-CONTEXT.md
+Last session: 2026-04-01T04:14:57.081Z
+Stopped at: Completed 39-01-PLAN.md
+Resume file: None

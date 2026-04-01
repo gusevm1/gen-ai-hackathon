@@ -330,7 +330,7 @@ Plans:
 **Goal:** The profile edit page gives users a clear, always-visible path to Flatfox after saving and shows them where they are in a multi-step form; the analyses page guides users to take action when empty instead of showing a dead end.
 **Depends on:** Phase 36
 **Requirements:** HND-01, HND-02, HND-03, HND-04
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 39-00-PLAN.md — Wave 0: test scaffold for HND-01 through HND-04 (failing RED state)
@@ -373,5 +373,5 @@ Plans:
 | 36. State-Aware Dashboard | 2/2 | Complete    | 2026-03-31 |
 | 37. Design System Propagation | 5/5 | Complete    | 2026-03-31 |
 | 38. Onboarding Rebuild | 4/4 | Complete    | 2026-04-01 |
-| 39. Critical Handoffs | 0/3 | Not started | - |
+| 39. Critical Handoffs | 1/3 | In Progress|  |
 | 40. Page Redesigns | 0/TBD | Not started | - |
