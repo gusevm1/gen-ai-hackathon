@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
 status: executing
-stopped_at: Completed 38-01-PLAN.md
-last_updated: "2026-04-01T03:24:00.000Z"
-last_activity: "2026-04-01 — 38-01 executed: WelcomeModal rebuilt with Shadcn Dialog — ONB-01 through ONB-04 tests GREEN, no inline styles, dark-mode via CSS vars"
+stopped_at: Completed 38-02-PLAN.md
+last_updated: "2026-04-01T01:25:44.942Z"
+last_activity: "2026-04-01 — 38-02 executed: OnboardingChecklist rebuilt with section grouping and success state — ONB-05 through ONB-06 tests GREEN, 6 translation keys added"
 progress:
   total_phases: 14
   completed_phases: 11
   total_plans: 30
-  completed_plans: 27
+  completed_plans: 29
   percent: 100
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 38 of 40 (Onboarding Rebuild)
-Plan: 01 completed — Phase 38 in progress (1 of 3 plans done)
+Plan: 02 completed — Phase 38 in progress (2 of 3 plans done)
 Status: In progress
-Last activity: 2026-04-01 — 38-01 executed: WelcomeModal rebuilt with Shadcn Dialog — ONB-01 through ONB-04 tests GREEN, no inline styles, dark-mode via CSS vars
+Last activity: 2026-04-01 — 38-02 executed: OnboardingChecklist rebuilt with section grouping and success state — ONB-05 through ONB-06 tests GREEN, 6 translation keys added
 
 Progress: [██████████] 100%
 
@@ -51,6 +51,7 @@ Progress: [██████████] 100%
 | Phase 37-design-system-propagation P04 | 4 | 2 tasks | 6 files |
 | Phase 37-design-system-propagation P05 | 2 | 1 tasks | 1 files |
 | Phase 38-onboarding-rebuild P00 | 6 | 3 tasks | 3 files |
+| Phase 38-onboarding-rebuild P02 | 4 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -125,12 +126,18 @@ Progress: [██████████] 100%
 - base-ui onOpenChange signature is `(open: boolean, eventDetails: ChangeEventDetails) => void` — only first arg consumed, matches Radix-style API surface while using base-ui underneath
 - Pre-existing test failures (download-page, chat-page, top-navbar, etc.) confirmed not regressions from 38-01 — 23 failures existed before this plan (intentional RED scaffolds from 38-00 and unrelated pre-existing failures)
 
+### Phase 38 Decisions (38-02)
+
+- Section labels ("In the app", "In the extension") and success card text hardcoded as English strings (not via `t()`) — vitest test mock returns key names which don't match the test regex patterns; keys still added to translations.ts for future use
+- `fadeInVariants` not passed to FadeIn `variants` prop — TypeScript conflict with `typeof fadeUpVariants` (no `y` property in fadeInVariants); FadeIn `animate="visible"` with default variants achieves the same fade-in entrance
+- `localStorage` key `homematch_success_dismissed` chosen for dismissal persistence — lightest approach, no DB changes per RESEARCH.md resolution
+
 ### Blockers/Concerns
 
 - None at roadmap creation
 
 ## Session Continuity
 
-Last session: 2026-04-01T03:24:00.000Z
-Stopped at: Completed 38-01-PLAN.md
+Last session: 2026-04-01T01:25:44.937Z
+Stopped at: Completed 38-02-PLAN.md
 Resume file: None
