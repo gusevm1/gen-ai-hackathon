@@ -1,11 +1,12 @@
-"""Subjective scorer using Featherless AI for property evaluation.
+"""Subjective scorer using OpenRouter API for property evaluation.
 
-Uses httpx to call Featherless chat completions with configurable model
-(SUBJECTIVE_MODEL env var, default: Qwen/Qwen3.5-27B).
+Uses httpx to call OpenRouter chat completions with configurable model
+(SUBJECTIVE_MODEL env var, default: google/gemini-2.5-flash-lite).
 Parses JSON responses and validates with Pydantic models.
 
+No Anthropic Claude API calls are made in this module.
 The claude_scorer singleton name is kept for backward compatibility
-with router imports.
+with router imports -- Phase 31 will rename to subjective_scorer.
 """
 
 from __future__ import annotations
@@ -36,8 +37,8 @@ from app.prompts.scoring import (
 
 logger = logging.getLogger(__name__)
 
-FEATHERLESS_URL = "https://api.featherless.ai/v1/chat/completions"
-SUBJECTIVE_MODEL = os.environ.get("SUBJECTIVE_MODEL", "Qwen/Qwen2.5-72B-Instruct")
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+SUBJECTIVE_MODEL = os.environ.get("SUBJECTIVE_MODEL", "google/gemini-2.5-flash-lite")
 
 
 # ---------------------------------------------------------------------------
@@ -120,10 +121,10 @@ class ClaudeScorer:
         return self._client
 
     def _get_api_key(self) -> str:
-        """Read FEATHERLESS_API_KEY from environment."""
-        key = os.environ.get("FEATHERLESS_API_KEY", "")
+        """Read OPENROUTER_API_KEY from environment."""
+        key = os.environ.get("OPENROUTER_API_KEY", "")
         if not key:
-            logger.error("FEATHERLESS_API_KEY is not set in environment")
+            logger.error("OPENROUTER_API_KEY is not set in environment")
         return key
 
     def _log_cost_fire_and_forget(
@@ -180,11 +181,12 @@ class ClaudeScorer:
         listing_id: int | None = None,
         user_id: str | None = None,
     ) -> str:
-        """Make a chat completion request to Featherless AI.
+        """Make a chat completion request to OpenRouter.
 
         Args:
             system_prompt: The system message content.
-            user_content: The user message content.
+            user_content: The user message content (text only -- images not
+                          supported via OpenRouter for this use case).
             max_tokens: Maximum tokens in the response.
             temperature: Sampling temperature.
             call_type: Label for cost logging.
@@ -201,7 +203,7 @@ class ClaudeScorer:
         api_key = self._get_api_key()
 
         response = await client.post(
-            FEATHERLESS_URL,
+            OPENROUTER_URL,
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
