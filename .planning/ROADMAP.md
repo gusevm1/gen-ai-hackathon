@@ -313,8 +313,8 @@ Plans:
 **Plans:** 1/4 plans executed
 
 Plans:
-- [ ] 38-00-PLAN.md — Wave 0: test scaffolds for ONB-01 through ONB-07 (failing RED state)
-- [ ] 38-01-PLAN.md — WelcomeModal rebuild: Shadcn Dialog, value-prop copy, bg-primary CTA, Skip tour ghost link
+- [x] 38-00-PLAN.md — Wave 0: test scaffolds for ONB-01 through ONB-07 (failing RED state)
+- [x] 38-01-PLAN.md — WelcomeModal rebuild: Shadcn Dialog, value-prop copy, bg-primary CTA, Skip tour ghost link
 - [ ] 38-02-PLAN.md — Checklist rebuild: section grouping (In the app / In the extension) + success state with Flatfox link
 - [ ] 38-03-PLAN.md — Settings Onboarding Tour section: Restart tour outline button calling startTour()
 
@@ -367,6 +367,6 @@ Plans:
 | 35. Navigation & IA | 2/2 | Complete   | 2026-03-31 |
 | 36. State-Aware Dashboard | 2/2 | Complete    | 2026-03-31 |
 | 37. Design System Propagation | 5/5 | Complete    | 2026-03-31 |
-| 38. Onboarding Rebuild | 1/4 | In Progress|  |
+| 38. Onboarding Rebuild | 2/4 | In Progress| 2026-04-01 |
 | 39. Critical Handoffs | 0/TBD | Not started | - |
 | 40. Page Redesigns | 0/TBD | Not started | - |

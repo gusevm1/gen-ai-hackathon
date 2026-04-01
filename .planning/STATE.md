@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
 status: executing
-stopped_at: Completed 38-00-PLAN.md
-last_updated: "2026-04-01T01:15:26.990Z"
-last_activity: "2026-03-31 — 37-05 executed: gap closure — stale tier-color assertions in analysis-page.test.ts updated to DS-03 palette (teal/green/red), test suite fully green"
+stopped_at: Completed 38-01-PLAN.md
+last_updated: "2026-04-01T03:24:00.000Z"
+last_activity: "2026-04-01 — 38-01 executed: WelcomeModal rebuilt with Shadcn Dialog — ONB-01 through ONB-04 tests GREEN, no inline styles, dark-mode via CSS vars"
 progress:
   total_phases: 14
   completed_phases: 11
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ## Current Position
 
-Phase: 37 of 40 (Design System Propagation)
-Plan: 05 completed — Phase 37 fully complete (all 5 plans done)
+Phase: 38 of 40 (Onboarding Rebuild)
+Plan: 01 completed — Phase 38 in progress (1 of 3 plans done)
 Status: In progress
-Last activity: 2026-03-31 — 37-05 executed: gap closure — stale tier-color assertions in analysis-page.test.ts updated to DS-03 palette (teal/green/red), test suite fully green
+Last activity: 2026-04-01 — 38-01 executed: WelcomeModal rebuilt with Shadcn Dialog — ONB-01 through ONB-04 tests GREEN, no inline styles, dark-mode via CSS vars
 
 Progress: [██████████] 100%
 
@@ -119,12 +119,18 @@ Progress: [██████████] 100%
 
 - No production code changes needed — test-only gap closure to align analysis-page.test.ts assertions with DS-03 palette already implemented in 37-02
 
+### Phase 38 Decisions (38-01)
+
+- WelcomeModal rendered unconditionally with `open={showWelcome}` passed to Dialog (not `{showWelcome && <WelcomeModal>}`) — Dialog handles mount/unmount/animation internally
+- base-ui onOpenChange signature is `(open: boolean, eventDetails: ChangeEventDetails) => void` — only first arg consumed, matches Radix-style API surface while using base-ui underneath
+- Pre-existing test failures (download-page, chat-page, top-navbar, etc.) confirmed not regressions from 38-01 — 23 failures existed before this plan (intentional RED scaffolds from 38-00 and unrelated pre-existing failures)
+
 ### Blockers/Concerns
 
 - None at roadmap creation
 
 ## Session Continuity
 
-Last session: 2026-04-01T01:15:26.985Z
-Stopped at: Completed 38-00-PLAN.md
+Last session: 2026-04-01T03:24:00.000Z
+Stopped at: Completed 38-01-PLAN.md
 Resume file: None
