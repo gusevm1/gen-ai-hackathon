@@ -1,10 +1,11 @@
 """Google Places search via Apify compass~crawler-google-places actor."""
 
+import asyncio
+import json
 import logging
 import math
 import os
-
-import httpx
+import subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,25 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return R * 2 * math.asin(math.sqrt(a))
 
 
+def _curl_apify(url: str, payload: dict, timeout: int = 60) -> list[dict]:
+    """Call Apify API via curl subprocess (works around httpx 402 issue)."""
+    result = subprocess.run(
+        [
+            "curl", "-s", "-X", "POST",
+            f"{url}?token={APIFY_TOKEN}",
+            "-H", "Content-Type: application/json",
+            "-d", json.dumps(payload),
+            "--max-time", str(timeout),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=timeout + 10,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"curl failed (exit {result.returncode}): {result.stderr[:200]}")
+    return json.loads(result.stdout)
+
+
 async def search_nearby_places(
     query: str,
     latitude: float,
@@ -33,19 +53,7 @@ async def search_nearby_places(
     radius_km: float = 1.0,
     max_results: int = 5,
 ) -> list[dict]:
-    """Search for nearby places using Google Places via Apify.
-
-    Args:
-        query: Search query (e.g. "primary school", "gym", "supermarket").
-        latitude: Listing latitude.
-        longitude: Listing longitude.
-        radius_km: Search radius in kilometers (default 1.0).
-        max_results: Maximum number of results to return (default 5).
-
-    Returns:
-        List of dicts with keys: title, address, rating, reviews, category, location.
-        Returns [] on any failure (timeout, error, no token).
-    """
+    """Search for nearby places using Google Places via Apify."""
     if not APIFY_TOKEN:
         logger.warning("APIFY_TOKEN not set, cannot search nearby places")
         return []
@@ -64,27 +72,20 @@ async def search_nearby_places(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=90) as client:
-            resp = await client.post(
-                url,
-                params={"token": APIFY_TOKEN},
-                json=payload,
-            )
-            resp.raise_for_status()
-            items = resp.json()
-
-            return [
-                {
-                    "title": item.get("title", ""),
-                    "address": item.get("address", ""),
-                    "rating": item.get("totalScore"),
-                    "reviews": item.get("reviewsCount"),
-                    "category": item.get("categoryName", ""),
-                    "location": item.get("location"),  # dict with "lat" and "lng" keys, or None
-                }
-                for item in items
-                if isinstance(item, dict)
-            ]
+        items = await asyncio.to_thread(_curl_apify, url, payload, 60)
+        logger.info("Apify places search OK for %r: %d results", query, len(items))
+        return [
+            {
+                "title": item.get("title", ""),
+                "address": item.get("address", ""),
+                "rating": item.get("totalScore"),
+                "reviews": item.get("reviewsCount"),
+                "category": item.get("categoryName", ""),
+                "location": item.get("location"),
+            }
+            for item in items
+            if isinstance(item, dict)
+        ]
     except Exception as e:
         logger.warning("Apify places search failed for %r: %s", query, e)
         return []
@@ -97,22 +98,7 @@ async def search_nearby_places_batch(
     radius_km: float = 2.0,
     max_results_per_query: int = 5,
 ) -> dict[str, list[dict]]:
-    """Search for multiple place categories in a single Apify actor run.
-
-    Sends all queries as a single searchStringsArray to the actor, which is
-    more RAM-efficient than N separate runs.
-
-    Args:
-        queries: List of search queries (e.g. ["supermarket", "gym"]).
-        latitude: Listing latitude.
-        longitude: Listing longitude.
-        radius_km: Search radius in kilometers (default 2.0).
-        max_results_per_query: Max results per query (default 5).
-
-    Returns:
-        Dict mapping each query string to its list of place dicts.
-        Returns empty lists for all queries on any failure.
-    """
+    """Search for multiple place categories in a single Apify actor run."""
     if not queries:
         return {}
 
@@ -134,16 +120,9 @@ async def search_nearby_places_batch(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=120) as client:
-            resp = await client.post(
-                url,
-                params={"token": APIFY_TOKEN},
-                json=payload,
-            )
-            resp.raise_for_status()
-            items = resp.json()
+        items = await asyncio.to_thread(_curl_apify, url, payload, 90)
+        logger.info("Apify batch places search OK: %d items for %d queries", len(items), len(queries))
 
-        # Apify returns results with a "searchString" field indicating which query produced them
         results: dict[str, list[dict]] = {q: [] for q in queries}
         for item in items:
             if not isinstance(item, dict):
