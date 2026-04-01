@@ -96,7 +96,7 @@
 - [x] **Phase 37: Design System Propagation** — Token cleanup, Framer Motion entrance animations, tier colors, hover states (completed 2026-03-31)
 - [x] **Phase 38: Onboarding Rebuild** — WelcomeModal with Shadcn, checklist completion state, Settings re-entry (completed 2026-04-01)
 - [x] **Phase 39: Critical Handoffs** — Profile edit CTA + progress indicator, analyses empty state (completed 2026-04-01)
-- [ ] **Phase 40: Page Redesigns** — Profiles list, AI chat, analyses cards, settings download section
+- [x] **Phase 40: Page Redesigns** — Profiles list, AI chat, analyses cards, settings download section (completed 2026-04-01)
 
 ## Phase Details
 
@@ -348,7 +348,7 @@ Plans:
 **Goal:** Profiles list, AI chat, analyses cards, and Settings pages receive targeted visual upgrades that make key information scannable, context clear, and user journeys complete.
 **Depends on:** Phase 37, Phase 38, Phase 39
 **Requirements:** PG-01, PG-02, PG-03, PG-04, PG-05, PG-06, PG-07
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 **Success Criteria** (what must be TRUE):
   1. Profile cards in the profiles list show the active profile badge, total analysis count, and last-used date; the active profile is visually prominent (highlighted border or pin indicator)
@@ -380,4 +380,4 @@ Plans:
 | 37. Design System Propagation | 5/5 | Complete    | 2026-03-31 |
 | 38. Onboarding Rebuild | 4/4 | Complete    | 2026-04-01 |
 | 39. Critical Handoffs | 3/3 | Complete    | 2026-04-01 |
-| 40. Page Redesigns | 3/4 | In Progress|  |
+| 40. Page Redesigns | 4/4 | Complete   | 2026-04-01 |

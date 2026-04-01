@@ -68,7 +68,7 @@
 
 ### Page Redesigns — Settings
 
-- [ ] **PG-07**: Settings page has a "Download Extension" section with the download button and install link
+- [x] **PG-07**: Settings page has a "Download Extension" section with the download button and install link
 
 ---
 
@@ -146,7 +146,7 @@
 | PG-04 | Phase 40 | Complete |
 | PG-05 | Phase 40 | Complete |
 | PG-06 | Phase 40 | Complete |
-| PG-07 | Phase 40 | Pending |
+| PG-07 | Phase 40 | Complete |
 
 **Coverage:**
 - v6.0 requirements: 33 total
