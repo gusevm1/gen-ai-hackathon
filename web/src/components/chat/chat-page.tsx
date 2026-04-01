@@ -158,6 +158,14 @@ export function ChatPage() {
       )}
     >
       <div className="flex-1 overflow-y-auto space-y-6 pb-4">
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center flex-1 gap-3 text-center px-4 pb-8 min-h-[16rem]">
+            <h2 className="text-2xl font-bold">Create a Profile</h2>
+            <p className="text-muted-foreground max-w-sm text-sm">
+              Answer a few questions and AI will build your search profile.
+            </p>
+          </div>
+        )}
         {messages.map((message) =>
           message.role === 'assistant' ? (
             <div key={message.id} className="flex gap-3 rounded-lg bg-muted/50 p-4">
