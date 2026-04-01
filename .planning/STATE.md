@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: UX & Design System Overhaul
-status: completed
-stopped_at: Completed 40-00-PLAN.md
-last_updated: "2026-04-01T07:34:16.079Z"
+status: executing
+stopped_at: Completed 40-01-PLAN.md
+last_updated: "2026-04-01T07:39:07.019Z"
 last_activity: "2026-04-01 — 39-02 executed: Analyses empty state CTAs (Open Flatfox + Download Extension) and conditional filter bar — HND-03 and HND-04 GREEN, Phase 39 complete"
 progress:
   total_phases: 14
   completed_phases: 13
   total_plans: 37
-  completed_plans: 34
+  completed_plans: 35
   percent: 98
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 40 of 40 (Page Redesigns)
-Plan: 00 completed — Phase 40 IN PROGRESS (1 of 4 plans done)
+Plan: 01 completed — Phase 40 IN PROGRESS (2 of 4 plans done)
 Status: In Progress
-Last activity: 2026-04-01 — 39-02 executed: Analyses empty state CTAs (Open Flatfox + Download Extension) and conditional filter bar — HND-03 and HND-04 GREEN, Phase 39 complete
+Last activity: 2026-04-01 — 40-01 executed: Profile card redesign — active ring border (ring-2 ring-primary) replaces star icon, last-used date row added, updated_at plumbed through Supabase query — PG-01 and PG-02 GREEN
 
 Progress: [██████████] 98%
 
@@ -57,6 +57,7 @@ Progress: [██████████] 98%
 | Phase 39 P02 | 3 | 1 tasks | 3 files |
 | Phase 39 P00 | 3 | 1 tasks | 1 files |
 | Phase 40-page-redesigns P00 | 4 | 3 tasks | 3 files |
+| Phase 40-page-redesigns P01 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -156,12 +157,19 @@ Progress: [██████████] 98%
 - PreferenceSummaryCard mocked with `data-testid="summary-card"` to prevent deep dependency chain in jsdom test environment
 - StaggerGroup/StaggerItem mocked as pass-through divs in analyses-grid.test to isolate Card rendering from motion library jsdom incompatibility
 
+### Phase 40 Decisions (40-01)
+
+- cn() used for conditional ring className in ProfileCard — cleaner than template string ternary for active vs inactive ring state
+- Star import removed entirely (not conditionally hidden) — no dead code in final component
+- Last-used date rendered as plain <p> below CardDescription — preserves semantic card structure without overloading CardDescription
+- formatLastUsed placed above buildSummaryLine — both are pure formatting helpers, grouped by function type
+
 ### Blockers/Concerns
 
 - None at roadmap creation
 
 ## Session Continuity
 
-Last session: 2026-04-01T07:34:10.829Z
-Stopped at: Completed 40-00-PLAN.md
+Last session: 2026-04-01T07:39:07.013Z
+Stopped at: Completed 40-01-PLAN.md
 Resume file: None
