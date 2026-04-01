@@ -57,7 +57,12 @@ def adapt_profile_to_listing(profile: ListingProfile) -> FlatfoxListing:
         surface_living=profile.sqm,
         number_of_rooms=str(profile.rooms) if profile.rooms is not None else None,
         floor=profile.floor,
-        # Location
+        # Location — set public_address for geocoding (profile.address is already
+        # a full formatted address like "Brauerstrasse 29, 8004 Zürich", so using it
+        # directly avoids the redundant "{street}, {zipcode} {city}" fallback in
+        # geocode_listing which produces broken queries like
+        # "Brauerstrasse 29, 8004 Zürich, 8004 Zürich, Switzerland").
+        public_address=profile.address,
         street=profile.address,
         zipcode=profile.zipcode,
         city=profile.city,
