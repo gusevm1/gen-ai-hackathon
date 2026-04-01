@@ -311,7 +311,19 @@ class ClaudeScorer:
             field_map = {f.name.lower(): f for f in subjective_fields}
             results = []
             for r in parsed.criteria:
-                field = field_map.get(r.criterion.lower())
+                crit_lower = r.criterion.lower()
+                # 1. Exact match
+                field = field_map.get(crit_lower)
+                # 2. Check if LLM returned "Name: value" format — match on prefix before ":"
+                if not field and ":" in crit_lower:
+                    prefix = crit_lower.split(":")[0].strip()
+                    field = field_map.get(prefix)
+                # 3. Check if any field name is contained in the criterion or vice versa
+                if not field:
+                    for key, candidate in field_map.items():
+                        if key in crit_lower or crit_lower in key:
+                            field = candidate
+                            break
                 if field:
                     results.append(_to_fulfillment_result(r, field))
                 else:
