@@ -36,17 +36,22 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
 
-  const res = await fetch(`${BACKEND_URL}/score/top-matches`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      user_id: user.id,
-      profile_id: profileId,
-      force_refresh: body.force_refresh ?? false,
-    }),
-    signal: AbortSignal.timeout(30000),
-  })
+  try {
+    const res = await fetch(`${BACKEND_URL}/score/top-matches`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: user.id,
+        profile_id: profileId,
+        force_refresh: body.force_refresh ?? false,
+      }),
+      signal: AbortSignal.timeout(60000),
+    })
 
-  const data = await res.json()
-  return NextResponse.json(data, { status: res.status })
+    const data = await res.json()
+    return NextResponse.json(data, { status: res.status })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Backend unreachable"
+    return NextResponse.json({ detail: message }, { status: 502 })
+  }
 }
