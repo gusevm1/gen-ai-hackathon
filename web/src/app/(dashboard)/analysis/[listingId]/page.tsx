@@ -5,6 +5,8 @@ import { BulletSummary } from '@/components/analysis/BulletSummary'
 import { CategoryBreakdown } from '@/components/analysis/CategoryBreakdown'
 import { ChecklistSection } from '@/components/analysis/ChecklistSection'
 import { FulfillmentBreakdown } from '@/components/analysis/FulfillmentBreakdown'
+import { PropertyMapView } from '@/components/analysis/PropertyMapView'
+import { FadeIn } from '@/components/motion/FadeIn'
 import { deriveFulfillmentChecklist } from '@/lib/fulfillment-utils'
 import type { CriterionResult } from '@/lib/fulfillment-utils'
 import Link from 'next/link'
@@ -71,6 +73,22 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
       .single()
     if (profile) {
       profileName = profile.name
+    }
+  }
+
+  // Fetch listing location for map view
+  let listingLocation: { address: string; latitude: number | null; longitude: number | null } | null = null
+  const { data: listingProfile } = await supabase
+    .from('listing_profiles')
+    .select('address, latitude, longitude')
+    .eq('listing_id', parseInt(listingId, 10))
+    .maybeSingle()
+
+  if (listingProfile?.address) {
+    listingLocation = {
+      address: listingProfile.address,
+      latitude: listingProfile.latitude ?? null,
+      longitude: listingProfile.longitude ?? null,
     }
   }
 
@@ -152,6 +170,17 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
           )}
         </div>
       </div>
+
+      {/* Property location map — only when listing_profiles data available */}
+      {listingLocation && (
+        <FadeIn className="mt-8">
+          <PropertyMapView
+            address={listingLocation.address}
+            latitude={listingLocation.latitude}
+            longitude={listingLocation.longitude}
+          />
+        </FadeIn>
+      )}
     </div>
   )
 }
