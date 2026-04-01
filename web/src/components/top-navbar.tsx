@@ -19,28 +19,34 @@ export function TopNavbar() {
   const [chooserOpen, setChooserOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
 
-  const navItems = [
-    { titleKey: "nav_top_matches" as const, url: "/top-matches", icon: Trophy, accent: true },
-    { titleKey: "nav_profiles" as const, url: "/profiles", icon: User },
-    { titleKey: "nav_analyses" as const, url: "/analyses", icon: BarChart3 },
-    { titleKey: "nav_settings" as const, url: "/settings", icon: Settings },
-  ]
+  const linkClass = (url: string, accent?: boolean) => {
+    const isActive = url === "/dashboard" ? pathname === url : pathname.startsWith(url)
+    return cn(
+      "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
+      accent
+        ? cn("text-primary", isActive && "bg-primary/10")
+        : isActive
+          ? "bg-accent text-accent-foreground"
+          : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+    )
+  }
 
   return (
     <>
       <nav className="flex items-center gap-1">
-        <Link
-          href="/dashboard"
-          className={cn(
-            "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
-            pathname === "/dashboard"
-              ? "bg-accent text-accent-foreground"
-              : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-          )}
-        >
+        {/* Home */}
+        <Link href="/dashboard" className={linkClass("/dashboard")}>
           <Home className="size-4" />
           <span className="hidden sm:inline">{t(language, "nav_home")}</span>
         </Link>
+
+        {/* Top Matches */}
+        <Link href="/top-matches" className={linkClass("/top-matches", true)}>
+          <Trophy className="size-4" />
+          <span className="hidden sm:inline">{t(language, "nav_top_matches")}</span>
+        </Link>
+
+        {/* New Profile */}
         <button
           onClick={() => setChooserOpen(true)}
           className={cn(
@@ -51,27 +57,24 @@ export function TopNavbar() {
           <Sparkles className="size-4" />
           <span className="hidden sm:inline">{t(language, "nav_new_profile")}</span>
         </button>
-        {navItems.map((item) => {
-          const isActive = item.url === "/dashboard" ? pathname === item.url : pathname.startsWith(item.url)
 
-          return (
-            <Link
-              key={item.url}
-              href={item.url}
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
-                item.accent
-                  ? cn("text-primary", isActive && "bg-primary/10")
-                  : isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-              )}
-            >
-              <item.icon className="size-4" />
-              <span className="hidden sm:inline">{t(language, item.titleKey)}</span>
-            </Link>
-          )
-        })}
+        {/* Profiles */}
+        <Link href="/profiles" className={linkClass("/profiles")}>
+          <User className="size-4" />
+          <span className="hidden sm:inline">{t(language, "nav_profiles")}</span>
+        </Link>
+
+        {/* Analyses */}
+        <Link href="/analyses" className={linkClass("/analyses")}>
+          <BarChart3 className="size-4" />
+          <span className="hidden sm:inline">{t(language, "nav_analyses")}</span>
+        </Link>
+
+        {/* Settings */}
+        <Link href="/settings" className={linkClass("/settings")}>
+          <Settings className="size-4" />
+          <span className="hidden sm:inline">{t(language, "nav_settings")}</span>
+        </Link>
       </nav>
 
       <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
