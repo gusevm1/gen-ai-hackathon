@@ -44,9 +44,10 @@ class CriterionResult(BaseModel):
     Maps each user preference criterion to a fulfillment score with
     its importance weight and reasoning. Used by the hybrid scoring
     pipeline (Phase 31) to provide transparent per-criterion breakdown.
-    """
 
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    No alias_generator — serializes as snake_case so both the Supabase
+    JSONB cache and the API response use criterion_name consistently.
+    """
 
     criterion_name: str
     fulfillment: Optional[float] = Field(None, ge=0.0, le=1.0)
