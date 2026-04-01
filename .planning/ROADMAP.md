@@ -310,7 +310,13 @@ Plans:
 **Goal:** The WelcomeModal is rebuilt on Shadcn primitives and is dark-mode aware; the onboarding checklist has a proper completion state instead of silently disappearing; and users can re-access the tour from Settings.
 **Depends on:** Phase 35
 **Requirements:** ONB-01, ONB-02, ONB-03, ONB-04, ONB-05, ONB-06, ONB-07
-**Plans:** TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 38-00-PLAN.md — Wave 0: test scaffolds for ONB-01 through ONB-07 (failing RED state)
+- [ ] 38-01-PLAN.md — WelcomeModal rebuild: Shadcn Dialog, value-prop copy, bg-primary CTA, Skip tour ghost link
+- [ ] 38-02-PLAN.md — Checklist rebuild: section grouping (In the app / In the extension) + success state with Flatfox link
+- [ ] 38-03-PLAN.md — Settings Onboarding Tour section: Restart tour outline button calling startTour()
 
 **Success Criteria** (what must be TRUE):
   1. WelcomeModal renders using Shadcn Dialog/Card components with zero hardcoded inline styles; it looks correct in both light and dark mode
@@ -361,6 +367,6 @@ Plans:
 | 35. Navigation & IA | 2/2 | Complete   | 2026-03-31 |
 | 36. State-Aware Dashboard | 2/2 | Complete    | 2026-03-31 |
 | 37. Design System Propagation | 5/5 | Complete    | 2026-03-31 |
-| 38. Onboarding Rebuild | 0/TBD | Not started | - |
+| 38. Onboarding Rebuild | 0/4 | Not started | - |
 | 39. Critical Handoffs | 0/TBD | Not started | - |
 | 40. Page Redesigns | 0/TBD | Not started | - |
