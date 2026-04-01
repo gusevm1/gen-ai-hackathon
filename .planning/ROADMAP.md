@@ -348,7 +348,7 @@ Plans:
 **Goal:** Profiles list, AI chat, analyses cards, and Settings pages receive targeted visual upgrades that make key information scannable, context clear, and user journeys complete.
 **Depends on:** Phase 37, Phase 38, Phase 39
 **Requirements:** PG-01, PG-02, PG-03, PG-04, PG-05, PG-06, PG-07
-**Plans:** TBD
+**Plans:** 4 plans
 
 **Success Criteria** (what must be TRUE):
   1. Profile cards in the profiles list show the active profile badge, total analysis count, and last-used date; the active profile is visually prominent (highlighted border or pin indicator)
@@ -356,6 +356,12 @@ Plans:
   3. Transition from chat conversation to summary card is animated — the swap does not appear abrupt or jarring
   4. Analysis cards show a left-edge colored bar in the tier color (teal/green/amber/red) and a large, left-aligned score number — scannable at a glance
   5. Settings page contains a "Download Extension" section with the download button and sideloading instructions link
+
+Plans:
+- [ ] 40-00-PLAN.md — Wave 0: test scaffolds for PG-01/PG-02 (profile-card), PG-03/PG-04 (chat-page), PG-05/PG-06 (analyses-grid)
+- [ ] 40-01-PLAN.md — Profile card redesign: last-used date row + ring-2 ring-primary active border + star icon removal (PG-01, PG-02)
+- [ ] 40-02-PLAN.md — Analysis card layout: border-l-4 tier bar + two-column score+info layout + remove pill badge (PG-05, PG-06)
+- [ ] 40-03-PLAN.md — Chat splash heading + FadeIn wrapper on summary card transition (PG-03, PG-04, PG-07)
 
 ## Progress
 
@@ -374,4 +380,4 @@ Plans:
 | 37. Design System Propagation | 5/5 | Complete    | 2026-03-31 |
 | 38. Onboarding Rebuild | 4/4 | Complete    | 2026-04-01 |
 | 39. Critical Handoffs | 3/3 | Complete    | 2026-04-01 |
-| 40. Page Redesigns | 0/TBD | Not started | - |
+| 40. Page Redesigns | 0/4 | In progress | - |
