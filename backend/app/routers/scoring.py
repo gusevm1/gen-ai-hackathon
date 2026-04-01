@@ -46,6 +46,7 @@ from app.services.deterministic_scorer import (
     synthesize_builtin_results,
 )
 from app.services.hybrid_scorer import compute_weighted_score, to_criterion_result
+from app.services.places import haversine_km, search_nearby_places_batch
 from app.services.listing_profile_db import get_all_listing_profiles, get_listing_profile
 from app.services.profile_adapter import adapt_profile_to_listing, adapt_profile_amenities
 from app.services.supabase import supabase_service
@@ -207,7 +208,9 @@ async def _score_with_profile(profile, preferences: UserPreferences) -> ScoreRes
     builtin = synthesize_builtin_results(preferences, listing)
     deterministic_results.extend(builtin)
 
-    # Dynamic fields -- route by criterion_type
+    # Dynamic fields -- route by criterion_type; track proximity gaps for on-demand Apify
+    gap_fields: list = []  # DISTANCE/PROXIMITY_QUALITY fields with no pre-fetched data
+
     for field in preferences.dynamic_fields:
         ct = field.criterion_type
         result_value: Optional[float] = None
@@ -217,12 +220,18 @@ async def _score_with_profile(profile, preferences: UserPreferences) -> ScoreRes
         elif ct == CriterionType.DISTANCE:
             actual_km = _resolve_distance_km(field.name, proximity_data)
             result_value = score_distance(field, listing, actual_km)
+            if result_value is None:
+                gap_fields.append(field)
+                continue
         elif ct == CriterionType.SIZE:
             result_value = score_size(field, listing)
         elif ct == CriterionType.BINARY_FEATURE:
             result_value = score_binary_feature(field, listing)
         elif ct == CriterionType.PROXIMITY_QUALITY:
             result_value = score_proximity_quality(field, listing, proximity_data)
+            if result_value is None:
+                gap_fields.append(field)
+                continue
         elif ct == CriterionType.SUBJECTIVE or ct is None:
             # Handled by subjective scorer below
             continue
@@ -241,23 +250,83 @@ async def _score_with_profile(profile, preferences: UserPreferences) -> ScoreRes
             )
         )
 
-    # c. LLM review of deterministic scores
-    deterministic_results = await claude_scorer.review_deterministic_scores(
-        deterministic_results, listing, preferences
-    )
+    # Gap-fill: on-demand Apify for custom proximity criteria with no pre-fetched data
+    if gap_fields and profile.latitude is not None and profile.longitude is not None:
+        queries = [f.name for f in gap_fields]
+        logger.info("On-demand Apify for %d proximity gaps: %s", len(queries), queries)
+        try:
+            batch_results = await search_nearby_places_batch(
+                queries=queries,
+                latitude=profile.latitude,
+                longitude=profile.longitude,
+                radius_km=2.0,
+                max_results_per_query=5,
+            )
+            for field in gap_fields:
+                raw_places = batch_results.get(field.name, [])
+                places_with_dist: list[dict] = []
+                for place in raw_places:
+                    dist_km: Optional[float] = None
+                    loc = place.get("location")
+                    if isinstance(loc, dict):
+                        plat, plng = loc.get("lat"), loc.get("lng")
+                        if plat is not None and plng is not None:
+                            try:
+                                dist_km = haversine_km(
+                                    profile.latitude, profile.longitude,
+                                    float(plat), float(plng),
+                                )
+                            except Exception:
+                                pass
+                    places_with_dist.append({
+                        "name": place.get("title", ""),
+                        "distance_km": dist_km,
+                        "rating": place.get("rating"),
+                        "review_count": place.get("reviews"),
+                        "address": place.get("address", ""),
+                    })
 
-    # d. Subjective scoring via OpenRouter
+                key = field.name.lower().replace(" ", "_")
+                proximity_data[key] = places_with_dist
+
+                ct = field.criterion_type
+                if ct == CriterionType.DISTANCE:
+                    actual_km = _resolve_distance_km(field.name, proximity_data)
+                    result_value = score_distance(field, listing, actual_km)
+                else:
+                    result_value = score_proximity_quality(field, listing, proximity_data)
+
+                # If still no data (amenity genuinely not found), score 0.0
+                if result_value is None:
+                    result_value = 0.0
+                    reasoning = f"No {field.name} found within search radius"
+                else:
+                    reasoning = None
+
+                deterministic_results.append(
+                    FulfillmentResult(
+                        criterion_name=field.name,
+                        fulfillment=result_value,
+                        importance=field.importance,
+                        reasoning=reasoning,
+                    )
+                )
+        except Exception:
+            logger.warning("On-demand Apify gap-fill failed", exc_info=True)
+
+    # c. Subjective scoring via OpenRouter
     subjective_results, summary_bullets = await claude_scorer.score_listing(
-        listing, preferences, nearby_places=proximity_data or None
+        listing, preferences, nearby_places=proximity_data or None,
+        listing_profile=profile,
     )
 
-    # e. Merge results
+    # d. Merge results
     all_results = deterministic_results + subjective_results
 
-    # f. Aggregate
+    # e. Aggregate
     overall_score, match_tier = compute_weighted_score(all_results)
 
-    # g. Build ScoreResponse v2
+    # f. Build ScoreResponse v2
     return ScoreResponse(
         overall_score=overall_score,
         match_tier=match_tier,

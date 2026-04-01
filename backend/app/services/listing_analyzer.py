@@ -47,7 +47,34 @@ STANDARD_AMENITIES = [
 
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 
-IMAGE_ANALYSIS_PROMPT = """Analyze these property listing images and provide scores.
+IMAGE_ANALYSIS_PROMPT = """Analyze these property listing images. Use the criteria below to assign each score.
+
+CONDITION (condition_score 0-100):
+- High (80-100): freshly painted walls, clean surfaces, new flooring, no visible damage
+- Medium (50-79): minor wear but well-maintained, no structural concerns
+- Low (0-49): cracks, peeling paint, damaged floors, water stains, mold, dirty grout, broken fixtures, patchy repairs
+
+NATURAL LIGHT (natural_light_score 0-100):
+- High (80-100): large windows, south/west-facing, bright room exposure in photos
+- Medium (40-79): adequate windows, neutral orientation
+- Low (0-39): dark rooms, north-facing or small windows, basement feel
+
+KITCHEN QUALITY (kitchen_quality_score 0-100):
+- High (80-100): integrated appliances, stone/composite countertops, modern cabinets, backsplash
+- Medium (40-79): clean older cabinets, adequate counter space, basic appliances
+- Low (0-39): outdated or damaged cabinets, missing handles, worn countertop, no visible appliances
+
+BATHROOM QUALITY (bathroom_quality_score 0-100):
+- High (80-100): walk-in shower or modern bathtub, clean tiles, new fixtures, good lighting
+- Medium (40-79): functional but dated, clean condition, older fixtures
+- Low (0-39): stained grout, chipped tiles, old fixtures, visible mold
+
+INTERIOR STYLE — pick one:
+- "modern": clean lines, neutral palette, no visible wallpaper, <10 year feel
+- "renovated": older bones but updated kitchen/bath
+- "classic": older construction, well-maintained traditional finishes
+- "dated": 1980s-90s style, parquet/laminate in poor shape, formica, heavy wallpaper
+
 Respond with JSON only:
 {
   "condition_score": <0-100>,
@@ -55,19 +82,33 @@ Respond with JSON only:
   "kitchen_quality_score": <0-100>,
   "bathroom_quality_score": <0-100>,
   "interior_style": "modern" | "classic" | "renovated" | "dated",
-  "maintenance_notes": ["note1", "note2"],
-  "highlights": ["highlight1", "highlight2"],
-  "concerns": ["concern1", "concern2"]
+  "maintenance_notes": ["specific issue observed, e.g. bathroom grout stained"],
+  "highlights": ["standout positive, e.g. large south-facing windows"],
+  "concerns": ["potential problem, e.g. visible ceiling stain"]
 }
 """
 
-DESCRIPTION_ANALYSIS_PROMPT = """Analyze this property listing description and extract:
+DESCRIPTION_ANALYSIS_PROMPT = """Analyze this property listing description and extract the following fields.
+
+neighborhood_character: one of "urban center" | "quiet residential" | "family suburb" | "mixed commercial" | "village"
+noise_level_estimate: 0-100 (100 = very noisy). Infer from keywords like "ruhig" (quiet→low), "Hauptstrasse" (main road→high), "Gewerbe" (commercial→medium-high).
+family_friendly_score: 0-100. Infer from keywords like "ruhig", "Spielplatz", "Schulen", "Familien", "kindergartenfreundlich". Default 50 if no signal.
+nightlife_proximity_score: 0-100. Infer from keywords like "Ausgehviertel", "Bars", "Clubs", "zentral", "lebhaft", "Nachtleben". Default 50 if no signal.
+green_space_score: 0-100. Infer from keywords like "Park", "Natur", "Wald", "Grünanlage", "Wiese", "See", "Naherholung". Default 50 if no signal.
+description_summary: 2-3 sentence summary of the property and location.
+highlights: list of standout positive features mentioned in the description.
+concerns: list of potential drawbacks mentioned or implied.
+
+Respond with JSON only:
 {{
-  "neighborhood_character": "urban center" | "quiet residential" | "family suburb" | "mixed commercial" | "village",
-  "noise_level_estimate": <0-100, 100=very noisy>,
-  "description_summary": "<2-3 sentence summary>",
-  "highlights": ["highlight1", ...],
-  "concerns": ["concern1", ...]
+  "neighborhood_character": "...",
+  "noise_level_estimate": <0-100>,
+  "family_friendly_score": <0-100>,
+  "nightlife_proximity_score": <0-100>,
+  "green_space_score": <0-100>,
+  "description_summary": "...",
+  "highlights": ["..."],
+  "concerns": ["..."]
 }}
 
 Description:
@@ -199,6 +240,9 @@ async def analyze_listing(listing_id: int) -> ListingProfile:
         # AI-researched neighborhood (from description)
         neighborhood_character=description_analysis.get("neighborhood_character"),
         noise_level_estimate=description_analysis.get("noise_level_estimate"),
+        family_friendly_score=description_analysis.get("family_friendly_score"),
+        nightlife_proximity_score=description_analysis.get("nightlife_proximity_score"),
+        green_space_score=description_analysis.get("green_space_score"),
         description_summary=description_analysis.get("description_summary"),
         # Pre-fetched proximity data
         amenities=amenities,

@@ -237,6 +237,7 @@ class ClaudeScorer:
         preferences: UserPreferences,
         image_urls: list[str] | None = None,
         nearby_places: dict[str, list[dict]] | None = None,
+        listing_profile=None,
     ) -> tuple[list[FulfillmentResult], list[str]]:
         """Score subjective criteria and generate summary bullets via OpenRouter.
 
@@ -254,8 +255,43 @@ class ClaudeScorer:
             if f.criterion_type is None or f.criterion_type == CriterionType.SUBJECTIVE
         ]
 
+        # Build listing_profile_context dict if a ListingProfile was provided
+        lp_ctx: dict | None = None
+        if listing_profile is not None:
+            lp_ctx = {}
+            lp = listing_profile
+            if lp.condition_score is not None:
+                lp_ctx["condition_score"] = lp.condition_score
+            if lp.natural_light_score is not None:
+                lp_ctx["natural_light_score"] = lp.natural_light_score
+            if lp.kitchen_quality_score is not None:
+                lp_ctx["kitchen_quality_score"] = lp.kitchen_quality_score
+            if lp.bathroom_quality_score is not None:
+                lp_ctx["bathroom_quality_score"] = lp.bathroom_quality_score
+            if lp.interior_style:
+                lp_ctx["interior_style"] = lp.interior_style
+            if lp.neighborhood_character:
+                lp_ctx["neighborhood_character"] = lp.neighborhood_character
+            if lp.noise_level_estimate is not None:
+                lp_ctx["noise_level_estimate"] = lp.noise_level_estimate
+            if lp.highlights:
+                lp_ctx["image_highlights"] = lp.highlights[:5]
+            if lp.concerns:
+                lp_ctx["image_concerns"] = lp.concerns[:5]
+            if lp.description_summary:
+                lp_ctx["description_summary"] = lp.description_summary
+            if lp.maintenance_notes:
+                # Encode the most salient maintenance note as a condition note
+                lp_ctx["condition_note"] = lp.maintenance_notes[0]
+            if not lp_ctx:
+                lp_ctx = None
+
         # Build user prompt text (images not sent to OpenRouter)
-        user_text = build_user_prompt(listing, preferences, nearby_places=nearby_places)
+        user_text = build_user_prompt(
+            listing, preferences,
+            nearby_places=nearby_places,
+            listing_profile_context=lp_ctx,
+        )
 
         if subjective_fields:
             # PATH A: Combined criteria + bullets call
@@ -321,38 +357,28 @@ class ClaudeScorer:
             return deterministic_results
 
         try:
+            from app.prompts.scoring import LANGUAGE_MAP
+            lang_name = LANGUAGE_MAP.get(preferences.language, "German (Deutsch)")
             system_prompt = (
                 "You are a Swiss apartment matching expert. You review formula-based "
-                "match scores and rescore them with human judgement.\n\n"
-                "The formula gives 1.0 for anything within range and decays for anything outside. "
-                "This is too coarse — two apartments both 'within budget' could be very different:\n"
-                "- CHF 1200 vs CHF 2000 max → excellent value (0.95-1.0)\n"
-                "- CHF 1950 vs CHF 2000 max → barely fits, leaves no buffer (0.7-0.8)\n\n"
-                "SCORING GUIDELINES per criterion type:\n"
-                "BUDGET: Don't just check pass/fail. Score how comfortably it fits:\n"
-                "  <50% of max → 1.0 (exceptional value)\n"
-                "  50-70% → 0.9-0.95 (good value)\n"
-                "  70-85% → 0.8-0.9 (reasonable)\n"
-                "  85-95% → 0.65-0.8 (tight but ok)\n"
-                "  95-100% → 0.5-0.65 (barely fits)\n"
-                "  >100% → 0.0-0.5 (over budget, scale by how much)\n"
-                "  Also consider: are utilities included? Is the area expensive/cheap for the price?\n\n"
-                "ROOMS: Consider actual vs desired, but also:\n"
-                "  Exact match → 0.85-0.95 (not 1.0 unless layout info confirms good use)\n"
-                "  +0.5 room → 0.9-1.0 (bonus space)\n"
-                "  -0.5 room → 0.5-0.7 (workable but compromised)\n\n"
-                "SIZE (sqm): Similar gradient — don't give 1.0 just for meeting minimum.\n"
-                "  20%+ above min → 1.0 | At min → 0.75-0.85 | Below min → scale down\n\n"
-                "BINARY FEATURES (balcony, parking, etc.): Keep 0.0/1.0 but add reasoning "
-                "from description context (e.g. 'has balcony' → check if it's a real balcony or tiny Juliet).\n\n"
-                "DISTANCE/PROXIMITY: Consider Swiss context — 0.5km in Zürich center is different "
-                "from 0.5km in a rural area. Public transport access matters.\n\n"
-                "GENERAL RULES:\n"
-                "- You MUST rescore every criterion, not just echo the formula score\n"
-                "- Use the FULL 0.0-1.0 range. Spread scores out — avoid clustering around 0.8-1.0\n"
-                "- Each reasoning must be 1 specific sentence about THIS listing, not generic\n"
-                "- If data is missing (fulfillment=null), keep it null\n"
-                "- Consider cross-criterion context (cheap price + bad area = sus)\n\n"
+                "match scores and add human-readable reasoning.\n\n"
+                f"LANGUAGE RULES (MANDATORY):\n"
+                f"- You MUST write ALL reasoning text EXCLUSIVELY in {lang_name}.\n"
+                f"- This overrides everything else. No mixed-language output.\n\n"
+                "IMPORTANT: The formula scores are correct and must NOT be changed.\n"
+                "- within budget/range → formula returns 1.0 — keep it 1.0\n"
+                "- over budget/range → formula applies exponential decay — keep that score\n"
+                "Your ONLY job is to add a specific, one-sentence reasoning for each criterion.\n\n"
+                "REASONING GUIDELINES:\n"
+                "BUDGET: Cite the actual price vs budget (e.g. 'CHF 1950 vs max CHF 2000').\n"
+                "ROOMS: State actual vs desired rooms.\n"
+                "SIZE: State actual sqm vs desired.\n"
+                "BINARY FEATURES: Note whether the feature is present and any nuance from description.\n"
+                "DISTANCE/PROXIMITY: Cite the actual distance found.\n\n"
+                "RULES:\n"
+                "- Copy the formula_score value unchanged into fulfillment\n"
+                "- If formula_score is null, set fulfillment to null\n"
+                "- Each reasoning is 1 specific sentence about THIS listing\n\n"
                 "Return ONLY JSON:\n"
                 '{"criteria":[{"criterion_name":"...","fulfillment":0.85,"reasoning":"..."}]}'
             )

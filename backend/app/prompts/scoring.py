@@ -260,6 +260,7 @@ def build_user_prompt(
     listing: FlatfoxListing,
     prefs: UserPreferences,
     nearby_places: dict[str, list[dict]] | None = None,
+    listing_profile_context: dict | None = None,
 ) -> str:
     """Build the user prompt with listing data and preferences.
 
@@ -400,6 +401,39 @@ def build_user_prompt(
 Evaluate this listing against the user's preferences based on the subjective criteria provided. \
 Return a fulfillment score (0.0-1.0) with reasoning for each criterion, and 3-5 summary bullets \
 highlighting key matches and compromises."""
+
+    # Append pre-analyzed property data from ListingProfile when available (Problem 6)
+    if listing_profile_context:
+        ctx = listing_profile_context
+        lines = ["\n\n---\n\n## Pre-Analyzed Property Data (AI-assessed)\n"]
+        lines.append(
+            "The following data was assessed before this evaluation. "
+            "Use it when generating criterion evaluations and summary bullets.\n"
+        )
+        if ctx.get("condition_score") is not None:
+            note = f" ({ctx['condition_note']})" if ctx.get("condition_note") else ""
+            lines.append(f"- Condition score: {ctx['condition_score']}/100{note}")
+        if ctx.get("natural_light_score") is not None:
+            lines.append(f"- Natural light: {ctx['natural_light_score']}/100")
+        if ctx.get("kitchen_quality_score") is not None:
+            note = f" ({ctx['kitchen_note']})" if ctx.get("kitchen_note") else ""
+            lines.append(f"- Kitchen quality: {ctx['kitchen_quality_score']}/100{note}")
+        if ctx.get("bathroom_quality_score") is not None:
+            note = f" ({ctx['bathroom_note']})" if ctx.get("bathroom_note") else ""
+            lines.append(f"- Bathroom quality: {ctx['bathroom_quality_score']}/100{note}")
+        if ctx.get("interior_style"):
+            lines.append(f"- Interior style: {ctx['interior_style']}")
+        if ctx.get("neighborhood_character"):
+            lines.append(f"- Neighborhood character: {ctx['neighborhood_character']}")
+        if ctx.get("noise_level_estimate") is not None:
+            lines.append(f"- Noise level estimate: {ctx['noise_level_estimate']}/100 (100=very noisy)")
+        if ctx.get("image_highlights"):
+            lines.append(f"- Image highlights: {', '.join(ctx['image_highlights'])}")
+        if ctx.get("image_concerns"):
+            lines.append(f"- Image concerns: {', '.join(ctx['image_concerns'])}")
+        if ctx.get("description_summary"):
+            lines.append(f"- Description summary: {ctx['description_summary']}")
+        base += "\n".join(lines)
 
     # Append verified nearby places section when pre-fetched data is available (PROMPT-01, PROMPT-02)
     if nearby_places:
