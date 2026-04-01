@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 APIFY_BASE = "https://api.apify.com/v2"
 APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
 
+# Global semaphore: only 1 Apify actor call at a time to avoid concurrency limits
+_apify_semaphore = asyncio.Semaphore(1)
+
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Great-circle distance in km between two lat/lon points."""
@@ -72,7 +75,8 @@ async def search_nearby_places(
     }
 
     try:
-        items = await asyncio.to_thread(_curl_apify, url, payload, 60)
+        async with _apify_semaphore:
+            items = await asyncio.to_thread(_curl_apify, url, payload, 60)
         logger.info("Apify places search OK for %r: %d results", query, len(items))
         return [
             {
@@ -120,7 +124,9 @@ async def search_nearby_places_batch(
     }
 
     try:
-        items = await asyncio.to_thread(_curl_apify, url, payload, 90)
+        async with _apify_semaphore:
+            logger.info("Apify semaphore acquired for %d queries: %s", len(queries), queries)
+            items = await asyncio.to_thread(_curl_apify, url, payload, 90)
         logger.info("Apify batch places search OK: %d items for %d queries", len(items), len(queries))
 
         results: dict[str, list[dict]] = {q: [] for q in queries}
