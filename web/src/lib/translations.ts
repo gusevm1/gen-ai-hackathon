@@ -266,6 +266,12 @@ export const translations = {
     onboarding_take_tour: 'Take a quick tour',
     onboarding_skip: 'Skip tour',
     onboarding_installed_confirm: "I've installed the extension",
+    onboarding_section_app: 'In the app',
+    onboarding_section_ext: 'In the extension',
+    onboarding_success_title: "You're all set \u2713",
+    onboarding_success_cta: 'Start scoring on Flatfox',
+    settings_onboarding_title: 'Onboarding Tour',
+    settings_onboarding_btn: 'Restart tour',
 
     // Dashboard returning user
     dashboard_active_profile: 'Active Profile',
@@ -554,6 +560,12 @@ export const translations = {
     onboarding_take_tour: 'Kurze Tour starten',
     onboarding_skip: 'Tour überspringen',
     onboarding_installed_confirm: 'Ich habe die Erweiterung installiert',
+    onboarding_section_app: 'In der App',
+    onboarding_section_ext: 'In der Erweiterung',
+    onboarding_success_title: 'Alles erledigt \u2713',
+    onboarding_success_cta: 'Bewertungen auf Flatfox starten',
+    settings_onboarding_title: 'Einführungstour',
+    settings_onboarding_btn: 'Tour neu starten',
 
     // Dashboard returning user
     dashboard_active_profile: 'Aktives Profil',
