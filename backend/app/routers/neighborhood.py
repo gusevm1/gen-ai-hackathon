@@ -7,6 +7,7 @@ from fastapi import APIRouter, Query
 
 from app.models.neighborhood import NeighborhoodPOI, NeighborhoodResponse
 from app.services import neighborhood_db
+from app.services import zurich_geodata_db
 
 logger = logging.getLogger(__name__)
 
@@ -71,3 +72,20 @@ async def list_pois(
         neighborhood_db.query_pois_in_radius,
         lat, lon, radius_m, category_group, category, limit,
     )
+
+
+@router.get("/zurich-data")
+async def get_zurich_enrichment(
+    lat: float = Query(..., description="Latitude"),
+    lon: float = Query(..., description="Longitude"),
+) -> dict:
+    """Return Zürich open data enrichment for a location.
+
+    Combines transit quality (ÖV-Güteklasse), population density,
+    nearby ZVV stops, construction projects, noise levels, and
+    air quality from official Swiss/Zürich open data sources.
+    """
+    data = await asyncio.to_thread(
+        zurich_geodata_db.get_zurich_enrichment, lat, lon,
+    )
+    return {"lat": lat, "lon": lon, **data}
