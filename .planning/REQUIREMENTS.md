@@ -33,16 +33,16 @@
 
 ### Onboarding — WelcomeModal Rebuild
 
-- [ ] **ONB-01**: WelcomeModal uses Shadcn Dialog/Card components — zero hardcoded inline styles
-- [ ] **ONB-02**: WelcomeModal respects dark/light mode via CSS variables
-- [ ] **ONB-03**: WelcomeModal shows brand primary color on the CTA button
-- [ ] **ONB-04**: WelcomeModal copy includes one sentence explaining what HomeMatch does before asking user to start
+- [x] **ONB-01**: WelcomeModal uses Shadcn Dialog/Card components — zero hardcoded inline styles
+- [x] **ONB-02**: WelcomeModal respects dark/light mode via CSS variables
+- [x] **ONB-03**: WelcomeModal shows brand primary color on the CTA button
+- [x] **ONB-04**: WelcomeModal copy includes one sentence explaining what HomeMatch does before asking user to start
 
 ### Onboarding — Checklist & Completion
 
-- [ ] **ONB-05**: Onboarding checklist groups steps 5–8 under a visible "In the extension →" section label
-- [ ] **ONB-06**: When onboarding completes, checklist morphs into a success state: "You're all set ✓ — start scoring on Flatfox" with a direct Flatfox link
-- [ ] **ONB-07**: User can re-access the tour from Settings after dismissing the checklist
+- [x] **ONB-05**: Onboarding checklist groups steps 5–8 under a visible "In the extension →" section label
+- [x] **ONB-06**: When onboarding completes, checklist morphs into a success state: "You're all set ✓ — start scoring on Flatfox" with a direct Flatfox link
+- [x] **ONB-07**: User can re-access the tour from Settings after dismissing the checklist
 
 ### Critical Handoffs
 
@@ -129,13 +129,13 @@
 | DS-02 | Phase 37 | Complete |
 | DS-03 | Phase 37 | Complete |
 | DS-04 | Phase 37 | Complete |
-| ONB-01 | Phase 38 | Pending |
-| ONB-02 | Phase 38 | Pending |
-| ONB-03 | Phase 38 | Pending |
-| ONB-04 | Phase 38 | Pending |
-| ONB-05 | Phase 38 | Pending |
-| ONB-06 | Phase 38 | Pending |
-| ONB-07 | Phase 38 | Pending |
+| ONB-01 | Phase 38 | Complete |
+| ONB-02 | Phase 38 | Complete |
+| ONB-03 | Phase 38 | Complete |
+| ONB-04 | Phase 38 | Complete |
+| ONB-05 | Phase 38 | Complete |
+| ONB-06 | Phase 38 | Complete |
+| ONB-07 | Phase 38 | Complete |
 | HND-01 | Phase 39 | Pending |
 | HND-02 | Phase 39 | Pending |
 | HND-03 | Phase 39 | Pending |
