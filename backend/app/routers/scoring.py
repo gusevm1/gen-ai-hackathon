@@ -56,6 +56,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/score", tags=["scoring"])
 
 ALLOW_CLAUDE_FALLBACK = os.environ.get("ALLOW_CLAUDE_FALLBACK", "false").lower() == "true"
+ENABLE_APIFY = os.environ.get("ENABLE_APIFY", "false").lower() == "true"
 
 
 # ---------------------------------------------------------------------------
@@ -252,6 +253,9 @@ async def _score_with_profile(profile, preferences: UserPreferences) -> ScoreRes
 
     # Gap-fill: on-demand Apify for DISTANCE/PROXIMITY_QUALITY fields with no pre-fetched data.
     # Also enrich proximity_data for SUBJECTIVE fields so the LLM has real data to evaluate.
+    # Gated by ENABLE_APIFY env var (default: false) to avoid actor concurrency issues.
+    if not ENABLE_APIFY:
+        logger.info("Apify disabled (ENABLE_APIFY=false), skipping on-demand proximity lookups")
     has_coords = profile.latitude is not None and profile.longitude is not None
 
     # Geocode from address if profile lacks coordinates (98% of profiles have NULL lat/lon)
@@ -303,7 +307,7 @@ async def _score_with_profile(profile, preferences: UserPreferences) -> ScoreRes
     ]
 
     all_apify_fields = gap_fields + subjective_lookup_fields
-    if all_apify_fields and has_coords:
+    if all_apify_fields and has_coords and ENABLE_APIFY:
         queries = [f.name for f in all_apify_fields]
         logger.info(
             "On-demand Apify for %d fields (%d det gaps + %d subjective): %s",
