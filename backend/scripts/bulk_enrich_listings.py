@@ -17,7 +17,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
+import json
 import logging
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -53,50 +56,95 @@ FLATFOX_API = "https://flatfox.ch/api/v1/public-listing/"
 async def discover_all_listings(city: str, max_listings: int | None = None) -> list[int]:
     """Paginate through Flatfox search results for a city.
 
+    Uses explicit offset pagination instead of the API's ``next`` URL,
+    which returns duplicates.
+
+    Note: The Flatfox API ignores city/object_category filters and returns
+    all listing types.  We filter client-side by ``object_type`` to keep
+    only residential listings (APARTMENT, FURNISHED_FLAT, SHARED_FLAT)
+    in the target city.
+
     Args:
         city: City name (e.g. "zürich").
         max_listings: Stop discovery after collecting this many PKs.
             None = fetch all pages.
     """
-    url = FLATFOX_API
-    params: dict[str, str | int] = {
-        "ordering": "-created",
-        "offer_type": "RENT",
-        "object_category": "APARTMENT",
-        "city": city,
-        "limit": 50,
-    }
+    page_size = 50
+    city_lower = city.lower()
+    # Residential object types we want to enrich
+    WANTED_TYPES = {"APARTMENT", "FURNISHED_FLAT", "SHARED_FLAT"}
     all_pks: list[int] = []
     seen: set[int] = set()
+    offset = 0
     page = 0
+    consecutive_empty = 0  # pages with 0 new matches in a row
+
     async with httpx.AsyncClient(timeout=30.0) as client:
-        while url:
-            resp = await client.get(url, params=params, headers={"Accept": "application/json"})
+        while True:
+            params: dict[str, str | int] = {
+                "ordering": "-created",
+                "offer_type": "RENT",
+                "object_category": "APARTMENT",
+                "city": city,
+                "limit": page_size,
+                "offset": offset,
+            }
+            resp = await client.get(FLATFOX_API, params=params, headers={"Accept": "application/json"})
             resp.raise_for_status()
             data = resp.json()
             results = data.get("results", [])
+
+            if not results:
+                logger.info("  Page %d: empty results — stopping pagination", page + 1)
+                break
+
             new_on_page = 0
             for item in results:
-                if isinstance(item, dict) and "pk" in item:
-                    pk = item["pk"]
-                    if pk not in seen:
-                        seen.add(pk)
-                        all_pks.append(pk)
-                        new_on_page += 1
+                if not isinstance(item, dict) or "pk" not in item:
+                    continue
+                # Client-side filter: city + residential object types
+                item_city = (item.get("city") or "").lower()
+                item_type = (item.get("object_type") or "").upper()
+                if item_city != city_lower or item_type not in WANTED_TYPES:
+                    continue
+                pk = item["pk"]
+                if pk not in seen:
+                    seen.add(pk)
+                    all_pks.append(pk)
+                    new_on_page += 1
+
             page += 1
             total = data.get("count", "?")
-            logger.info("  Page %d: %d new / %d on page (total unique: %d, available: %s)", page, new_on_page, len(results), len(all_pks), total)
-            # Stop early if we have enough
+            # Log every 10 pages or when there are matches (discovery can take 18+ min)
+            if page % 10 == 0 or new_on_page > 0:
+                logger.info(
+                    "  Page %d: %d new / %d on page (total unique: %d, available: %s)",
+                    page, new_on_page, len(results), len(all_pks), total,
+                )
+
+            # Track consecutive pages with no matches to avoid infinite pagination
+            if new_on_page == 0:
+                consecutive_empty += 1
+            else:
+                consecutive_empty = 0
+
             if max_listings and len(all_pks) >= max_listings:
                 all_pks = all_pks[:max_listings]
                 logger.info("  Reached --max %d during discovery, stopping pagination", max_listings)
                 break
-            # Stop if page returned no new results (all duplicates)
-            if new_on_page == 0:
-                logger.info("  Page %d had no new listings — stopping pagination", page)
+
+            # Stop after 50 consecutive pages with no matches — Zürich apartments
+            # are only ~5.5% of all listings, so many pages will have 0 matches
+            if consecutive_empty >= 50:
+                logger.info("  %d consecutive pages with no matches — stopping pagination", consecutive_empty)
                 break
-            url = data.get("next")
-            params = {}  # next URL already includes query params
+
+            # No more pages
+            if not data.get("next"):
+                break
+
+            offset += page_size
+
     return all_pks
 
 
@@ -130,6 +178,49 @@ def format_amenity_summary(amenities: dict[str, AmenityCategory]) -> str:
     return "\n".join(lines) if lines else "No amenity data available."
 
 
+async def fetch_cover_image_data_url(listing: FlatfoxListing) -> str | None:
+    """Scrape listing page for cover image thumb URL and convert to base64.
+
+    Flatfox image IDs don't serve images via the API — the actual JPEG files
+    live at ``/thumb/`` paths that are only discoverable from the listing HTML.
+    Featherless requires base64 data URLs and allows only 1 image per request,
+    so we fetch just the cover (first) image.
+    """
+    url = listing.url or f"/en/{listing.pk}/"
+    page_url = f"https://flatfox.ch{url}"
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            resp = await client.get(page_url)
+            resp.raise_for_status()
+    except Exception:
+        logger.warning("  [%d] Failed to fetch listing page for images", listing.pk)
+        return None
+
+    # Extract first medium-sized thumb URL from HTML
+    raw_thumbs = re.findall(
+        r'/thumb/ff/\S+?\.jpg\?alias=listing_gallery_m[^"\'\s>]+',
+        resp.text,
+    )
+    if not raw_thumbs:
+        return None
+
+    thumb_url = "https://flatfox.ch" + raw_thumbs[0].replace("&amp;", "&")
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            img_resp = await client.get(thumb_url)
+            img_resp.raise_for_status()
+            ct = img_resp.headers.get("content-type", "image/jpeg")
+            if not ct.startswith("image/"):
+                return None
+            b64 = base64.b64encode(img_resp.content).decode()
+            return f"data:{ct};base64,{b64}"
+    except Exception:
+        logger.debug("  [%d] Failed to download cover image: %s", listing.pk, thumb_url)
+        return None
+
+
 def build_context(
     listing: FlatfoxListing,
     amenity_summary: str,
@@ -161,11 +252,15 @@ def build_profile(
     amenities: dict[str, AmenityCategory],
     zurich_data: dict,
     analysis: dict,
+    image_scores: dict | None = None,
 ) -> ListingProfile:
     """Merge all data sources into a ListingProfile."""
-    # Sanitize interior_style — LLM may return "unknown" which isn't in the Literal
+    if image_scores is None:
+        image_scores = {}
+
+    # Sanitize interior_style — prefer image analysis (more reliable), fall back to text
     VALID_STYLES = {"modern", "classic", "renovated", "dated"}
-    raw_style = analysis.get("interior_style")
+    raw_style = image_scores.get("interior_style") or analysis.get("interior_style")
     interior_style = raw_style if raw_style in VALID_STYLES else None
 
     # Clamp score values to 0-100 range
@@ -259,6 +354,11 @@ def build_profile(
         concerns=analysis.get("concerns", []),
         description_summary=analysis.get("description_summary"),
         interior_style=interior_style,
+        condition_score=_clamp_score(image_scores.get("condition_score")),
+        natural_light_score=_clamp_score(image_scores.get("natural_light_score")),
+        kitchen_quality_score=_clamp_score(image_scores.get("kitchen_quality_score")),
+        bathroom_quality_score=_clamp_score(image_scores.get("bathroom_quality_score")),
+        maintenance_notes=image_scores.get("maintenance_notes", []),
         # Local amenities
         amenities=amenities,
         # Swiss context
@@ -270,51 +370,123 @@ def build_profile(
     )
 
 
-async def enrich_listing(pk: int, sem: asyncio.Semaphore, dry_run: bool) -> str:
-    """Enrich a single listing. Returns status string."""
+async def enrich_listing(
+    pk: int, sem: asyncio.Semaphore, dry_run: bool,
+    progress_path: Path | None = None,
+) -> str:
+    """Enrich a single listing with graceful degradation.
+
+    Each phase (amenities, zurich data, text, vision, save) is wrapped
+    independently — a failure in one phase degrades that data source but
+    doesn't kill the whole listing.
+    """
     async with sem:
+        t_start = time.monotonic()
         try:
-            # Fetch listing from Flatfox
+            # ── Fetch listing ──
             listing = await fetch_listing(pk)
             title = listing.short_title or listing.public_title or f"pk={pk}"
+            logger.info("  [%d] fetched: %s", pk, title)
 
             if not listing.latitude or not listing.longitude:
-                logger.warning("  [%d] %s — skipped (no coordinates)", pk, title)
+                logger.warning("  [%d] skipped (no coordinates)", pk)
                 return "skipped_no_coords"
 
-            # Get local amenities (sync → thread)
-            amenities = await asyncio.to_thread(
-                get_local_amenities, listing.latitude, listing.longitude
-            )
+            # ── Local amenities (graceful) ──
+            amenities: dict = {}
+            try:
+                amenities = await asyncio.to_thread(
+                    get_local_amenities, listing.latitude, listing.longitude
+                )
+            except Exception as e:
+                logger.warning("  [%d] amenities failed (continuing): %s", pk, e)
 
-            # Get Zürich enrichment data (sync → thread)
-            zurich_data = await asyncio.to_thread(
-                get_zurich_enrichment, listing.latitude, listing.longitude
-            )
+            # ── Zürich geodata (graceful) ──
+            zurich_data: dict = {}
+            try:
+                zurich_data = await asyncio.to_thread(
+                    get_zurich_enrichment, listing.latitude, listing.longitude
+                )
+            except Exception as e:
+                logger.warning("  [%d] zürich data failed (continuing): %s", pk, e)
 
             amenity_summary = format_amenity_summary(amenities)
 
             if dry_run:
-                logger.info(
-                    "  [DRY RUN] %d: %s | %d amenity categories | zurich_data=%s",
-                    pk, title, len(amenities), bool(zurich_data),
-                )
+                logger.info("  [DRY RUN] %d: %s", pk, title)
                 return "dry_run"
 
-            # Call Featherless AI
+            # ── Text analysis (required) ──
             context = build_context(listing, amenity_summary, zurich_data)
             analysis = await featherless_service.analyze_listing(context)
+            t_text = time.monotonic()
+            logger.info("  [%d] text %.1fs — style=%s highlights=%d concerns=%d",
+                        pk, t_text - t_start,
+                        analysis.get("interior_style"),
+                        len(analysis.get("highlights", [])),
+                        len(analysis.get("concerns", [])))
 
-            # Build and save profile
-            profile = build_profile(listing, amenities, zurich_data, analysis)
+            # ── Vision analysis (graceful) ──
+            image_scores: dict = {}
+            if listing.images:
+                try:
+                    cover_data_url = await fetch_cover_image_data_url(listing)
+                    if cover_data_url:
+                        image_scores = await featherless_service.analyze_images(
+                            [cover_data_url],
+                            listing_context=context.get("title", ""),
+                        )
+                        t_vision = time.monotonic()
+                        logger.info("  [%d] vision %.1fs — condition=%s light=%s style=%s",
+                                    pk, t_vision - t_text,
+                                    image_scores.get("condition_score"),
+                                    image_scores.get("natural_light_score"),
+                                    image_scores.get("interior_style"))
+                    else:
+                        logger.info("  [%d] no cover image found", pk)
+                except Exception as e:
+                    logger.warning("  [%d] vision failed (continuing text-only): %s", pk, e)
+            else:
+                logger.info("  [%d] no images on listing", pk)
+
+            # ── Save to Supabase ──
+            profile = build_profile(listing, amenities, zurich_data, analysis, image_scores)
             await asyncio.to_thread(save_listing_profile, profile)
 
-            logger.info("  [OK] %d: %s", pk, title)
+            elapsed = time.monotonic() - t_start
+            logger.info("  [OK] %d: %s — %.1fs", pk, title, elapsed)
+
+            # Track progress
+            if progress_path:
+                _append_progress(progress_path, pk)
+
             return "success"
 
         except Exception as e:
-            logger.error("  [FAIL] %d: %s", pk, e)
+            elapsed = time.monotonic() - t_start
+            logger.error("  [FAIL] %d after %.1fs: %s", pk, elapsed, e)
             return "failed"
+
+
+def _append_progress(path: Path, pk: int) -> None:
+    """Append a completed PK to the progress file (one per line)."""
+    with open(path, "a") as f:
+        f.write(f"{pk}\n")
+
+
+def _load_progress(path: Path) -> set[int]:
+    """Load completed PKs from progress file."""
+    if not path.exists():
+        return set()
+    pks = set()
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if line:
+            try:
+                pks.add(int(line))
+            except ValueError:
+                pass
+    return pks
 
 
 # ---------------------------------------------------------------------------
@@ -330,6 +502,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--concurrency", type=int, default=10, help="Parallel workers (default: 10)")
     parser.add_argument("--dry-run", action="store_true", help="Gather data but skip LLM + DB writes")
     parser.add_argument("--force", action="store_true", help="Re-analyze listings that already have profiles")
+    parser.add_argument("--pks-file", type=str, default=None,
+                        help="Path to JSON file with pre-discovered PKs (skip discovery)")
+    parser.add_argument("--save-pks", type=str, default=None,
+                        help="Save discovered PKs to this JSON file and exit")
     return parser.parse_args()
 
 
@@ -337,11 +513,24 @@ async def main() -> None:
     args = parse_args()
     t0 = time.monotonic()
 
-    # 1. Discover listings (cap discovery to avoid paginating through 30k+ old listings)
-    discover_cap = args.max if args.max else 2000  # default: newest 2000
-    logger.info("Discovering listings in %s (max discover: %d)...", args.city, discover_cap)
-    all_pks = await discover_all_listings(city=args.city, max_listings=discover_cap)
-    logger.info("Discovered %d listings", len(all_pks))
+    # 1. Discover listings — or load from file
+    if args.pks_file:
+        pks_path = Path(args.pks_file)
+        all_pks = json.loads(pks_path.read_text())
+        logger.info("Loaded %d PKs from %s", len(all_pks), pks_path)
+    else:
+        discover_cap = args.max  # None if --max not specified → discover all
+        logger.info("Discovering listings in %s (max discover: %s)...", args.city, discover_cap or "all")
+        all_pks = await discover_all_listings(city=args.city, max_listings=discover_cap)
+        logger.info("Discovered %d listings", len(all_pks))
+
+    # Optionally save PKs and exit
+    if args.save_pks:
+        save_path = Path(args.save_pks)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        save_path.write_text(json.dumps(all_pks))
+        logger.info("Saved %d PKs to %s — exiting", len(all_pks), save_path)
+        return
 
     if not all_pks:
         logger.info("No listings found — exiting.")
@@ -355,12 +544,21 @@ async def main() -> None:
             chunk = all_pks[i : i + chunk_size]
             unanalyzed = await asyncio.to_thread(get_unanalyzed_listing_ids, chunk)
             pks.extend(unanalyzed)
-        logger.info("%d of %d listings need analysis", len(pks), len(all_pks))
+        logger.info("%d of %d listings need analysis (DB check)", len(pks), len(all_pks))
     else:
         pks = all_pks
         logger.info("Force mode: re-analyzing all %d listings", len(pks))
 
-    # 3. Apply --max cap
+    # 3. Filter already-completed in this run's progress file
+    progress_path = Path(backend_dir / "scripts" / "output" / "enrich_progress.txt")
+    already_done = _load_progress(progress_path)
+    if already_done:
+        before = len(pks)
+        pks = [pk for pk in pks if pk not in already_done]
+        logger.info("Skipped %d already-completed from progress file (%d remaining)",
+                    before - len(pks), len(pks))
+
+    # 4. Apply --max cap
     if args.max and len(pks) > args.max:
         pks = pks[: args.max]
         logger.info("Capped to %d listings (--max)", args.max)
@@ -369,16 +567,19 @@ async def main() -> None:
         logger.info("Nothing to process — all listings already analyzed.")
         return
 
-    # 4. Process with concurrency control
+    # 5. Process with concurrency control
     sem = asyncio.Semaphore(args.concurrency)
     logger.info(
         "Processing %d listings (concurrency=%d, dry_run=%s)...",
         len(pks), args.concurrency, args.dry_run,
     )
 
-    results = await asyncio.gather(*[enrich_listing(pk, sem, args.dry_run) for pk in pks])
+    results = await asyncio.gather(*[
+        enrich_listing(pk, sem, args.dry_run, progress_path=progress_path)
+        for pk in pks
+    ])
 
-    # 5. Summary
+    # 6. Summary
     elapsed = time.monotonic() - t0
     counts: dict[str, int] = {}
     for r in results:
@@ -393,10 +594,13 @@ async def main() -> None:
 
 if __name__ == "__main__":
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+    # Keep noisy libraries at INFO
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
 
     try:
         asyncio.run(main())

@@ -10,7 +10,10 @@ Follows the same patterns as app.services.supabase.
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timedelta, timezone
+
+from httpx import RemoteProtocolError
 
 from app.models.listing_profile import AmenityCategory, ListingProfile
 from app.services.supabase import supabase_service
@@ -33,14 +36,13 @@ def get_listing_profile(listing_id: int) -> ListingProfile | None:
     return None
 
 
-def save_listing_profile(profile: ListingProfile) -> None:
+def save_listing_profile(profile: ListingProfile, _max_retries: int = 3) -> None:
     """Upsert a listing profile (on_conflict=listing_id).
 
     Converts the Pydantic model to a dict via model_dump(), handles
     the amenities field specially (nested Pydantic models -> dicts),
-    and upserts on listing_id.
+    and upserts on listing_id.  Retries on HTTP/2 connection errors.
     """
-    client = supabase_service.get_client()
     data = profile.model_dump(mode="json")
 
     # Convert amenities: dict[str, AmenityCategory] -> dict[str, dict]
@@ -55,12 +57,23 @@ def save_listing_profile(profile: ListingProfile) -> None:
                 serialized_amenities[key] = value
         data["amenities"] = serialized_amenities
 
-    client.table("listing_profiles").upsert(
-        data,
-        on_conflict="listing_id",
-    ).execute()
-
-    logger.info("Saved listing profile for listing_id=%d", profile.listing_id)
+    last_err: Exception | None = None
+    for attempt in range(_max_retries):
+        try:
+            client = supabase_service.get_client()
+            client.table("listing_profiles").upsert(
+                data,
+                on_conflict="listing_id",
+            ).execute()
+            logger.info("Saved listing profile for listing_id=%d", profile.listing_id)
+            return
+        except Exception as e:
+            last_err = e
+            supabase_service.reset_client()
+            wait = 0.5 * (2 ** attempt)
+            logger.warning("Supabase save retry %d/%d for listing %d: %s", attempt + 1, _max_retries, profile.listing_id, e)
+            time.sleep(wait)
+    raise last_err  # type: ignore[misc]
 
 
 def get_unanalyzed_listing_ids(known_ids: list[int]) -> list[int]:

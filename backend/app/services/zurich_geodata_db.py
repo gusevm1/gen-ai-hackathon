@@ -7,6 +7,9 @@ from __future__ import annotations
 
 import logging
 import math
+import time
+
+from httpx import RemoteProtocolError
 
 from app.services.supabase import supabase_service
 
@@ -47,22 +50,40 @@ def _query_dataset(
     radius_m: float,
     limit: int = 1000,
     select: str = "lat, lon, properties",
+    _max_retries: int = 3,
 ) -> list[dict]:
-    """Return rows from zurich_geodata matching dataset + bbox."""
+    """Return rows from zurich_geodata matching dataset + bbox.
+
+    Retries on HTTP/2 connection errors (common under concurrency when
+    the shared Supabase client's connection pool gets terminated).
+    """
     lat_min, lat_max, lon_min, lon_max = _bbox(lat, lon, radius_m)
-    client = supabase_service.get_client()
-    result = (
-        client.table("zurich_geodata")
-        .select(select)
-        .eq("dataset", dataset)
-        .gte("lat", lat_min)
-        .lte("lat", lat_max)
-        .gte("lon", lon_min)
-        .lte("lon", lon_max)
-        .limit(limit)
-        .execute()
-    )
-    return result.data or []
+    last_err: Exception | None = None
+    for attempt in range(_max_retries):
+        try:
+            client = supabase_service.get_client()
+            result = (
+                client.table("zurich_geodata")
+                .select(select)
+                .eq("dataset", dataset)
+                .gte("lat", lat_min)
+                .lte("lat", lat_max)
+                .gte("lon", lon_min)
+                .lte("lon", lon_max)
+                .limit(limit)
+                .execute()
+            )
+            return result.data or []
+        except Exception as e:
+            # Catch broad exceptions — Supabase wraps HTTP/2 errors in
+            # various forms (RemoteProtocolError, Cloudflare 400s, etc.)
+            last_err = e
+            supabase_service.reset_client()
+            wait = 0.5 * (2 ** attempt)
+            logger.warning("Supabase query retry %d/%d for %s: %s", attempt + 1, _max_retries, dataset, e)
+            time.sleep(wait)
+    logger.error("Supabase query failed after %d retries for %s", _max_retries, dataset)
+    raise last_err  # type: ignore[misc]
 
 
 def _nearest_row(

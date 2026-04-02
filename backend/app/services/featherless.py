@@ -27,6 +27,9 @@ FEATHERLESS_URL = "https://api.featherless.ai/v1/chat/completions"
 FEATHERLESS_MODEL = os.environ.get(
     "FEATHERLESS_MODEL", "meta-llama/Meta-Llama-3.1-70B-Instruct"
 )
+FEATHERLESS_VISION_MODEL = os.environ.get(
+    "FEATHERLESS_VISION_MODEL", "mlabonne/gemma-3-27b-it-abliterated"
+)
 
 
 # ── JSON parsing helpers ─────────────────────────────────────────────
@@ -78,6 +81,57 @@ def _fallback_result() -> dict:
         "price_vs_market": None,
         "interior_style": None,
     }
+
+
+def _image_fallback_result() -> dict:
+    """Return a safe fallback dict when image analysis fails."""
+    return {
+        "condition_score": None,
+        "natural_light_score": None,
+        "kitchen_quality_score": None,
+        "bathroom_quality_score": None,
+        "interior_style": None,
+        "maintenance_notes": [],
+    }
+
+
+IMAGE_ANALYSIS_PROMPT = """Analyze these property listing images. Use the criteria below to assign each score.
+
+CONDITION (condition_score 0-100):
+- High (80-100): freshly painted walls, clean surfaces, new flooring, no visible damage
+- Medium (50-79): minor wear but well-maintained, no structural concerns
+- Low (0-49): cracks, peeling paint, damaged floors, water stains, mold, dirty grout, broken fixtures, patchy repairs
+
+NATURAL LIGHT (natural_light_score 0-100):
+- High (80-100): large windows, south/west-facing, bright room exposure in photos
+- Medium (40-79): adequate windows, neutral orientation
+- Low (0-39): dark rooms, north-facing or small windows, basement feel
+
+KITCHEN QUALITY (kitchen_quality_score 0-100):
+- High (80-100): integrated appliances, stone/composite countertops, modern cabinets, backsplash
+- Medium (40-79): clean older cabinets, adequate counter space, basic appliances
+- Low (0-39): outdated or damaged cabinets, missing handles, worn countertop, no visible appliances
+
+BATHROOM QUALITY (bathroom_quality_score 0-100):
+- High (80-100): walk-in shower or modern bathtub, clean tiles, new fixtures, good lighting
+- Medium (40-79): functional but dated, clean condition, older fixtures
+- Low (0-39): stained grout, chipped tiles, old fixtures, visible mold
+
+INTERIOR STYLE — pick one:
+- "modern": clean lines, neutral palette, no visible wallpaper, <10 year feel
+- "renovated": older bones but updated kitchen/bath
+- "classic": older construction, well-maintained traditional finishes
+- "dated": 1980s-90s style, parquet/laminate in poor shape, formica, heavy wallpaper
+
+Respond with JSON only:
+{
+  "condition_score": <0-100>,
+  "natural_light_score": <0-100>,
+  "kitchen_quality_score": <0-100>,
+  "bathroom_quality_score": <0-100>,
+  "interior_style": "modern" | "classic" | "renovated" | "dated",
+  "maintenance_notes": ["specific issue observed, e.g. bathroom grout stained"]
+}"""
 
 
 def _format_zurich_data(zurich_data: dict | None) -> str:
@@ -196,15 +250,15 @@ class FeatherlessService:
         """Make a single chat completion request to Featherless AI.
 
         Uses a fresh httpx client per request to avoid HTTP/2 connection
-        sharing issues under high concurrency. Retries on transient errors.
+        sharing issues under high concurrency. Retries on transient errors,
+        rotating to a different API key on each retry.
         """
-        api_key = self._next_key()
-
-        if not api_key:
+        if not self._load_keys():
             raise RuntimeError("No Featherless API key available")
 
         last_err: Exception | None = None
         for attempt in range(max_retries):
+            api_key = self._next_key()
             try:
                 async with httpx.AsyncClient(timeout=120.0, http2=False) as client:
                     response = await client.post(
@@ -273,6 +327,116 @@ class FeatherlessService:
         except Exception:
             logger.exception("Featherless listing analysis failed")
             return _fallback_result()
+
+    async def _call_vision_llm(
+        self, image_urls: list[str], prompt: str, max_retries: int = 3
+    ) -> str:
+        """Make a vision chat completion request to Featherless AI.
+
+        Sends images as OpenAI-compatible image_url content parts.
+        Uses a fresh httpx client per request. Retries on transient errors,
+        rotating to a different API key on each retry.
+        """
+        if not self._load_keys():
+            raise RuntimeError("No Featherless API key available")
+
+        # Build multimodal content: images first, then text prompt
+        content: list[dict[str, Any]] = [
+            {"type": "image_url", "image_url": {"url": url}}
+            for url in image_urls
+        ]
+        content.append({"type": "text", "text": prompt})
+
+        last_err: Exception | None = None
+        for attempt in range(max_retries):
+            api_key = self._next_key()
+            try:
+                async with httpx.AsyncClient(timeout=180.0, http2=False) as client:
+                    response = await client.post(
+                        FEATHERLESS_URL,
+                        headers={
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": FEATHERLESS_VISION_MODEL,
+                            "messages": [{"role": "user", "content": content}],
+                            "temperature": 0.1,
+                            "max_tokens": 1024,
+                        },
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    return data["choices"][0]["message"]["content"]
+            except (
+                httpx.RemoteProtocolError,
+                httpx.LocalProtocolError,
+                httpx.ReadError,
+                ConnectionError,
+            ) as e:
+                last_err = e
+                wait = 2**attempt
+                logger.warning(
+                    "Featherless vision attempt %d/%d failed: %s — retrying in %ds",
+                    attempt + 1, max_retries, e, wait,
+                )
+                import asyncio
+                await asyncio.sleep(wait)
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code in (429, 502, 503, 504):
+                    last_err = e
+                    wait = 2**attempt
+                    logger.warning(
+                        "Featherless vision HTTP %d — retrying in %ds",
+                        e.response.status_code, wait,
+                    )
+                    import asyncio
+                    await asyncio.sleep(wait)
+                else:
+                    logger.error(
+                        "Featherless vision HTTP %d: %s",
+                        e.response.status_code,
+                        e.response.text[:300],
+                    )
+                    raise
+        raise last_err or RuntimeError("Featherless vision call failed after retries")
+
+    async def analyze_images(
+        self, image_data_urls: list[str], listing_context: str = ""
+    ) -> dict:
+        """Analyze listing images with vision model.
+
+        Args:
+            image_data_urls: Base64 data URLs (``data:image/jpeg;base64,...``).
+                Featherless only supports base64, not external URLs.
+                First 5 used.
+            listing_context: Optional listing title for context.
+
+        Returns:
+            Dict with: condition_score, natural_light_score,
+            kitchen_quality_score, bathroom_quality_score,
+            interior_style, maintenance_notes.
+            Returns fallback dict with None values on failure.
+        """
+        if not image_data_urls:
+            return _image_fallback_result()
+
+        try:
+            urls = image_data_urls[:5]
+            raw = await self._call_vision_llm(urls, IMAGE_ANALYSIS_PROMPT)
+            parsed = _parse_json_response(raw)
+
+            if not isinstance(parsed, dict):
+                logger.warning("Featherless vision returned non-dict response")
+                return _image_fallback_result()
+
+            result = _image_fallback_result()
+            result.update(parsed)
+            return result
+
+        except Exception:
+            logger.exception("Featherless image analysis failed")
+            return _image_fallback_result()
 
     async def close(self) -> None:
         """No-op — clients are per-request now."""

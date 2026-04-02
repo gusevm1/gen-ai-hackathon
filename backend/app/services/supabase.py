@@ -8,6 +8,7 @@ Follows the singleton pattern established by FlatfoxClient.
 """
 
 import os
+import threading
 
 from supabase import create_client, Client
 
@@ -21,18 +22,29 @@ class SupabaseService:
 
     def __init__(self) -> None:
         self._client: Client | None = None
+        self._lock = threading.Lock()
 
     def get_client(self) -> Client:
         """Get or create the Supabase client (lazy initialization).
 
         Reads SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY from environment.
         """
-        if self._client is None:
-            self._client = create_client(
-                os.environ["SUPABASE_URL"],
-                os.environ["SUPABASE_SERVICE_ROLE_KEY"],
-            )
-        return self._client
+        with self._lock:
+            if self._client is None:
+                self._client = create_client(
+                    os.environ["SUPABASE_URL"],
+                    os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+                )
+            return self._client
+
+    def reset_client(self) -> None:
+        """Force-recreate the client on next get_client() call.
+
+        Call this after catching HTTP/2 connection errors to get a fresh
+        connection pool.
+        """
+        with self._lock:
+            self._client = None
 
     def get_analysis(
         self, user_id: str, profile_id: str, listing_id: str
