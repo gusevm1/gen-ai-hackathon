@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { User, BarChart3, Settings, Sparkles, Home, Trophy, FileText } from "lucide-react"
+import { User, BarChart3, Settings, Sparkles, Home, Trophy } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/lib/language-context"
 import { t } from "@/lib/translations"
@@ -68,12 +68,6 @@ export function TopNavbar() {
         <Link href="/analyses" className={linkClass("/analyses")}>
           <BarChart3 className="size-4" />
           <span className="hidden sm:inline">{t(language, "nav_analyses")}</span>
-        </Link>
-
-        {/* Applications */}
-        <Link href="/applications" className={linkClass("/applications")}>
-          <FileText className="size-4" />
-          <span className="hidden sm:inline">Applications</span>
         </Link>
 
         {/* Settings */}

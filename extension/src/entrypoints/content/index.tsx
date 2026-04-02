@@ -6,8 +6,6 @@
 import './style.css';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { activatePrefill } from './lib/prefill';
-
 export default defineContentScript({
   matches: ['*://*.flatfox.ch/*'],
   cssInjectionMode: 'ui',
@@ -16,8 +14,6 @@ export default defineContentScript({
     console.log('[HM] index.tsx main() called — content script running');
     console.log('[HM] index.tsx URL:', window.location.href);
 
-    // Fill the Flatfox contact form if the URL contains homematch_apply prefill data
-    activatePrefill();
     // Create a Shadow DOM overlay for the FAB (fixed position, always visible)
     const fab = await createShadowRootUi(ctx, {
       name: 'homematch-fab',
