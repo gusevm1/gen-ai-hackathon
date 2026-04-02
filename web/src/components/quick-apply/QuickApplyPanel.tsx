@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, RefreshCw, X, Send } from 'lucide-react'
+import { Loader2, RefreshCw, X, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface QuickApplyPanelProps {
@@ -30,7 +30,6 @@ export function QuickApplyPanel({
 }: QuickApplyPanelProps) {
   const [draft, setDraft] = useState('')
   const [loadingDraft, setLoadingDraft] = useState(true)
-  const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const edgeFnUrl = (name: string) => `${supabaseUrl}/functions/v1/${name}`
@@ -57,26 +56,16 @@ export function QuickApplyPanel({
 
   useEffect(() => { fetchDraft() }, [])
 
-  const handleSend = async () => {
-    setSending(true)
-    setError(null)
-    try {
-      const res = await fetch(edgeFnUrl('quick-apply'), {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({ listing_id: listingId, name: userName, email: userEmail, phone: userPhone, message: draft }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        onApplied()
-      } else {
-        setError(data.error ?? 'Send failed. Please try again.')
-      }
-    } catch {
-      setError('Network error. Please try again.')
-    } finally {
-      setSending(false)
-    }
+  const handleOpenInFlatfox = () => {
+    const payload = encodeURIComponent(JSON.stringify({
+      name: userName,
+      email: userEmail,
+      phone: userPhone,
+      message: draft,
+    }))
+    const url = `https://flatfox.ch/de/flat/${listingId}/?homematch_apply=${payload}`
+    window.open(url, '_blank')
+    onApplied()
   }
 
   return (
@@ -114,11 +103,11 @@ export function QuickApplyPanel({
           Regenerate
         </button>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onDismiss} disabled={sending}>
+          <Button variant="outline" size="sm" onClick={onDismiss}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSend} disabled={sending || loadingDraft || !draft}>
-            {sending ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Sending...</> : <><Send className="mr-1.5 h-3.5 w-3.5" />Send</>}
+          <Button size="sm" onClick={handleOpenInFlatfox} disabled={loadingDraft || !draft}>
+            <ExternalLink className="mr-1.5 h-3.5 w-3.5" />Open in Flatfox
           </Button>
         </div>
       </div>
