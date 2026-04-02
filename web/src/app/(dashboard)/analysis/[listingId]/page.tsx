@@ -149,6 +149,17 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
         Scored on {formatDate(analysis.created_at)}
       </p>
 
+      {/* Property location map — only when listing_profiles data available */}
+      {listingLocation && (
+        <FadeIn className="mb-8">
+          <PropertyMapView
+            address={listingLocation.address}
+            latitude={listingLocation.latitude}
+            longitude={listingLocation.longitude}
+          />
+        </FadeIn>
+      )}
+
       {/* 2-column layout on lg screens */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
         {/* Left column: Key Takeaways + Breakdown (v1: categories, v2: fulfillment) */}
@@ -171,16 +182,6 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
         </div>
       </div>
 
-      {/* Property location map — only when listing_profiles data available */}
-      {listingLocation && (
-        <FadeIn className="mt-8">
-          <PropertyMapView
-            address={listingLocation.address}
-            latitude={listingLocation.latitude}
-            longitude={listingLocation.longitude}
-          />
-        </FadeIn>
-      )}
     </div>
   )
 }
