@@ -55,11 +55,11 @@ export const translations = {
     landing_globe_body: 'HomeMatch works with Flatfox — the leading Swiss rental platform.',
 
     // Section 3 — Problem
-    landing_problem_overline: 'The problem',
-    landing_problem_headline: 'Finding a flat in Switzerland is exhausting.',
-    landing_problem_bullet1: 'You scroll through 40 listings every Sunday and still feel lost.',
-    landing_problem_bullet2: 'You request viewings. Half never reply. The rest are wrong.',
-    landing_problem_bullet3: 'The right flat is gone in 48 hours — you saw it too late.',
+    landing_problem_overline: 'The Problem',
+    landing_problem_headline: 'Finding a property in Switzerland is exhausting and painful',
+    landing_problem_bullet1: '"Filters only scratch the surface." Budget, size, location — but what about what actually matters to you?',
+    landing_problem_bullet2: '"Every listing means hours of research." Google Maps, Street View, distances, reviews — for every single property. All has to be done manually.',
+    landing_problem_bullet3: '"You never see what you\'re compromising." No property is perfect. But which trade-offs are worth it?',
 
     // Section 4 — How it works
     landing_howit_overline: 'How to avoid this',
