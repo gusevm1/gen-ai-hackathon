@@ -7,6 +7,8 @@ import { TopMatchesSkeleton } from '@/components/top-matches/TopMatchesSkeleton'
 import { Button } from '@/components/ui/button'
 import { useLanguage } from '@/lib/language-context'
 import { t } from '@/lib/translations'
+import { createClient } from '@/lib/supabase/client'
+import { recordApplication } from '@/app/(dashboard)/applications/actions'
 
 interface TopMatch {
   listing_id: number
@@ -38,11 +40,27 @@ interface TopMatchesData {
   computed_at: string
 }
 
+interface QuickApplySharedProps {
+  profileId: string
+  profileName: string
+  keyPreferences: string[]
+  moveInIntent: string
+  userName: string
+  userEmail: string
+  userPhone: string
+  supabaseUrl: string
+  supabaseAnonKey: string
+  authToken: string
+}
+
 export default function TopMatchesPage() {
   const { language } = useLanguage()
   const [data, setData] = useState<TopMatchesData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [openPanelId, setOpenPanelId] = useState<string | null>(null)
+  const [appliedListingIds, setAppliedListingIds] = useState<Set<string>>(new Set())
+  const [quickApplyShared, setQuickApplyShared] = useState<QuickApplySharedProps | null>(null)
 
   const fetchMatches = useCallback(async (forceRefresh = false) => {
     setLoading(true)
@@ -69,9 +87,90 @@ export default function TopMatchesPage() {
     }
   }, [])
 
+  // Fetch user session, profile, and existing applications
+  const fetchUserContext = useCallback(async () => {
+    try {
+      const supabase = createClient()
+
+      const [sessionResult, userResult] = await Promise.all([
+        supabase.auth.getSession(),
+        supabase.auth.getUser(),
+      ])
+
+      const session = sessionResult.data.session
+      const user = userResult.data.user
+      if (!session || !user) return
+
+      const authToken = session.access_token
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, name, phone, preferences')
+        .eq('is_default', true)
+        .single()
+
+      if (!profile) return
+
+      // Fetch existing applied listings
+      const { data: apps } = await supabase
+        .from('applications')
+        .select('listing_id')
+        .eq('profile_id', profile.id)
+
+      if (apps && apps.length > 0) {
+        setAppliedListingIds(new Set(apps.map(a => a.listing_id)))
+      }
+
+      // Extract top preferences for message generation
+      const prefs = profile.preferences as Record<string, unknown> | null ?? {}
+      const dynamicFields = (prefs.dynamicFields as Array<{ label: string; importance: string }> | undefined) ?? []
+      const keyPreferences = dynamicFields
+        .filter(f => ['critical', 'high', 'medium'].includes(f.importance))
+        .slice(0, 2)
+        .map(f => f.label)
+
+      const moveInIntent = (prefs.moveInDate as string | undefined) ?? ''
+
+      setQuickApplyShared({
+        profileId: profile.id,
+        profileName: profile.name,
+        keyPreferences,
+        moveInIntent,
+        userName: user.user_metadata?.display_name ?? user.email ?? '',
+        userEmail: user.email ?? '',
+        userPhone: (profile.phone as string | null) ?? '',
+        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+        supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        authToken,
+      })
+    } catch {
+      // User context failure must not block the page
+    }
+  }, [])
+
   useEffect(() => {
     fetchMatches()
-  }, [fetchMatches])
+    fetchUserContext()
+  }, [fetchMatches, fetchUserContext])
+
+  const handleApplied = useCallback(async (listingId: string) => {
+    setAppliedListingIds(prev => new Set([...prev, listingId]))
+    setOpenPanelId(null)
+
+    if (!quickApplyShared) return
+    const match = data?.matches.find(m => String(m.listing_id) === listingId)
+    try {
+      await recordApplication(
+        quickApplyShared.profileId,
+        listingId,
+        match?.address ?? match?.title ?? '',
+        'Wohnung',
+        '',
+      )
+    } catch {
+      // Recording failure must not break the UI
+    }
+  }, [quickApplyShared, data])
 
   const computedDate = data?.computed_at
     ? new Date(data.computed_at).toLocaleString()
@@ -133,6 +232,22 @@ export default function TopMatchesPage() {
                 match={match}
                 rank={index}
                 defaultExpanded={index === 0}
+                isApplied={appliedListingIds.has(String(match.listing_id))}
+                quickApplyProps={quickApplyShared ? {
+                  profileName: quickApplyShared.profileName,
+                  keyPreferences: quickApplyShared.keyPreferences,
+                  moveInIntent: quickApplyShared.moveInIntent,
+                  userName: quickApplyShared.userName,
+                  userEmail: quickApplyShared.userEmail,
+                  userPhone: quickApplyShared.userPhone,
+                  supabaseUrl: quickApplyShared.supabaseUrl,
+                  supabaseAnonKey: quickApplyShared.supabaseAnonKey,
+                  authToken: quickApplyShared.authToken,
+                } : undefined}
+                openPanelId={openPanelId}
+                onOpenPanel={(id) => setOpenPanelId(id)}
+                onClosePanel={() => setOpenPanelId(null)}
+                onApplied={handleApplied}
               />
             ))}
           </div>

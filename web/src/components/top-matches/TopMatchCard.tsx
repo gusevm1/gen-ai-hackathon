@@ -4,8 +4,10 @@ import { useState } from 'react'
 import { ChevronDown, ChevronUp, ExternalLink, MapPin, Ruler, DoorOpen, Banknote } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { BulletSummary } from '@/components/analysis/BulletSummary'
 import { FulfillmentBreakdown } from '@/components/analysis/FulfillmentBreakdown'
+import { QuickApplyPanel } from '@/components/quick-apply/QuickApplyPanel'
 import type { CriterionResult } from '@/lib/fulfillment-utils'
 import { useLanguage } from '@/lib/language-context'
 import { t } from '@/lib/translations'
@@ -45,9 +47,35 @@ interface TopMatchCardProps {
   }
   rank: number
   defaultExpanded?: boolean
+  isApplied?: boolean
+  quickApplyProps?: {
+    profileName: string
+    keyPreferences: string[]
+    moveInIntent: string
+    userName: string
+    userEmail: string
+    userPhone: string
+    supabaseUrl: string
+    supabaseAnonKey: string
+    authToken: string
+  }
+  openPanelId: string | null
+  onOpenPanel: (listingId: string) => void
+  onClosePanel: () => void
+  onApplied: (listingId: string) => void
 }
 
-export function TopMatchCard({ match, rank, defaultExpanded = false }: TopMatchCardProps) {
+export function TopMatchCard({
+  match,
+  rank,
+  defaultExpanded = false,
+  isApplied,
+  quickApplyProps,
+  openPanelId,
+  onOpenPanel,
+  onClosePanel,
+  onApplied,
+}: TopMatchCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const { language } = useLanguage()
   const tier = match.score_response.match_tier
@@ -132,6 +160,35 @@ export function TopMatchCard({ match, rank, defaultExpanded = false }: TopMatchC
           <div className="space-y-4 pt-2">
             <BulletSummary bullets={match.score_response.summary_bullets} />
             <FulfillmentBreakdown criteriaResults={match.score_response.criteria_results} />
+          </div>
+        )}
+
+        {/* Quick Apply section */}
+        {quickApplyProps && (
+          <div className="pt-2 border-t border-border">
+            {isApplied ? (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
+                Applied
+              </span>
+            ) : openPanelId === String(match.listing_id) ? (
+              <QuickApplyPanel
+                listingId={String(match.listing_id)}
+                listingAddress={match.address ?? match.title ?? ''}
+                listingType="Wohnung"
+                onApplied={() => onApplied(String(match.listing_id))}
+                onDismiss={onClosePanel}
+                {...quickApplyProps}
+              />
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full text-xs"
+                onClick={() => onOpenPanel(String(match.listing_id))}
+              >
+                Quick Apply
+              </Button>
+            )}
           </div>
         )}
       </CardContent>
