@@ -2,8 +2,6 @@
 
 import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import Image from 'next/image'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { duration, ease } from '@/lib/motion'
 import { t } from '@/lib/translations'
 import type { Language } from '@/lib/translations'
@@ -233,31 +231,52 @@ export function SectionHero({ lang }: SectionHeroProps) {
           {t(lang, 'landing_hero_subtitle')}
         </motion.p>
 
-        {/* CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.52, duration: duration.slow, ease: ease.enter }}
-          className="flex flex-col items-center gap-3"
-        >
-          <Button
-            render={<Link href="/auth" />}
-            size="lg"
-            className="px-9 py-3 text-base font-semibold rounded-xl h-auto"
-            style={{
-              backgroundColor: 'var(--primary)',
-              color: 'var(--primary-foreground)',
-              boxShadow: '0 0 32px hsl(342 89% 50% / 0.28)',
-            }}
-          >
-            {t(lang, 'landing_hero_cta')}
-          </Button>
-          <span className="text-sm text-center" style={{ color: 'hsl(0 0% 42%)' }}>
-            Free · No credit card · Works on Flatfox today
-          </span>
-        </motion.div>
 
       </div>
+
+      {/* Scroll indicator — positioned relative to the section */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.9, duration: duration.slow, ease: ease.enter }}
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 cursor-pointer"
+        onClick={() => window.scrollBy({ top: window.innerHeight, behavior: 'smooth' })}
+      >
+        <span className="text-xs uppercase tracking-widest" style={{ color: 'hsl(0 0% 50%)' }}>
+          Scroll
+        </span>
+        <motion.div
+          className="flex flex-col items-center gap-1"
+          animate={{ y: [0, 8, 0] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="hsl(0 0% 50%)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ marginTop: -10, stroke: 'hsl(0 0% 35%)' }}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </motion.div>
+      </motion.div>
+
     </section>
   )
 }
