@@ -16,7 +16,7 @@ function scoreColor(score: number) {
 
 // ─── Mock data (illustrative, not translated) ────────────────────────────────
 
-const PROFILE_TEXT = '2BR in Zurich, max CHF 2,500, pet-friendly, near a park or lake'
+const PROFILE_TEXT = 'I love coffee, I need a Starbucks nearby, quiet and green, but still connected to the city, relaxed vibe. I need a good school for my kids.'
 
 const LISTINGS = [
   { addr: 'Seefeld, Zürich',    rooms: '3.5 Zi', price: 'CHF 2,450', score: 94 },
