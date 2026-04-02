@@ -62,14 +62,14 @@ export const translations = {
     landing_problem_bullet3: '"You never see what you\'re compromising." No property is perfect. But which trade-offs are worth it?',
 
     // Section 4 — How it works
-    landing_howit_overline: 'How to avoid this',
-    landing_howit_headline: 'Three steps from search to certainty.',
-    landing_howit_step1_label: 'Tell us what you need',
-    landing_howit_step1_body: 'Set your criteria once — location, budget, size, must-haves — via chat or a quick form.',
-    landing_howit_step2_label: 'We score every listing',
-    landing_howit_step2_body: 'HomeMatch reads each Flatfox listing and calculates a match score against your profile in seconds.',
-    landing_howit_step3_label: 'See the full picture',
-    landing_howit_step3_body: 'Open any listing to see your score, a breakdown by category, and the AI reasoning behind it.',
+    landing_howit_overline: 'The solution',
+    landing_howit_headline: 'Three steps from search to certainty',
+    landing_howit_step1_label: '"Tell us what really matters"',
+    landing_howit_step1_body: 'Must-haves, nice-to-haves, priorities. Describe your ideal home the way you\'d tell a friend.',
+    landing_howit_step2_label: '"Our AI analyzes every listing"',
+    landing_howit_step2_body: 'Each property and image is scored against all your preferences — including the ones you\'d normally spend hours Googling. Seconds, not weekends.',
+    landing_howit_step3_label: '"See your top 5 — and the full picture"',
+    landing_howit_step3_body: 'Your best matches, surfaced instantly. Open any listing for a full breakdown: what fits, what doesn\'t, and why.',
 
     // Section 4b — Features
     landing_features_overline: 'Built for Swiss renters',
