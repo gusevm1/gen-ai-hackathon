@@ -257,6 +257,22 @@ export async function updateProfilesLanguage(language: 'en' | 'de') {
   revalidatePath('/', 'layout')
 }
 
+export async function saveProfilePhone(profileId: string, phone: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ phone: phone.trim() || null })
+    .eq('id', profileId)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/profiles')
+  revalidatePath('/', 'layout')
+}
+
 export async function saveProfilePreferences(profileId: string, data: Preferences) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

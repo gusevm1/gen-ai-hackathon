@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { preferencesSchema, migratePreferences } from '@/lib/schemas/preferences'
 import { saveProfilePreferences } from '@/app/(dashboard)/profiles/actions'
 import { PreferencesForm } from '@/components/preferences/preferences-form'
+import { ContactDetailsCard } from '@/components/profiles/ContactDetailsCard'
 import { t, type Language } from '@/lib/translations'
 
 interface EditProfilePageProps {
@@ -26,7 +27,7 @@ export default async function EditProfilePage({ params }: EditProfilePageProps) 
 
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('id, name, preferences')
+    .select('id, name, preferences, phone')
     .eq('id', profileId)
     .single()
 
@@ -57,6 +58,13 @@ export default async function EditProfilePage({ params }: EditProfilePageProps) 
       <p className="text-muted-foreground mb-8">
         {t(lang, 'edit_profile_desc')}
       </p>
+      <ContactDetailsCard
+        profileId={profile.id}
+        phone={(profile as { phone?: string | null }).phone ?? null}
+        userName={user.user_metadata?.display_name ?? user.email ?? ''}
+        userEmail={user.email ?? ''}
+      />
+      <div className="mt-8" />
       <PreferencesForm
         defaultValues={defaults}
         onSave={handleSave}
