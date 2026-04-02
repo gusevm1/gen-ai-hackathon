@@ -3,6 +3,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader'
 import { MapPin, Map } from 'lucide-react'
+
+// Must be called at module level — setOptions is a one-time init and is
+// silently ignored if called after the loader has already started.
+setOptions({
+  key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
+  v: 'weekly',
+})
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -26,11 +33,6 @@ export function PropertyMapView({ address, latitude, longitude }: PropertyMapVie
   const markerRef = useRef<google.maps.Marker | null>(null)
 
   useEffect(() => {
-    setOptions({
-      key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
-      v: 'weekly',
-    })
-
     let cancelled = false
 
     const init = async () => {
