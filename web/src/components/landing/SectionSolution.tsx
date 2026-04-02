@@ -326,7 +326,7 @@ const STEPS = [
   { num: '03', labelKey: 'landing_howit_step3_label' as const, bodyKey: 'landing_howit_step3_body' as const },
 ]
 
-const SCENE_DURATION = 5000 // ms per scene
+const SCENE_DURATIONS = [9000, 5000, 5000] // ms per scene — step 1 needs longer for typewriter
 
 export function SectionSolution({ lang }: { lang: Language }) {
   const prefersReduced = useReducedMotion()
@@ -336,12 +336,12 @@ export function SectionSolution({ lang }: { lang: Language }) {
     setScene((s) => (s + 1) % 3)
   }, [])
 
-  // Auto-advance timer
+  // Auto-advance timer — respects per-scene duration
   useEffect(() => {
     if (prefersReduced) return
-    const id = setInterval(advance, SCENE_DURATION)
-    return () => clearInterval(id)
-  }, [advance, prefersReduced])
+    const id = setTimeout(advance, SCENE_DURATIONS[scene])
+    return () => clearTimeout(id)
+  }, [advance, prefersReduced, scene])
 
   return (
     <section className="py-32 px-6" style={{ backgroundColor: 'var(--color-hero-bg)' }}>
@@ -416,7 +416,7 @@ export function SectionSolution({ lang }: { lang: Language }) {
                         style={{ backgroundColor: 'var(--color-hero-teal)' }}
                         initial={{ width: '0%' }}
                         animate={{ width: '100%' }}
-                        transition={{ duration: SCENE_DURATION / 1000, ease: 'linear' }}
+                        transition={{ duration: SCENE_DURATIONS[scene] / 1000, ease: 'linear' }}
                         key={scene}
                       />
                     </div>
