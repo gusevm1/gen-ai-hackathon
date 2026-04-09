@@ -653,14 +653,18 @@ CACHE_TTL_SECONDS = 3600  # 1 hour
 def _load_preferences(user_id: str, profile_id: str) -> Optional[dict]:
     """Load preferences JSONB from Supabase profiles table."""
     client = supabase_service.get_client()
-    result = (
-        client.table("profiles")
-        .select("preferences")
-        .eq("id", profile_id)
-        .eq("user_id", user_id)
-        .maybe_single()
-        .execute()
-    )
+    try:
+        result = (
+            client.table("profiles")
+            .select("preferences")
+            .eq("id", profile_id)
+            .eq("user_id", user_id)
+            .maybe_single()
+            .execute()
+        )
+    except Exception as exc:
+        logger.error("Failed to load preferences: %s", exc)
+        return None
     if result.data and result.data.get("preferences"):
         return result.data["preferences"]
     return None
@@ -829,12 +833,16 @@ async def top_matches(request: TopMatchesRequest) -> TopMatchesResponse:
             computed_at=datetime.now(timezone.utc).isoformat(),
         )
 
-    # 4. Phase A: Deterministic batch scoring
+    # 4. Phase A: Deterministic batch scoring (skip listings that fail)
+    def _safe_score(p):
+        try:
+            return (p, _score_deterministic_only(p, preferences))
+        except Exception as exc:
+            logger.debug("Skipping listing %s during batch scoring: %s", getattr(p, 'listing_id', '?'), exc)
+            return None
+
     with ThreadPoolExecutor(max_workers=8) as executor:
-        scored = list(executor.map(
-            lambda p: (p, _score_deterministic_only(p, preferences)),
-            all_profiles,
-        ))
+        scored = [r for r in executor.map(_safe_score, all_profiles) if r is not None]
 
     # Sort by score descending, take top N
     scored.sort(key=lambda x: x[1][0], reverse=True)
