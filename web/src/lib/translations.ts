@@ -45,9 +45,9 @@ export const translations = {
     landing_footer_copyright: '© 2026 HomeMatch. All rights reserved.',
 
     // Section 1 — Hero
-    landing_hero_overline: 'Find your perfect flat',
+    landing_hero_overline: 'Closed Alpha',
     landing_hero_headline: 'Thousands of listings. One perfect match.',
-    landing_hero_subtitle: 'HomeMatch scores every Flatfox listing against your exact needs — so you spend time on viewings, not scrolling.',
+    landing_hero_subtitle: 'HomeMatch scores every Flatfox listing against your exact needs. We\'re in closed alpha — join the waitlist for early access.',
     landing_hero_cta: 'Get Started',
 
     // Section 2 — Globe
@@ -86,6 +86,16 @@ export const translations = {
     landing_cta_headline: 'Start matching in minutes.',
     landing_cta_subtext: 'Free to use. No credit card. Works on Flatfox today.',
     landing_cta_button: 'Create free account',
+
+    // Waitlist
+    waitlist_placeholder: 'Your email address',
+    waitlist_button: 'Join the Alpha',
+    waitlist_success: "You're on the list! We'll be in touch.",
+    waitlist_error: 'Something went wrong. Try again.',
+    waitlist_signin: 'Already have access? Sign in',
+
+    // Auth gating
+    auth_not_approved: "Your account hasn't been approved for alpha access yet. Join the waitlist at homematch-web.vercel.app.",
 
     // Section Credits
     landing_credits_label: 'A project from',
@@ -340,9 +350,9 @@ export const translations = {
     landing_footer_copyright: '© 2026 HomeMatch. Alle Rechte vorbehalten.',
 
     // Section 1 — Hero
-    landing_hero_overline: 'Finde deine perfekte Wohnung',
+    landing_hero_overline: 'Geschlossene Alpha',
     landing_hero_headline: 'Tausende Inserate. Ein perfektes Match.',
-    landing_hero_subtitle: 'HomeMatch bewertet jedes Flatfox-Inserat anhand deiner genauen Anforderungen — damit du Zeit für Besichtigungen hast, nicht fürs Scrollen.',
+    landing_hero_subtitle: 'HomeMatch bewertet jedes Flatfox-Inserat anhand deiner genauen Anforderungen. Wir sind in der geschlossenen Alpha — trag dich auf die Warteliste ein.',
     landing_hero_cta: 'Jetzt starten',
 
     // Section 2 — Globe
@@ -381,6 +391,16 @@ export const translations = {
     landing_cta_headline: 'In wenigen Minuten loslegen.',
     landing_cta_subtext: 'Kostenlos. Keine Kreditkarte. Funktioniert auf Flatfox.',
     landing_cta_button: 'Kostenloses Konto erstellen',
+
+    // Waitlist
+    waitlist_placeholder: 'Deine E-Mail-Adresse',
+    waitlist_button: 'Zur Alpha anmelden',
+    waitlist_success: 'Du bist auf der Liste! Wir melden uns.',
+    waitlist_error: 'Etwas ist schiefgelaufen. Versuch es nochmal.',
+    waitlist_signin: 'Schon Zugang? Anmelden',
+
+    // Auth gating
+    auth_not_approved: 'Dein Konto wurde noch nicht für den Alpha-Zugang freigeschaltet. Trag dich auf homematch-web.vercel.app auf die Warteliste ein.',
 
     // Section Credits
     landing_credits_label: 'A project from',

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -13,8 +14,6 @@ import { Logo } from '@/components/logo'
 export default function Home() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [isSignUp, setIsSignUp] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -22,21 +21,29 @@ export default function Home() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setLoading(true)
 
-    if (isSignUp && password !== confirmPassword) {
-      setError('Passwords do not match')
+    const supabase = createClient()
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (signInError) {
+      setError(signInError.message)
+      setLoading(false)
       return
     }
 
-    setLoading(true)
-    const supabase = createClient()
+    // Check alpha approval
+    const res = await fetch('/api/admin/check-alpha', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.toLowerCase().trim() }),
+    })
 
-    const { error } = isSignUp
-      ? await supabase.auth.signUp({ email, password })
-      : await supabase.auth.signInWithPassword({ email, password })
-
-    if (error) {
-      setError(error.message)
+    if (!res.ok) {
+      // Not approved — sign out immediately
+      await supabase.auth.signOut()
+      setError("Your account hasn't been approved for alpha access yet. Join the waitlist on the homepage.")
       setLoading(false)
       return
     }
@@ -69,13 +76,9 @@ export default function Home() {
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">
-              {isSignUp ? 'Create an account' : 'Welcome back'}
-            </CardTitle>
+            <CardTitle className="text-lg">Welcome back</CardTitle>
             <CardDescription>
-              {isSignUp
-                ? 'Sign up to start finding your perfect home'
-                : 'Sign in to your HomeMatch account'}
+              Sign in to your HomeMatch account
             </CardDescription>
           </CardHeader>
 
@@ -106,41 +109,22 @@ export default function Home() {
                 />
               </div>
 
-              {isSignUp && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    placeholder="••••••••"
-                  />
-                </div>
-              )}
-
               {error && (
                 <p className="text-sm text-destructive">{error}</p>
               )}
 
               <Button type="submit" disabled={loading} className="w-full">
-                {loading ? 'Please wait...' : isSignUp ? 'Sign Up' : 'Sign In'}
+                {loading ? 'Please wait...' : 'Sign In'}
               </Button>
             </form>
           </CardContent>
 
           <CardFooter className="justify-center pt-0">
             <p className="text-sm text-muted-foreground">
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-              <button
-                type="button"
-                onClick={() => { setIsSignUp(!isSignUp); setError(null); setConfirmPassword('') }}
-                className="font-medium text-primary hover:underline"
-              >
-                {isSignUp ? 'Sign In' : 'Sign Up'}
-              </button>
+              {"Don't have access? "}{' '}
+              <Link href="/" className="font-medium text-primary hover:underline">
+                Join the waitlist
+              </Link>
             </p>
           </CardFooter>
         </Card>
