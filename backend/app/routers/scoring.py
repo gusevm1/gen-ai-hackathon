@@ -765,34 +765,13 @@ def _save_top_matches_cache(
 
 @router.post("/top-matches", response_model=TopMatchesResponse)
 async def top_matches(request: TopMatchesRequest) -> TopMatchesResponse:
-    """Return top 5 matches from all pre-analyzed listings.
+    """Return top matches from the user's existing analyses.
 
-    Phase A: Deterministic-only batch scoring (~200 listings, <1s)
-    Phase B: Full hybrid scoring of top 5 (asyncio.gather, ~3-4s)
+    Pulls scored analyses from the analyses table (scored via extension),
+    enriches with listing metadata from listing_profiles, and returns
+    the top N sorted by score.
     """
-    # 1. Load preferences
-    raw_prefs = await asyncio.to_thread(
-        _load_preferences, request.user_id, request.profile_id
-    )
-    if not raw_prefs:
-        raise HTTPException(status_code=404, detail="Profile or preferences not found")
-
-    preferences = UserPreferences.model_validate(raw_prefs)
-
-    # 1b. Guard: empty preferences produce score 0 for everything — bail early
-    has_criteria = (
-        preferences.budget_max is not None
-        or preferences.rooms_min is not None
-        or preferences.living_space_min is not None
-        or len(preferences.dynamic_fields) > 0
-    )
-    if not has_criteria:
-        raise HTTPException(
-            status_code=422,
-            detail="No scoring criteria configured. Please set budget, rooms, size, or custom criteria in your profile.",
-        )
-
-    # 2. Cache check
+    # 1. Cache check
     if not request.force_refresh:
         cached = await asyncio.to_thread(
             _get_cached_top_matches, request.user_id, request.profile_id
@@ -801,114 +780,101 @@ async def top_matches(request: TopMatchesRequest) -> TopMatchesResponse:
             logger.info("Returning cached top matches for profile=%s", request.profile_id)
             return cached
 
-    # 3. Fetch all listing profiles and filter by offer_type + object_category
-    all_profiles = await asyncio.to_thread(get_all_listing_profiles)
+    # 2. Fetch user's analyses for this profile, sorted by score desc
+    def _fetch_analyses():
+        client = supabase_service.get_client()
+        result = (
+            client.table("analyses")
+            .select("listing_id, score, breakdown")
+            .eq("user_id", request.user_id)
+            .eq("profile_id", request.profile_id)
+            .order("score", desc=True)
+            .limit(TOP_MATCHES_COUNT)
+            .execute()
+        )
+        return result.data or []
 
-    # Filter: match offer_type (RENT/SALE)
-    all_profiles = [
-        p for p in all_profiles
-        if p.offer_type.upper() == preferences.offer_type.value.upper()
-    ]
+    analyses = await asyncio.to_thread(_fetch_analyses)
 
-    # Filter: match object_category (skip parking, storage, commercial)
-    # object_category is the reliable field from Flatfox API
-    EXCLUDED_CATEGORIES = {"PARK", "INDUSTRY", "SECONDARY"}
-    RESIDENTIAL_CATEGORIES = {"APARTMENT", "HOUSE", "SHARED"}
-    pref_cat = preferences.object_category.value.upper()
-    if pref_cat == "ANY":
-        all_profiles = [
-            p for p in all_profiles
-            if p.object_category.upper() in RESIDENTIAL_CATEGORIES
-        ]
-    else:
-        all_profiles = [
-            p for p in all_profiles
-            if p.object_category.upper() == pref_cat
-        ]
-
-    if not all_profiles:
+    if not analyses:
         return TopMatchesResponse(
             matches=[],
             total_scored=0,
             computed_at=datetime.now(timezone.utc).isoformat(),
         )
 
-    # 4. Phase A: Deterministic batch scoring (skip listings that fail)
-    def _safe_score(p):
-        try:
-            return (p, _score_deterministic_only(p, preferences))
-        except Exception as exc:
-            logger.debug("Skipping listing %s during batch scoring: %s", getattr(p, 'listing_id', '?'), exc)
-            return None
+    # 3. Fetch listing metadata from listing_profiles
+    listing_ids = [int(a["listing_id"]) for a in analyses]
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        scored = [r for r in executor.map(_safe_score, all_profiles) if r is not None]
+    def _fetch_metadata():
+        client = supabase_service.get_client()
+        result = (
+            client.table("listing_profiles")
+            .select("listing_id, slug, title, address, city, rooms, sqm, price, image_urls")
+            .in_("listing_id", listing_ids)
+            .execute()
+        )
+        return {row["listing_id"]: row for row in (result.data or [])}
 
-    # Sort by score descending, take top N
-    scored.sort(key=lambda x: x[1][0], reverse=True)
-    top_candidates = scored[:TOP_MATCHES_COUNT]
+    metadata_map = await asyncio.to_thread(_fetch_metadata)
 
-    # 5. Phase B: Full hybrid scoring of top candidates
-    # Limit concurrency to 2 to avoid Apify rate-limiting / timeouts when
-    # multiple listings need on-demand geocoding + place searches.
-    _apify_sem = asyncio.Semaphore(2)
-
-    async def _full_score(profile):
-        async with _apify_sem:
-            return await _score_with_profile(profile, preferences)
-
-    full_results = await asyncio.gather(
-        *[_full_score(candidate[0]) for candidate in top_candidates],
-        return_exceptions=True,
-    )
-
-    # 6. Build response
+    # 4. Build response
     matches: list[TopMatchResult] = []
-    for (profile, (det_score, _, _)), full_result in zip(top_candidates, full_results):
-        if isinstance(full_result, Exception):
-            logger.warning(
-                "Full scoring failed for listing=%d, using deterministic: %s",
-                profile.listing_id, full_result,
-            )
-            # Fall back to deterministic-only score
-            det_score_val, det_tier, det_results = _score_deterministic_only(profile, preferences)
+    for analysis in analyses:
+        lid = int(analysis["listing_id"])
+        breakdown = analysis.get("breakdown") or {}
+        meta = metadata_map.get(lid, {})
+
+        try:
+            score_resp = ScoreResponse.model_validate(breakdown)
+        except Exception:
+            # If breakdown doesn't parse, build a minimal response
             score_resp = ScoreResponse(
-                overall_score=det_score_val,
-                match_tier=det_tier,
-                summary_bullets=["Detailed analysis unavailable.", "Score based on objective criteria only.", "Try refreshing later."],
-                criteria_results=[to_criterion_result(r) for r in det_results],
-                schema_version=2,
-                enrichment_status="partial",
-                categories=[],
-                checklist=[],
-                language=preferences.language,
+                overall_score=int(analysis.get("score", 0)),
+                match_tier=breakdown.get("match_tier", "fair"),
+                summary_bullets=breakdown.get("summary_bullets", []),
+                criteria_results=[],
+                schema_version=breakdown.get("schema_version", 2),
+                enrichment_status="complete",
+                categories=breakdown.get("categories", []),
+                checklist=breakdown.get("checklist", []),
+                language=breakdown.get("language", "en"),
             )
-        else:
-            score_resp = full_result
 
         matches.append(TopMatchResult(
-            listing_id=profile.listing_id,
-            slug=profile.slug,
-            title=profile.title,
-            address=profile.address,
-            city=profile.city,
-            rooms=profile.rooms,
-            sqm=profile.sqm,
-            price=profile.price,
-            image_url=profile.image_urls[0] if profile.image_urls else None,
+            listing_id=lid,
+            slug=meta.get("slug", f"listing-{lid}"),
+            title=meta.get("title"),
+            address=meta.get("address"),
+            city=meta.get("city"),
+            rooms=meta.get("rooms"),
+            sqm=meta.get("sqm"),
+            price=meta.get("price"),
+            image_url=(meta.get("image_urls") or [None])[0],
             score_response=score_resp,
         ))
 
-    # Sort matches by final score descending
-    matches.sort(key=lambda m: m.score_response.overall_score, reverse=True)
+    # 5. Count total analyses for this profile
+    def _count_analyses():
+        client = supabase_service.get_client()
+        result = (
+            client.table("analyses")
+            .select("id", count="exact")
+            .eq("user_id", request.user_id)
+            .eq("profile_id", request.profile_id)
+            .execute()
+        )
+        return result.count or len(analyses)
+
+    total = await asyncio.to_thread(_count_analyses)
 
     response = TopMatchesResponse(
         matches=matches,
-        total_scored=len(all_profiles),
+        total_scored=total,
         computed_at=datetime.now(timezone.utc).isoformat(),
     )
 
-    # 7. Fire-and-forget cache save
+    # 6. Fire-and-forget cache save
     async def _cache_save():
         try:
             await asyncio.to_thread(
